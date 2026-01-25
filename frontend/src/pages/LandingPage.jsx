@@ -4,6 +4,7 @@ import Footer from '../components/layout/Footer';
 import HeroSection from '../components/landing/HeroSection';
 import ProblemSection from '../components/landing/ProblemSection';
 import SolutionSection from '../components/landing/SolutionSection';
+import DeliverablesSection from '../components/landing/DeliverablesSection';
 import WhoSection from '../components/landing/WhoSection';
 import HowItWorksSection from '../components/landing/HowItWorksSection';
 import PricingSection from '../components/landing/PricingSection';
@@ -16,6 +17,7 @@ const LandingPage = () => {
       <Header />
       <main>
         <HeroSection />
+        <DeliverablesSection />
         <ProblemSection />
         <SolutionSection />
         <WhoSection />
