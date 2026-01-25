@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
-import { formFields, cohortData } from '../data/mock';
+import { cohortData, pricingPlans } from '../data/mock';
 import { toast } from 'sonner';
 
 const ApplyPage = () => {
@@ -16,7 +16,7 @@ const ApplyPage = () => {
     targetRole: '',
     timeline: '',
     struggle: '',
-    willingToInvest: ''
+    selectedPlan: ''
   });
 
   const handleInputChange = (e) => {
@@ -63,14 +63,14 @@ const ApplyPage = () => {
                 Join the Founding Cohort
               </h1>
               <p className="body-large">
-                Tell us about yourself. If shortlisted, you'll receive payment & onboarding details.
+                Tell us about yourself. If shortlisted, you'll receive payment & onboarding details within 24 hours.
               </p>
               
               {/* Seat Counter */}
-              <div className="inline-flex items-center gap-2 mt-6 px-4 py-2 rounded-full border border-[#3f4816] bg-[#302f2c]/50">
+              <div className="inline-flex items-center gap-2 mt-6 px-4 py-2 rounded-full border border-[#d9fb06] bg-[#3f4816]/30">
                 <span className="w-2 h-2 bg-[#d9fb06] rounded-full seat-pulse" />
-                <span className="text-sm text-[#888680]">
-                  <span className="text-[#d9fb06] font-semibold">{cohortData.seatsRemaining}</span> seats remaining
+                <span className="text-sm text-white">
+                  <span className="text-[#d9fb06] font-semibold">{cohortData.seatsRemaining}</span> founding seats remaining
                 </span>
               </div>
             </div>
@@ -183,31 +183,56 @@ const ApplyPage = () => {
                 />
               </div>
 
-              {/* Willingness to Invest */}
+              {/* Plan Selection */}
               <div>
                 <label className="block text-white font-medium mb-3">
-                  Are you willing to invest ₹1,999/month for serious preparation? <span className="text-[#d9fb06]">*</span>
+                  Which plan interests you? <span className="text-[#d9fb06]">*</span>
                 </label>
-                <div className="flex gap-4">
-                  {['Yes', 'No'].map((option) => (
+                <div className="grid grid-cols-1 gap-3">
+                  {pricingPlans.map((plan) => (
                     <label
-                      key={option}
-                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border cursor-pointer transition-all ${
-                        formData.willingToInvest === option
-                          ? 'border-[#d9fb06] bg-[#3f4816]/50 text-[#d9fb06]'
-                          : 'border-[#3f4816] bg-[#302f2c] text-white hover:border-[#888680]'
+                      key={plan.id}
+                      className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-all ${
+                        formData.selectedPlan === plan.id
+                          ? 'border-[#d9fb06] bg-[#3f4816]/50'
+                          : 'border-[#3f4816] bg-[#302f2c] hover:border-[#888680]'
                       }`}
                     >
-                      <input
-                        type="radio"
-                        name="willingToInvest"
-                        value={option}
-                        checked={formData.willingToInvest === option}
-                        onChange={handleInputChange}
-                        required
-                        className="sr-only"
-                      />
-                      {option}
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="radio"
+                          name="selectedPlan"
+                          value={plan.id}
+                          checked={formData.selectedPlan === plan.id}
+                          onChange={handleInputChange}
+                          required
+                          className="sr-only"
+                        />
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                          formData.selectedPlan === plan.id
+                            ? 'border-[#d9fb06] bg-[#d9fb06]'
+                            : 'border-[#888680]'
+                        }`}>
+                          {formData.selectedPlan === plan.id && (
+                            <div className="w-2 h-2 rounded-full bg-[#1a1c1b]" />
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-white font-medium">{plan.name}</span>
+                          {plan.popular && (
+                            <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-[#d9fb06] text-[#1a1c1b] font-semibold">
+                              Best Value
+                            </span>
+                          )}
+                          <p className="text-[#888680] text-sm">{plan.duration}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-white font-bold">{cohortData.currency}{plan.price.toLocaleString()}</span>
+                        {plan.savings && (
+                          <p className="text-[#d9fb06] text-xs">{plan.savings}</p>
+                        )}
+                      </div>
                     </label>
                   ))}
                 </div>
@@ -233,7 +258,7 @@ const ApplyPage = () => {
               </button>
 
               <p className="text-center text-sm text-[#888680]">
-                We review applications within 24 hours.
+                We review applications within 24 hours. Payment link sent after approval.
               </p>
             </form>
           </div>
