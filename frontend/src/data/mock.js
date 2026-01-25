@@ -8,20 +8,112 @@ export const siteConfig = {
   founderName: "The Codementee Team"
 };
 
+// Companies where our mentors have worked
+export const targetCompanies = [
+  { name: "Amazon", color: "#FF9900" },
+  { name: "Google", color: "#4285F4" },
+  { name: "Microsoft", color: "#00A4EF" },
+  { name: "Flipkart", color: "#F8D210" },
+  { name: "Razorpay", color: "#528FF0" },
+  { name: "Swiggy", color: "#FC8019" },
+  { name: "Uber", color: "#000000" },
+  { name: "Atlassian", color: "#0052CC" }
+];
+
 export const cohortData = {
-  price: 1999,
-  currency: "₹",
   totalSeats: 25,
   seatsRemaining: 18,
-  includes: [
-    "1 mock interview per month",
-    "Detailed resume review",
-    "Career roadmap planning",
-    "Private mentor group access",
-    "Interview feedback reports"
-  ],
-  note: "Price increases after launch"
+  currency: "₹"
 };
+
+// Pricing Plans
+export const pricingPlans = [
+  {
+    id: "monthly",
+    name: "Monthly",
+    duration: "1 Month",
+    price: 1999,
+    originalPrice: null,
+    perMonth: 1999,
+    popular: false,
+    features: [
+      "1 mock interview",
+      "Detailed feedback report",
+      "Resume review",
+      "Private mentor group access",
+      "Email support"
+    ],
+    cta: "Start Monthly"
+  },
+  {
+    id: "quarterly",
+    name: "3 Months",
+    duration: "3 Months",
+    price: 4999,
+    originalPrice: 5997,
+    perMonth: 1666,
+    popular: true,
+    savings: "Save ₹998",
+    features: [
+      "3 mock interviews (1/month)",
+      "Detailed feedback reports",
+      "Resume review + optimization",
+      "Private mentor group access",
+      "Priority scheduling",
+      "1 system design session"
+    ],
+    cta: "Best Value"
+  },
+  {
+    id: "biannual",
+    name: "6 Months",
+    duration: "6 Months",
+    price: 8999,
+    originalPrice: 11994,
+    perMonth: 1500,
+    popular: false,
+    savings: "Save ₹2,995",
+    features: [
+      "6 mock interviews (1/month)",
+      "Detailed feedback reports",
+      "Complete resume overhaul",
+      "Private mentor group access",
+      "Priority scheduling",
+      "2 system design sessions",
+      "Salary negotiation guidance",
+      "Direct mentor WhatsApp access"
+    ],
+    cta: "Maximum Prep"
+  }
+];
+
+// What you get - clear deliverables
+export const deliverables = [
+  {
+    id: 1,
+    title: "Mock Interviews",
+    description: "1-on-1 video calls simulating real interviews at Amazon, Google, Flipkart",
+    detail: "45-60 min sessions covering DSA, System Design, or Behavioral rounds"
+  },
+  {
+    id: 2,
+    title: "Feedback Reports",
+    description: "Detailed written feedback after every mock interview",
+    detail: "Specific areas to improve, what went well, and actionable next steps"
+  },
+  {
+    id: 3,
+    title: "Resume Review",
+    description: "Get your resume reviewed by engineers who've screened 1000+ resumes",
+    detail: "Line-by-line feedback to increase your shortlist rate"
+  },
+  {
+    id: 4,
+    title: "Mentor Group",
+    description: "Access to a private community of serious job seekers",
+    detail: "Ask questions, share experiences, get referrals"
+  }
+];
 
 export const problemPoints = [
   {
