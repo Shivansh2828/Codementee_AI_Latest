@@ -220,5 +220,9 @@ export const formFields = [
     "Just exploring"
   ]},
   { id: "struggle", label: "What's your biggest interview struggle?", type: "textarea", required: true },
-  { id: "willingToInvest", label: "Are you willing to invest ₹1,999/month for serious preparation?", type: "radio", required: true, options: ["Yes", "No"] }
+  { id: "selectedPlan", label: "Which plan are you interested in?", type: "select", required: true, options: [
+    "Monthly - ₹1,999",
+    "3 Months - ₹4,999 (Best Value)",
+    "6 Months - ₹8,999"
+  ]}
 ];
