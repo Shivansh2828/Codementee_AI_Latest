@@ -30,12 +30,12 @@ const Header = () => {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[#1a1c1b]/95 backdrop-blur-sm border-b border-[#3f4816]/30">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[#0f172a]/95 backdrop-blur-md border-b border-[#334155]/50">
       <div className="container">
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <span className="text-xl md:text-2xl font-bold text-[#d9fb06] tracking-tight">
+            <span className="text-xl md:text-2xl font-bold text-white tracking-tight">
               {siteConfig.name}
             </span>
           </Link>
@@ -47,14 +47,14 @@ const Header = () => {
                 key={link.href}
                 href={link.href}
                 onClick={(e) => scrollToSection(e, link.href)}
-                className="text-white/80 hover:text-[#d9fb06] transition-colors duration-300 font-medium"
+                className="text-slate-300 hover:text-[#06b6d4] transition-colors duration-200 font-medium"
               >
                 {link.label}
               </a>
             ))}
             <Link
               to="/apply"
-              className="btn-primary text-sm py-3 px-6"
+              className="btn-primary text-sm py-2.5 px-5"
             >
               Apply Now
             </Link>
@@ -72,7 +72,7 @@ const Header = () => {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-[#3f4816]/30">
+          <div className="md:hidden py-4 border-t border-[#334155]/50">
             <nav className="flex flex-col gap-4">
               {navLinks.map((link) => (
                 link.href === '/apply' ? (
@@ -89,7 +89,7 @@ const Header = () => {
                     key={link.href}
                     href={link.href}
                     onClick={(e) => scrollToSection(e, link.href)}
-                    className="text-white/80 hover:text-[#d9fb06] transition-colors duration-300 font-medium py-2"
+                    className="text-slate-300 hover:text-[#06b6d4] transition-colors duration-200 font-medium py-2"
                   >
                     {link.label}
                   </a>
