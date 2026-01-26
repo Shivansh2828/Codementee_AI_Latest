@@ -4,7 +4,8 @@ export const siteConfig = {
   name: "Codementee",
   tagline: "Real mock interviews with engineers who've cracked product based companies",
   subTagline: "No AI-only feedback. No generic courses. Limited seats. Real interviewers.",
-  contactEmail: "hello@codementee.com",
+  contactEmail: "support@codementee.com",
+  whatsapp: "+91-9731842807",
   founderName: "The Codementee Team"
 };
 
