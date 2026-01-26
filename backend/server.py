@@ -513,6 +513,239 @@ async def get_revenue_stats(user=Depends(get_current_user)):
         "recent_orders": [serialize_doc(dict(o)) for o in recent_orders]
     }
 
+# ============ BOOKING SYSTEM - ADMIN ROUTES ============
+@api_router.get("/admin/companies")
+async def get_companies(user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    companies = await db.companies.find().to_list(1000)
+    return [serialize_doc(dict(c)) for c in companies]
+
+@api_router.post("/admin/companies")
+async def create_company(data: CompanyCreate, user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    company_doc = {
+        "id": str(uuid.uuid4()),
+        "name": data.name,
+        "logo_url": data.logo_url,
+        "description": data.description,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.companies.insert_one(company_doc)
+    return serialize_doc(company_doc)
+
+@api_router.delete("/admin/companies/{company_id}")
+async def delete_company(company_id: str, user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    await db.companies.delete_one({"id": company_id})
+    return {"message": "Company deleted"}
+
+@api_router.get("/admin/time-slots")
+async def get_all_time_slots(user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    slots = await db.time_slots.find().sort("date", 1).to_list(1000)
+    return [serialize_doc(dict(s)) for s in slots]
+
+@api_router.post("/admin/time-slots")
+async def create_time_slot(data: TimeSlotCreate, user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    slot_doc = {
+        "id": str(uuid.uuid4()),
+        "date": data.date,
+        "start_time": data.start_time,
+        "end_time": data.end_time,
+        "mentor_id": data.mentor_id,
+        "status": "available",  # available, booked
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.time_slots.insert_one(slot_doc)
+    return serialize_doc(slot_doc)
+
+@api_router.delete("/admin/time-slots/{slot_id}")
+async def delete_time_slot(slot_id: str, user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    await db.time_slots.delete_one({"id": slot_id})
+    return {"message": "Time slot deleted"}
+
+@api_router.get("/admin/booking-requests")
+async def get_all_booking_requests(user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    requests = await db.booking_requests.find().sort("created_at", -1).to_list(1000)
+    return [serialize_doc(dict(r)) for r in requests]
+
+# ============ BOOKING SYSTEM - PUBLIC/MENTEE ROUTES ============
+@api_router.get("/companies")
+async def get_public_companies():
+    companies = await db.companies.find().to_list(1000)
+    return [serialize_doc(dict(c)) for c in companies]
+
+@api_router.get("/available-slots")
+async def get_available_slots(user=Depends(get_current_user)):
+    slots = await db.time_slots.find({"status": "available"}).sort("date", 1).to_list(1000)
+    return [serialize_doc(dict(s)) for s in slots]
+
+@api_router.post("/mentee/booking-request")
+async def create_booking_request(data: BookingRequestCreate, user=Depends(get_current_user)):
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    if len(data.slot_ids) > 2:
+        raise HTTPException(status_code=400, detail="Maximum 2 slots allowed")
+    
+    # Get company details
+    company = await db.companies.find_one({"id": data.company_id})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    # Get slot details
+    slots = await db.time_slots.find({"id": {"$in": data.slot_ids}, "status": "available"}).to_list(10)
+    if len(slots) != len(data.slot_ids):
+        raise HTTPException(status_code=400, detail="Some slots are not available")
+    
+    # Get assigned mentor
+    mentor = None
+    if user.get("mentor_id"):
+        mentor = await db.users.find_one({"id": user["mentor_id"]})
+    
+    if not mentor:
+        # Find any available mentor
+        mentor = await db.users.find_one({"role": "mentor"})
+    
+    if not mentor:
+        raise HTTPException(status_code=400, detail="No mentor available")
+    
+    # Create booking request
+    slot_details = [{"id": s["id"], "date": s["date"], "start_time": s["start_time"], "end_time": s["end_time"]} for s in slots]
+    
+    request_doc = {
+        "id": str(uuid.uuid4()),
+        "mentee_id": user["id"],
+        "mentee_name": user["name"],
+        "mentee_email": user["email"],
+        "mentor_id": mentor["id"],
+        "mentor_name": mentor["name"],
+        "mentor_email": mentor["email"],
+        "company_id": data.company_id,
+        "company_name": company["name"],
+        "preferred_slots": slot_details,
+        "status": "pending",  # pending, confirmed, cancelled
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.booking_requests.insert_one(request_doc)
+    
+    # Send email to mentor
+    slot_strings = [f"{s['date']} at {s['start_time']} - {s['end_time']}" for s in slot_details]
+    asyncio.create_task(send_booking_request_email(
+        mentor_name=mentor["name"],
+        mentor_email=mentor["email"],
+        mentee_name=user["name"],
+        company_name=company["name"],
+        slots=slot_strings
+    ))
+    
+    return serialize_doc(request_doc)
+
+@api_router.get("/mentee/booking-requests")
+async def get_mentee_booking_requests(user=Depends(get_current_user)):
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    requests = await db.booking_requests.find({"mentee_id": user["id"]}).sort("created_at", -1).to_list(100)
+    return [serialize_doc(dict(r)) for r in requests]
+
+# ============ BOOKING SYSTEM - MENTOR ROUTES ============
+@api_router.get("/mentor/booking-requests")
+async def get_mentor_booking_requests(user=Depends(get_current_user)):
+    if user["role"] != "mentor":
+        raise HTTPException(status_code=403, detail="Mentor only")
+    requests = await db.booking_requests.find({"mentor_id": user["id"], "status": "pending"}).sort("created_at", -1).to_list(100)
+    return [serialize_doc(dict(r)) for r in requests]
+
+@api_router.post("/mentor/confirm-booking")
+async def confirm_booking(data: ConfirmBookingRequest, user=Depends(get_current_user)):
+    if user["role"] != "mentor":
+        raise HTTPException(status_code=403, detail="Mentor only")
+    
+    # Get booking request
+    request = await db.booking_requests.find_one({"id": data.booking_request_id, "mentor_id": user["id"]})
+    if not request:
+        raise HTTPException(status_code=404, detail="Booking request not found")
+    
+    if request["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Booking already processed")
+    
+    # Find the confirmed slot
+    confirmed_slot = None
+    for slot in request["preferred_slots"]:
+        if slot["id"] == data.confirmed_slot_id:
+            confirmed_slot = slot
+            break
+    
+    if not confirmed_slot:
+        raise HTTPException(status_code=400, detail="Invalid slot selection")
+    
+    # Update booking request status
+    await db.booking_requests.update_one(
+        {"id": data.booking_request_id},
+        {"$set": {
+            "status": "confirmed",
+            "confirmed_slot": confirmed_slot,
+            "meeting_link": data.meeting_link,
+            "confirmed_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Mark the slot as booked
+    await db.time_slots.update_one({"id": data.confirmed_slot_id}, {"$set": {"status": "booked"}})
+    
+    # Create a mock interview record
+    mock_doc = {
+        "id": str(uuid.uuid4()),
+        "mentee_id": request["mentee_id"],
+        "mentor_id": user["id"],
+        "company_name": request["company_name"],
+        "scheduled_at": f"{confirmed_slot['date']}T{confirmed_slot['start_time']}:00",
+        "meet_link": data.meeting_link,
+        "status": "scheduled",
+        "booking_request_id": data.booking_request_id,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.mocks.insert_one(mock_doc)
+    
+    # Get mentee details
+    mentee = await db.users.find_one({"id": request["mentee_id"]})
+    
+    # Send confirmation emails
+    slot_time_str = f"{confirmed_slot['date']} at {confirmed_slot['start_time']} - {confirmed_slot['end_time']}"
+    
+    # Email to mentee
+    if mentee:
+        asyncio.create_task(send_booking_confirmed_email(
+            recipient_name=mentee["name"],
+            recipient_email=mentee["email"],
+            company_name=request["company_name"],
+            slot_time=slot_time_str,
+            meeting_link=data.meeting_link,
+            is_mentor=False
+        ))
+    
+    # Email to mentor
+    asyncio.create_task(send_booking_confirmed_email(
+        recipient_name=user["name"],
+        recipient_email=user["email"],
+        company_name=request["company_name"],
+        slot_time=slot_time_str,
+        meeting_link=data.meeting_link,
+        is_mentor=True
+    ))
+    
+    return {"message": "Booking confirmed", "mock_id": mock_doc["id"]}
+
 # ============ MOCK INTERVIEW ROUTES ============
 @api_router.post("/mocks")
 async def create_mock(mock: MockInterviewCreate, user=Depends(get_current_user)):
