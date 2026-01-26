@@ -4,11 +4,11 @@ import { testimonials } from '../../data/mock';
 
 const TestimonialsSection = () => {
   return (
-    <section className="section bg-[#302f2c]">
+    <section className="section bg-[#0f172a]">
       <div className="container">
         <div className="max-w-3xl mb-12 md:mb-16">
-          <span className="caption text-[#d9fb06] mb-4 block">Testimonials</span>
-          <h2 className="heading-1 text-white mb-6">
+          <span className="caption mb-4 block">Testimonials</span>
+          <h2 className="heading-1 mb-6">
             What our members say
           </h2>
         </div>
@@ -17,15 +17,15 @@ const TestimonialsSection = () => {
           {testimonials.map((testimonial) => (
             <div
               key={testimonial.id}
-              className="p-8 rounded-lg border border-[#3f4816] bg-[#1a1c1b] hover:border-[#d9fb06]/50 transition-colors duration-300"
+              className="p-6 md:p-8 rounded-xl border border-[#334155] bg-[#1e293b]/30 hover:border-[#06b6d4]/30 transition-colors duration-300"
             >
-              <Quote className="text-[#d9fb06] mb-4" size={32} />
-              <p className="text-white/90 mb-6 text-lg leading-relaxed">
+              <Quote className="text-[#06b6d4] mb-4" size={28} />
+              <p className="text-slate-200 mb-6 leading-relaxed">
                 "{testimonial.quote}"
               </p>
-              <div className="border-t border-[#3f4816] pt-4">
+              <div className="border-t border-[#334155] pt-4">
                 <p className="font-semibold text-white">{testimonial.name}</p>
-                <p className="text-sm text-[#888680]">{testimonial.role}</p>
+                <p className="text-sm text-slate-400">{testimonial.role}</p>
               </div>
             </div>
           ))}
