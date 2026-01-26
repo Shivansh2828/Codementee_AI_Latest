@@ -151,19 +151,11 @@ const MentorBookingRequests = () => {
                       </div>
                     </div>
                     
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        <Video size={16} className="inline mr-2" />
-                        Meeting Link (Google Meet / Zoom) *
-                      </label>
-                      <input
-                        type="url"
-                        value={meetingLink}
-                        onChange={(e) => setMeetingLink(e.target.value)}
-                        placeholder="https://meet.google.com/xxx-xxxx-xxx"
-                        className="w-full px-4 py-2.5 bg-[#0f172a] border border-[#334155] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#06b6d4]"
-                        data-testid="meeting-link-input"
-                      />
+                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                      <p className="text-blue-400 text-sm flex items-center gap-2">
+                        <Video size={16} />
+                        A Google Meet link will be automatically assigned from the pool
+                      </p>
                     </div>
 
                     <div className="flex items-center justify-end gap-3">
@@ -171,7 +163,6 @@ const MentorBookingRequests = () => {
                         onClick={() => {
                           setConfirmingId(null);
                           setSelectedSlotId('');
-                          setMeetingLink('');
                         }}
                         className="flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-white transition-colors"
                       >
@@ -179,10 +170,11 @@ const MentorBookingRequests = () => {
                       </button>
                       <button
                         onClick={() => handleConfirm(request.id)}
-                        className="flex items-center gap-2 bg-[#10b981] text-white px-5 py-2 rounded-lg font-medium hover:bg-[#10b981]/90 transition-colors"
+                        disabled={submitting || !selectedSlotId}
+                        className="flex items-center gap-2 bg-[#10b981] text-white px-5 py-2 rounded-lg font-medium hover:bg-[#10b981]/90 transition-colors disabled:opacity-50"
                         data-testid="submit-confirm-btn"
                       >
-                        <CheckCircle size={18} /> Confirm & Send Invite
+                        <CheckCircle size={18} /> {submitting ? 'Confirming...' : 'Confirm & Send Invite'}
                       </button>
                     </div>
                   </div>
