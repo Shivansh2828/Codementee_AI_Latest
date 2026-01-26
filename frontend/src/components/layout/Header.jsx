@@ -43,7 +43,7 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
-            {navLinks.slice(0, -1).map((link) => (
+            {navLinks.slice(0, -2).map((link) => (
               <a
                 key={link.href}
                 href={link.href}
@@ -53,6 +53,9 @@ const Header = () => {
                 {link.label}
               </a>
             ))}
+            <Link to="/login" className="text-slate-300 hover:text-[#06b6d4] transition-colors duration-200 font-medium">
+              Login
+            </Link>
             <Link
               to="/apply"
               className="btn-primary text-sm py-2.5 px-5"
