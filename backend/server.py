@@ -757,13 +757,22 @@ async def confirm_booking(data: ConfirmBookingRequest, user=Depends(get_current_
     if not confirmed_slot:
         raise HTTPException(status_code=400, detail="Invalid slot selection")
     
+    # Auto-assign meeting link from pool
+    meet_link_doc = await get_available_meet_link()
+    if not meet_link_doc:
+        raise HTTPException(status_code=400, detail="No available meeting links. Please contact admin to add more.")
+    
+    meeting_link = meet_link_doc["link"]
+    await assign_meet_link(meet_link_doc["id"], data.booking_request_id)
+    
     # Update booking request status
     await db.booking_requests.update_one(
         {"id": data.booking_request_id},
         {"$set": {
             "status": "confirmed",
             "confirmed_slot": confirmed_slot,
-            "meeting_link": data.meeting_link,
+            "meeting_link": meeting_link,
+            "meet_link_id": meet_link_doc["id"],
             "confirmed_at": datetime.now(timezone.utc).isoformat()
         }}
     )
