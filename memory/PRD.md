@@ -37,15 +37,21 @@ A mentorship-based interview preparation platform with three roles: Admin, Mento
 
 ### Booking System Flow
 ```
+Admin: Creates Meet Link Pool (Google Meet URLs)
+          ↓
 Mentee → Select Company → Pick 2 Slots → Submit
                                            ↓
                               Mentor receives email + dashboard notification
                                            ↓
-                              Mentor confirms slot + adds meeting link
+                              Mentor confirms slot
                                            ↓
-                              Both receive confirmation email
+                              System auto-assigns Meet Link from pool
+                                           ↓
+                              Both receive confirmation email with link
                                            ↓
                               Session visible in both dashboards
+                                           ↓
+                              Admin releases link after interview (reusable)
 ```
 
 ### Landing Page
@@ -85,6 +91,7 @@ Mentee → Select Company → Pick 2 Slots → Submit
 - **orders** - Payment transactions
 - **companies** - Companies for mock interviews
 - **time_slots** - Available booking slots
+- **meet_links** - Google Meet link pool (auto-assigned)
 - **booking_requests** - Mentee booking requests
 - **mocks** - Confirmed mock interviews
 - **feedbacks** - Interview feedback
@@ -98,6 +105,7 @@ Mentee → Select Company → Pick 2 Slots → Submit
 - Implemented complete booking system
 - Added company management for admin
 - Added time slot management for admin
+- **Added Google Meet Link Pool** - Auto-assigns links when mentor confirms
 - Created mentee booking flow (3 steps)
 - Created mentor booking request confirmation
 - Added email notifications for booking flow
@@ -105,7 +113,6 @@ Mentee → Select Company → Pick 2 Slots → Submit
 - Integrated Resend for emails
 
 ## Future/Backlog
-- Calendar integration (Google Calendar)
-- Automated meeting link generation
-- SMS notifications
+- Google Calendar API integration (auto-create events)
+- SMS notifications via Twilio
 - Mobile app
