@@ -136,6 +136,10 @@ class TimeSlotCreate(BaseModel):
     end_time: str  # HH:MM
     mentor_id: Optional[str] = None  # If None, any mentor can take it
 
+class MeetLinkCreate(BaseModel):
+    link: str
+    name: Optional[str] = ""  # Optional label like "Room 1"
+
 class BookingRequestCreate(BaseModel):
     company_id: str
     slot_ids: List[str]  # Up to 2 preferred slots
