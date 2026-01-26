@@ -147,7 +147,7 @@ class BookingRequestCreate(BaseModel):
 class ConfirmBookingRequest(BaseModel):
     booking_request_id: str
     confirmed_slot_id: str
-    meeting_link: str
+    # meeting_link is now auto-assigned from pool
 
 # ============ HELPERS ============
 def hash_password(password: str) -> str:
