@@ -25,6 +25,7 @@ import AdminPayments from "./pages/admin/AdminPayments";
 import AdminCompanies from "./pages/admin/AdminCompanies";
 import AdminTimeSlots from "./pages/admin/AdminTimeSlots";
 import AdminBookings from "./pages/admin/AdminBookings";
+import AdminMeetLinks from "./pages/admin/AdminMeetLinks";
 
 // Mentor pages
 import MentorDashboard from "./pages/mentor/MentorDashboard";
@@ -76,6 +77,7 @@ function App() {
           <Route path="/admin/companies" element={<ProtectedRoute allowedRoles={['admin']}><AdminCompanies /></ProtectedRoute>} />
           <Route path="/admin/time-slots" element={<ProtectedRoute allowedRoles={['admin']}><AdminTimeSlots /></ProtectedRoute>} />
           <Route path="/admin/bookings" element={<ProtectedRoute allowedRoles={['admin']}><AdminBookings /></ProtectedRoute>} />
+          <Route path="/admin/meet-links" element={<ProtectedRoute allowedRoles={['admin']}><AdminMeetLinks /></ProtectedRoute>} />
 
           {/* Mentor Routes */}
           <Route path="/mentor" element={<ProtectedRoute allowedRoles={['mentor']}><MentorDashboard /></ProtectedRoute>} />

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus, Video } from 'lucide-react';
 import { useState } from 'react';
 
 const DashboardLayout = ({ children, title }) => {
@@ -23,6 +23,7 @@ const DashboardLayout = ({ children, title }) => {
         { path: '/admin/bookings', label: 'Bookings', icon: ClipboardList },
         { path: '/admin/companies', label: 'Companies', icon: Building2 },
         { path: '/admin/time-slots', label: 'Time Slots', icon: Clock },
+        { path: '/admin/meet-links', label: 'Meet Links', icon: Video },
         { path: '/admin/mentees', label: 'Mentees', icon: Users },
         { path: '/admin/mentors', label: 'Mentors', icon: Users },
         { path: '/admin/mocks', label: 'Mock Interviews', icon: Calendar },
