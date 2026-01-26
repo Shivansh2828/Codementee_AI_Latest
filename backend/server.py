@@ -15,6 +15,8 @@ from passlib.context import CryptContext
 import razorpay
 import hmac
 import hashlib
+import resend
+import asyncio
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -33,6 +35,15 @@ ACCESS_TOKEN_EXPIRE_HOURS = 24
 RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID')
 RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET')
 razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+
+# Resend Email Config
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
+SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
+BCC_EMAIL = os.environ.get('BCC_EMAIL')
+resend.api_key = RESEND_API_KEY
+
+# Logo URL for emails
+LOGO_URL = "https://customer-assets.emergentagent.com/job_interview-mentor-8/artifacts/w3mrzkd9_codementee_logo.png"
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
