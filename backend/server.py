@@ -613,6 +613,14 @@ async def verify_payment(data: VerifyPaymentRequest):
     # Generate token for auto-login
     token = create_token(user_doc["id"], user_doc["role"])
     
+    # Send welcome email (non-blocking)
+    asyncio.create_task(send_welcome_email(
+        name=order["name"],
+        email=order["email"],
+        plan_name=order["plan_name"],
+        amount=int(order["amount"] / 100)  # Convert paise to rupees
+    ))
+    
     return {
         "success": True,
         "message": "Payment successful! Welcome to Codementee.",
