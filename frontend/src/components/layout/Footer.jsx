@@ -7,7 +7,7 @@ const Footer = () => {
   return (
     <footer className="bg-[#0f172a] border-t border-[#334155]/50 py-12 md:py-16">
       <div className="container">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12">
           {/* Brand */}
           <div>
             <Link to="/" className="inline-block">
@@ -37,6 +37,38 @@ const Footer = () => {
               <li>
                 <Link to="/apply" className="text-slate-400 hover:text-[#06b6d4] transition-colors text-sm">
                   Apply Now
+                </Link>
+              </li>
+              <li>
+                <Link to="/login" className="text-slate-400 hover:text-[#06b6d4] transition-colors text-sm">
+                  Login
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Legal */}
+          <div>
+            <h4 className="text-white font-semibold mb-4">Legal</h4>
+            <ul className="space-y-3">
+              <li>
+                <Link to="/privacy-policy" className="text-slate-400 hover:text-[#06b6d4] transition-colors text-sm">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link to="/terms-of-service" className="text-slate-400 hover:text-[#06b6d4] transition-colors text-sm">
+                  Terms of Service
+                </Link>
+              </li>
+              <li>
+                <Link to="/refund-policy" className="text-slate-400 hover:text-[#06b6d4] transition-colors text-sm">
+                  Refund Policy
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" className="text-slate-400 hover:text-[#06b6d4] transition-colors text-sm">
+                  Contact Us
                 </Link>
               </li>
             </ul>
