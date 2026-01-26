@@ -312,6 +312,155 @@ async def get_user(user_id: str, user=Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="User not found")
     return serialize_doc(dict(target))
 
+# ============ RAZORPAY PAYMENT ROUTES ============
+class CreateOrderRequest(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    plan_id: str  # monthly, quarterly, biannual
+    current_role: str = ""
+    target_role: str = ""
+    timeline: str = ""
+    struggle: str = ""
+
+class VerifyPaymentRequest(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+    order_id: str  # Our internal order ID
+
+PLAN_PRICES = {
+    "monthly": 199900,      # ₹1,999 in paise
+    "quarterly": 499900,    # ₹4,999 in paise
+    "biannual": 899900      # ₹8,999 in paise
+}
+
+PLAN_NAMES = {
+    "monthly": "Monthly Plan",
+    "quarterly": "3 Months Plan",
+    "biannual": "6 Months Plan"
+}
+
+@api_router.post("/payment/create-order")
+async def create_payment_order(data: CreateOrderRequest):
+    # Check if email already exists
+    existing = await db.users.find_one({"email": data.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered. Please login instead.")
+    
+    # Validate plan
+    if data.plan_id not in PLAN_PRICES:
+        raise HTTPException(status_code=400, detail="Invalid plan selected")
+    
+    amount = PLAN_PRICES[data.plan_id]
+    
+    # Create Razorpay order
+    try:
+        razorpay_order = razorpay_client.order.create({
+            "amount": amount,
+            "currency": "INR",
+            "receipt": f"order_{uuid.uuid4().hex[:10]}",
+            "notes": {
+                "email": data.email,
+                "plan": data.plan_id
+            }
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create order: {str(e)}")
+    
+    # Store order in DB with user details (pending status)
+    order_doc = {
+        "id": str(uuid.uuid4()),
+        "razorpay_order_id": razorpay_order["id"],
+        "name": data.name,
+        "email": data.email,
+        "password": hash_password(data.password),
+        "plan_id": data.plan_id,
+        "plan_name": PLAN_NAMES[data.plan_id],
+        "amount": amount,
+        "current_role": data.current_role,
+        "target_role": data.target_role,
+        "timeline": data.timeline,
+        "struggle": data.struggle,
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.orders.insert_one(order_doc)
+    
+    return {
+        "order_id": order_doc["id"],
+        "razorpay_order_id": razorpay_order["id"],
+        "razorpay_key_id": RAZORPAY_KEY_ID,
+        "amount": amount,
+        "currency": "INR",
+        "name": data.name,
+        "email": data.email
+    }
+
+@api_router.post("/payment/verify")
+async def verify_payment(data: VerifyPaymentRequest):
+    # Get order from DB
+    order = await db.orders.find_one({"id": data.order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    if order["status"] == "paid":
+        raise HTTPException(status_code=400, detail="Order already processed")
+    
+    # Verify signature
+    try:
+        generated_signature = hmac.new(
+            RAZORPAY_KEY_SECRET.encode(),
+            f"{data.razorpay_order_id}|{data.razorpay_payment_id}".encode(),
+            hashlib.sha256
+        ).hexdigest()
+        
+        if generated_signature != data.razorpay_signature:
+            raise HTTPException(status_code=400, detail="Payment verification failed")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Signature verification error: {str(e)}")
+    
+    # Update order status
+    await db.orders.update_one(
+        {"id": data.order_id},
+        {"$set": {
+            "status": "paid",
+            "razorpay_payment_id": data.razorpay_payment_id,
+            "paid_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Create user account
+    user_doc = {
+        "id": str(uuid.uuid4()),
+        "name": order["name"],
+        "email": order["email"],
+        "password": order["password"],
+        "role": "mentee",
+        "status": "Active",
+        "plan_id": order["plan_id"],
+        "plan_name": order["plan_name"],
+        "mentor_id": None,
+        "current_role": order.get("current_role", ""),
+        "target_role": order.get("target_role", ""),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.users.insert_one(user_doc)
+    
+    # Generate token for auto-login
+    token = create_token(user_doc["id"], user_doc["role"])
+    
+    return {
+        "success": True,
+        "message": "Payment successful! Welcome to Codementee.",
+        "access_token": token,
+        "user": serialize_doc(user_doc)
+    }
+
+@api_router.get("/payment/config")
+async def get_payment_config():
+    return {"razorpay_key_id": RAZORPAY_KEY_ID}
+
 @api_router.get("/")
 async def root():
     return {"message": "Codementee API"}
