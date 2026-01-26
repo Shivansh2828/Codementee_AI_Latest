@@ -73,17 +73,22 @@ function App() {
           <Route path="/admin/mocks" element={<ProtectedRoute allowedRoles={['admin']}><AdminMocks /></ProtectedRoute>} />
           <Route path="/admin/feedbacks" element={<ProtectedRoute allowedRoles={['admin']}><AdminFeedbacks /></ProtectedRoute>} />
           <Route path="/admin/orders" element={<ProtectedRoute allowedRoles={['admin']}><AdminPayments /></ProtectedRoute>} />
+          <Route path="/admin/companies" element={<ProtectedRoute allowedRoles={['admin']}><AdminCompanies /></ProtectedRoute>} />
+          <Route path="/admin/time-slots" element={<ProtectedRoute allowedRoles={['admin']}><AdminTimeSlots /></ProtectedRoute>} />
+          <Route path="/admin/bookings" element={<ProtectedRoute allowedRoles={['admin']}><AdminBookings /></ProtectedRoute>} />
 
           {/* Mentor Routes */}
           <Route path="/mentor" element={<ProtectedRoute allowedRoles={['mentor']}><MentorDashboard /></ProtectedRoute>} />
           <Route path="/mentor/mentees" element={<ProtectedRoute allowedRoles={['mentor']}><MentorMentees /></ProtectedRoute>} />
           <Route path="/mentor/mocks" element={<ProtectedRoute allowedRoles={['mentor']}><MentorMocks /></ProtectedRoute>} />
           <Route path="/mentor/feedbacks" element={<ProtectedRoute allowedRoles={['mentor']}><MentorFeedbacks /></ProtectedRoute>} />
+          <Route path="/mentor/booking-requests" element={<ProtectedRoute allowedRoles={['mentor']}><MentorBookingRequests /></ProtectedRoute>} />
 
           {/* Mentee Routes */}
           <Route path="/mentee" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeDashboard /></ProtectedRoute>} />
           <Route path="/mentee/mocks" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeMocks /></ProtectedRoute>} />
           <Route path="/mentee/feedbacks" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeFeedbacks /></ProtectedRoute>} />
+          <Route path="/mentee/book" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeBooking /></ProtectedRoute>} />
 
           {/* Catch all */}
           <Route path="*" element={<Navigate to="/" replace />} />
