@@ -65,18 +65,24 @@ const HeroSection = () => {
 
           {/* Company Logos Section */}
           <div className="pt-8 border-t border-[#334155]/50">
-            <p className="text-sm text-slate-500 mb-4">Our mentors have interviewed at:</p>
-            <div className="flex flex-wrap items-center gap-4">
+            <p className="text-sm text-slate-500 mb-6">Our mentors have interviewed at:</p>
+            <div className="flex flex-wrap items-center gap-8 md:gap-12">
               {targetCompanies.map((company) => (
                 <div
                   key={company.name}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1e293b]/50 border border-[#334155]/50 hover:border-[#06b6d4]/30 transition-colors"
+                  className="h-6 md:h-8 opacity-70 hover:opacity-100 transition-opacity grayscale hover:grayscale-0"
                 >
-                  <div 
-                    className="w-2.5 h-2.5 rounded-full"
-                    style={{ backgroundColor: company.color }}
+                  <img 
+                    src={company.logo} 
+                    alt={company.name}
+                    className="h-full w-auto object-contain"
+                    style={{ filter: 'brightness(0) invert(1)', maxWidth: '100px' }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'block';
+                    }}
                   />
-                  <span className="text-slate-300 font-medium text-sm">{company.name}</span>
+                  <span className="hidden text-slate-300 font-medium text-sm">{company.name}</span>
                 </div>
               ))}
             </div>
