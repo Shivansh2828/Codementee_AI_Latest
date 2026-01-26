@@ -787,7 +787,7 @@ async def confirm_booking(data: ConfirmBookingRequest, user=Depends(get_current_
         "mentor_id": user["id"],
         "company_name": request["company_name"],
         "scheduled_at": f"{confirmed_slot['date']}T{confirmed_slot['start_time']}:00",
-        "meet_link": data.meeting_link,
+        "meet_link": meeting_link,
         "status": "scheduled",
         "booking_request_id": data.booking_request_id,
         "created_at": datetime.now(timezone.utc).isoformat()
@@ -807,7 +807,7 @@ async def confirm_booking(data: ConfirmBookingRequest, user=Depends(get_current_
             recipient_email=mentee["email"],
             company_name=request["company_name"],
             slot_time=slot_time_str,
-            meeting_link=data.meeting_link,
+            meeting_link=meeting_link,
             is_mentor=False
         ))
     
@@ -817,11 +817,11 @@ async def confirm_booking(data: ConfirmBookingRequest, user=Depends(get_current_
         recipient_email=user["email"],
         company_name=request["company_name"],
         slot_time=slot_time_str,
-        meeting_link=data.meeting_link,
+        meeting_link=meeting_link,
         is_mentor=True
     ))
     
-    return {"message": "Booking confirmed", "mock_id": mock_doc["id"]}
+    return {"message": "Booking confirmed", "mock_id": mock_doc["id"], "meeting_link": meeting_link}
 
 # ============ MOCK INTERVIEW ROUTES ============
 @api_router.post("/mocks")
