@@ -9,7 +9,7 @@ const MentorBookingRequests = () => {
   const [loading, setLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState(null);
   const [selectedSlotId, setSelectedSlotId] = useState('');
-  const [meetingLink, setMeetingLink] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchRequests = async () => {
     try {
@@ -26,25 +26,25 @@ const MentorBookingRequests = () => {
   }, []);
 
   const handleConfirm = async (requestId) => {
-    if (!selectedSlotId || !meetingLink) {
-      toast.error('Please select a slot and provide meeting link');
+    if (!selectedSlotId) {
+      toast.error('Please select a slot');
       return;
     }
     
+    setSubmitting(true);
     try {
-      await api.post('/mentor/confirm-booking', {
+      const response = await api.post('/mentor/confirm-booking', {
         booking_request_id: requestId,
-        confirmed_slot_id: selectedSlotId,
-        meeting_link: meetingLink
+        confirmed_slot_id: selectedSlotId
       });
-      toast.success('Booking confirmed! Both you and the mentee will receive an email.');
+      toast.success(`Booking confirmed! Meeting link: ${response.data.meeting_link}`);
       setConfirmingId(null);
       setSelectedSlotId('');
-      setMeetingLink('');
       fetchRequests();
     } catch (e) {
       toast.error(e.response?.data?.detail || 'Failed to confirm booking');
     }
+    setSubmitting(false);
   };
 
   const formatDate = (dateStr) => {
