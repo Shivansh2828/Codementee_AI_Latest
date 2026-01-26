@@ -2,22 +2,20 @@
 
 export const siteConfig = {
   name: "Codementee",
-  tagline: "Real mock interviews with engineers who've cracked product companies",
+  tagline: "Real mock interviews with engineers who've cracked product based companies",
   subTagline: "No AI-only feedback. No generic courses. Limited seats. Real interviewers.",
   contactEmail: "hello@codementee.com",
   founderName: "The Codementee Team"
 };
 
-// Companies where our mentors have worked
+// Companies where our mentors have worked - with logo URLs
 export const targetCompanies = [
-  { name: "Amazon", color: "#FF9900" },
-  { name: "Google", color: "#4285F4" },
-  { name: "Microsoft", color: "#00A4EF" },
-  { name: "Flipkart", color: "#F8D210" },
-  { name: "Razorpay", color: "#528FF0" },
-  { name: "Swiggy", color: "#FC8019" },
-  { name: "Uber", color: "#000000" },
-  { name: "Atlassian", color: "#0052CC" }
+  { name: "Amazon", logo: "https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" },
+  { name: "Google", logo: "https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg" },
+  { name: "Microsoft", logo: "https://upload.wikimedia.org/wikipedia/commons/9/96/Microsoft_logo_%282012%29.svg" },
+  { name: "Meta", logo: "https://upload.wikimedia.org/wikipedia/commons/7/7b/Meta_Platforms_Inc._logo.svg" },
+  { name: "Flipkart", logo: "https://upload.wikimedia.org/wikipedia/commons/f/f3/Flipkart_logo_2023.svg" },
+  { name: "Uber", logo: "https://upload.wikimedia.org/wikipedia/commons/c/cc/Uber_logo_2018.png" }
 ];
 
 export const cohortData = {
