@@ -583,6 +583,70 @@ async def get_all_booking_requests(user=Depends(get_current_user)):
     requests = await db.booking_requests.find().sort("created_at", -1).to_list(1000)
     return [serialize_doc(dict(r)) for r in requests]
 
+# ============ MEET LINKS MANAGEMENT ============
+@api_router.get("/admin/meet-links")
+async def get_meet_links(user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    links = await db.meet_links.find().sort("created_at", -1).to_list(1000)
+    return [serialize_doc(dict(l)) for l in links]
+
+@api_router.post("/admin/meet-links")
+async def create_meet_link(data: MeetLinkCreate, user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    # Check if link already exists
+    existing = await db.meet_links.find_one({"link": data.link})
+    if existing:
+        raise HTTPException(status_code=400, detail="This link already exists")
+    
+    link_doc = {
+        "id": str(uuid.uuid4()),
+        "link": data.link,
+        "name": data.name or f"Room {await db.meet_links.count_documents({}) + 1}",
+        "status": "available",  # available, in_use
+        "current_booking_id": None,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.meet_links.insert_one(link_doc)
+    return serialize_doc(link_doc)
+
+@api_router.delete("/admin/meet-links/{link_id}")
+async def delete_meet_link(link_id: str, user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    link = await db.meet_links.find_one({"id": link_id})
+    if link and link.get("status") == "in_use":
+        raise HTTPException(status_code=400, detail="Cannot delete a link that is currently in use")
+    
+    await db.meet_links.delete_one({"id": link_id})
+    return {"message": "Meet link deleted"}
+
+@api_router.post("/admin/meet-links/{link_id}/release")
+async def release_meet_link(link_id: str, user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    await db.meet_links.update_one(
+        {"id": link_id},
+        {"$set": {"status": "available", "current_booking_id": None}}
+    )
+    return {"message": "Meet link released"}
+
+async def get_available_meet_link():
+    """Get an available meet link from the pool"""
+    link = await db.meet_links.find_one({"status": "available"})
+    return link
+
+async def assign_meet_link(link_id: str, booking_id: str):
+    """Mark a meet link as in use"""
+    await db.meet_links.update_one(
+        {"id": link_id},
+        {"$set": {"status": "in_use", "current_booking_id": booking_id}}
+    )
+
 # ============ BOOKING SYSTEM - PUBLIC/MENTEE ROUTES ============
 @api_router.get("/companies")
 async def get_public_companies():
