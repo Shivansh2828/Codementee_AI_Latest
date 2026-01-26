@@ -3,11 +3,11 @@ import { howItWorks } from '../../data/mock';
 
 const HowItWorksSection = () => {
   return (
-    <section id="how-it-works" className="section bg-[#1a1c1b]">
+    <section id="how-it-works" className="section bg-[#0f172a]">
       <div className="container">
         <div className="max-w-3xl mb-12 md:mb-16">
-          <span className="caption text-[#d9fb06] mb-4 block">Process</span>
-          <h2 className="heading-1 text-white mb-6">
+          <span className="caption mb-4 block">Process</span>
+          <h2 className="heading-1 mb-6">
             How it works
           </h2>
           <p className="body-large">
@@ -20,19 +20,19 @@ const HowItWorksSection = () => {
             <div key={step.step} className="relative">
               {/* Connector Line */}
               {index < howItWorks.length - 1 && (
-                <div className="hidden lg:block absolute top-8 left-full w-full h-[2px] bg-[#3f4816] -translate-y-1/2 z-0" />
+                <div className="hidden lg:block absolute top-8 left-full w-full h-[2px] bg-[#334155] -translate-y-1/2 z-0" />
               )}
               
-              <div className="relative z-10 p-6 rounded-lg border border-[#3f4816] bg-[#302f2c]/50 h-full">
+              <div className="relative z-10 p-6 rounded-xl border border-[#334155] bg-[#1e293b]/30 h-full hover:border-[#06b6d4]/30 transition-colors">
                 {/* Step Number */}
-                <div className="w-16 h-16 rounded-full bg-[#3f4816] flex items-center justify-center mb-6">
-                  <span className="text-2xl font-bold text-[#d9fb06]">{step.step}</span>
+                <div className="w-14 h-14 rounded-xl bg-[#06b6d4] flex items-center justify-center mb-5">
+                  <span className="text-xl font-bold text-[#0f172a]">{step.step}</span>
                 </div>
                 
-                <h3 className="heading-3 text-white mb-3">
+                <h3 className="text-lg font-bold text-white mb-2">
                   {step.title}
                 </h3>
-                <p className="body-medium text-[#888680]">
+                <p className="text-slate-400 text-sm">
                   {step.description}
                 </p>
               </div>
