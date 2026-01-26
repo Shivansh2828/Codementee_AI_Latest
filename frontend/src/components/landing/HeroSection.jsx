@@ -5,26 +5,26 @@ import { siteConfig, cohortData, targetCompanies } from '../../data/mock';
 
 const HeroSection = () => {
   return (
-    <section className="min-h-screen flex items-center pt-20 pb-16 md:pt-24 md:pb-20 bg-[#1a1c1b] relative overflow-hidden">
+    <section className="min-h-screen flex items-center pt-20 pb-16 md:pt-24 md:pb-20 bg-[#0f172a] relative overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 -right-1/4 w-96 h-96 bg-[#3f4816]/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 -left-1/4 w-80 h-80 bg-[#3f4816]/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 -right-1/4 w-[500px] h-[500px] bg-[#06b6d4]/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 -left-1/4 w-[400px] h-[400px] bg-[#3b82f6]/5 rounded-full blur-3xl" />
       </div>
 
       <div className="container relative z-10">
         <div className="max-w-4xl">
           {/* Seat Counter Badge */}
-          <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 rounded-full border border-[#d9fb06] bg-[#3f4816]/30">
-            <span className="w-2 h-2 bg-[#d9fb06] rounded-full seat-pulse" />
-            <span className="text-sm text-white font-medium">
-              Only <span className="text-[#d9fb06] font-bold">{cohortData.seatsRemaining}</span> of {cohortData.totalSeats} founding seats left
+          <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 rounded-full border border-[#06b6d4]/30 bg-[#06b6d4]/10">
+            <span className="w-2 h-2 bg-[#06b6d4] rounded-full seat-pulse" />
+            <span className="text-sm text-slate-200 font-medium">
+              Only <span className="text-[#06b6d4] font-bold">{cohortData.seatsRemaining}</span> of {cohortData.totalSeats} founding seats left
             </span>
           </div>
 
           {/* Main Headline */}
           <h1 className="brand-display mb-6">
-            {siteConfig.tagline}
+            Real mock interviews with engineers who've <span className="gradient-text">cracked product companies</span>
           </h1>
 
           {/* Subheadline */}
@@ -33,22 +33,22 @@ const HeroSection = () => {
           </p>
 
           {/* Clear Value Prop */}
-          <div className="flex flex-wrap gap-4 mb-10 text-sm">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#302f2c] border border-[#3f4816]">
-              <span className="w-1.5 h-1.5 bg-[#d9fb06] rounded-full" />
-              <span className="text-white/90">1-on-1 Mock Interviews</span>
+          <div className="flex flex-wrap gap-3 mb-10 text-sm">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1e293b] border border-[#334155]">
+              <span className="w-1.5 h-1.5 bg-[#06b6d4] rounded-full" />
+              <span className="text-slate-300">1-on-1 Mock Interviews</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#302f2c] border border-[#3f4816]">
-              <span className="w-1.5 h-1.5 bg-[#d9fb06] rounded-full" />
-              <span className="text-white/90">Written Feedback Reports</span>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1e293b] border border-[#334155]">
+              <span className="w-1.5 h-1.5 bg-[#06b6d4] rounded-full" />
+              <span className="text-slate-300">Written Feedback Reports</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#302f2c] border border-[#3f4816]">
-              <span className="w-1.5 h-1.5 bg-[#d9fb06] rounded-full" />
-              <span className="text-white/90">Resume Review</span>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1e293b] border border-[#334155]">
+              <span className="w-1.5 h-1.5 bg-[#06b6d4] rounded-full" />
+              <span className="text-slate-300">Resume Review</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#302f2c] border border-[#3f4816]">
-              <span className="w-1.5 h-1.5 bg-[#d9fb06] rounded-full" />
-              <span className="text-white/90">Starting ₹1,999/mo</span>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1e293b] border border-[#334155]">
+              <span className="w-1.5 h-1.5 bg-[#06b6d4] rounded-full" />
+              <span className="text-slate-300">Starting ₹1,999/mo</span>
             </div>
           </div>
 
@@ -64,19 +64,19 @@ const HeroSection = () => {
           </div>
 
           {/* Company Logos Section */}
-          <div className="pt-8 border-t border-[#3f4816]/50">
-            <p className="text-sm text-[#888680] mb-4">Our mentors have interviewed at:</p>
-            <div className="flex flex-wrap items-center gap-6">
+          <div className="pt-8 border-t border-[#334155]/50">
+            <p className="text-sm text-slate-500 mb-4">Our mentors have interviewed at:</p>
+            <div className="flex flex-wrap items-center gap-4">
               {targetCompanies.map((company) => (
                 <div
                   key={company.name}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#302f2c]/50 border border-[#3f4816]/50 hover:border-[#d9fb06]/30 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1e293b]/50 border border-[#334155]/50 hover:border-[#06b6d4]/30 transition-colors"
                 >
                   <div 
-                    className="w-3 h-3 rounded-full"
+                    className="w-2.5 h-2.5 rounded-full"
                     style={{ backgroundColor: company.color }}
                   />
-                  <span className="text-white/80 font-medium text-sm">{company.name}</span>
+                  <span className="text-slate-300 font-medium text-sm">{company.name}</span>
                 </div>
               ))}
             </div>
