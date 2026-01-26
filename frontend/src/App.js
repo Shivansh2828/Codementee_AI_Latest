@@ -13,9 +13,9 @@ function App() {
         richColors 
         toastOptions={{
           style: {
-            background: '#302f2c',
-            border: '1px solid #3f4816',
-            color: '#ffffff',
+            background: '#1e293b',
+            border: '1px solid #334155',
+            color: '#f8fafc',
           },
         }}
       />
