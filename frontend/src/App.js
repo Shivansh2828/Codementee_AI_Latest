@@ -21,6 +21,7 @@ import AdminMentees from "./pages/admin/AdminMentees";
 import AdminMentors from "./pages/admin/AdminMentors";
 import AdminMocks from "./pages/admin/AdminMocks";
 import AdminFeedbacks from "./pages/admin/AdminFeedbacks";
+import AdminPayments from "./pages/admin/AdminPayments";
 
 // Mentor pages
 import MentorDashboard from "./pages/mentor/MentorDashboard";
@@ -66,6 +67,7 @@ function App() {
           <Route path="/admin/mentors" element={<ProtectedRoute allowedRoles={['admin']}><AdminMentors /></ProtectedRoute>} />
           <Route path="/admin/mocks" element={<ProtectedRoute allowedRoles={['admin']}><AdminMocks /></ProtectedRoute>} />
           <Route path="/admin/feedbacks" element={<ProtectedRoute allowedRoles={['admin']}><AdminFeedbacks /></ProtectedRoute>} />
+          <Route path="/admin/orders" element={<ProtectedRoute allowedRoles={['admin']}><AdminPayments /></ProtectedRoute>} />
 
           {/* Mentor Routes */}
           <Route path="/mentor" element={<ProtectedRoute allowedRoles={['mentor']}><MentorDashboard /></ProtectedRoute>} />

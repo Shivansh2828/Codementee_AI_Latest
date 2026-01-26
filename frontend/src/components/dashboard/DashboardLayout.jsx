@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart } from 'lucide-react';
 import { useState } from 'react';
 
 const DashboardLayout = ({ children, title }) => {
@@ -19,6 +19,7 @@ const DashboardLayout = ({ children, title }) => {
     if (user?.role === 'admin') {
       return [
         { path: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+        { path: '/admin/orders', label: 'Orders', icon: ShoppingCart },
         { path: '/admin/mentees', label: 'Mentees', icon: Users },
         { path: '/admin/mentors', label: 'Mentors', icon: Users },
         { path: '/admin/mocks', label: 'Mock Interviews', icon: Calendar },
