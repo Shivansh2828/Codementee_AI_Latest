@@ -17,15 +17,36 @@ A mentorship-based interview preparation platform with three roles: Admin, Mento
 - [x] View submitted feedback
 - [x] Update mentee status
 - [x] **Revenue Tracking** - Total revenue, orders by plan, detailed orders list with search/filters
+- [x] **Manage Companies** - Add/delete companies for mock interviews
+- [x] **Manage Time Slots** - Create available slots for booking
+- [x] **View Booking Requests** - Monitor all booking requests
 
 ### Mentor Dashboard
 - [x] See assigned mentees and upcoming interviews
 - [x] Button to join external meeting link
 - [x] Form to submit structured feedback after mock interview
+- [x] **Booking Requests** - View and confirm pending booking requests from mentees
 
 ### Mentee Dashboard
 - [x] See upcoming mock interview details and join link
 - [x] View feedback reports after mock
+- [x] **Schedule Mock Interview** - 3-step booking flow:
+  - Step 1: Select company (Amazon, Google, etc.)
+  - Step 2: Choose up to 2 preferred time slots
+  - Step 3: Review and submit request
+
+### Booking System Flow
+```
+Mentee → Select Company → Pick 2 Slots → Submit
+                                           ↓
+                              Mentor receives email + dashboard notification
+                                           ↓
+                              Mentor confirms slot + adds meeting link
+                                           ↓
+                              Both receive confirmation email
+                                           ↓
+                              Session visible in both dashboards
+```
 
 ### Landing Page
 - [x] Professional, clean, minimal UI
@@ -39,6 +60,13 @@ A mentorship-based interview preparation platform with three roles: Admin, Mento
 - [x] Auto-create mentee account upon successful payment
 - [x] Redirect to mentee dashboard after payment
 
+### Email Notifications
+- [x] Welcome email on successful payment (with logo, order summary)
+- [x] Booking request email to mentor
+- [x] Booking confirmation email to both mentor and mentee
+- From: Support@codementee.com
+- BCC: shivanshbiz28@gmail.com
+
 ### Policy Pages
 - [x] Privacy Policy
 - [x] Terms of Service
@@ -47,28 +75,37 @@ A mentorship-based interview preparation platform with three roles: Admin, Mento
 
 ## Technical Stack
 - **Frontend**: React, React Router, Tailwind CSS, Shadcn UI, Axios
-- **Backend**: FastAPI, MongoDB (motor async driver)
+- **Backend**: FastAPI, MongoDB Atlas (cloud database)
 - **Authentication**: JWT tokens
 - **Payments**: Razorpay (LIVE keys)
+- **Emails**: Resend API
+
+## Database Collections
+- **users** - All users (admin, mentor, mentee)
+- **orders** - Payment transactions
+- **companies** - Companies for mock interviews
+- **time_slots** - Available booking slots
+- **booking_requests** - Mentee booking requests
+- **mocks** - Confirmed mock interviews
+- **feedbacks** - Interview feedback
 
 ## Test Credentials
-- **Admin**: admin@test.com / password
-- **Mentor**: mentor@test.com / password
-- **Mentee**: Created dynamically via payment flow
-
-## Key API Endpoints
-- `POST /api/auth/login` - User authentication
-- `POST /api/auth/register` - User registration
-- `GET /api/admin/orders` - List all payment orders
-- `GET /api/admin/revenue-stats` - Revenue statistics
-- `POST /api/payment/create-order` - Create Razorpay order
-- `POST /api/payment/verify` - Verify payment and create user
+- **Admin**: admin@codementee.com / Admin@123
+- **Mentor**: mentor@codementee.com / Mentor@123
+- **Mentee**: mentee@codementee.com / Mentee@123
 
 ## Recent Updates (Jan 2026)
-- Completed revenue tracking feature for Admin
-- Added Admin Orders page with search and filter functionality
-- Updated Razorpay from test keys to LIVE keys
-- All tests passing (13/13 backend, 100% frontend)
+- Implemented complete booking system
+- Added company management for admin
+- Added time slot management for admin
+- Created mentee booking flow (3 steps)
+- Created mentor booking request confirmation
+- Added email notifications for booking flow
+- Connected to MongoDB Atlas (cloud)
+- Integrated Resend for emails
 
 ## Future/Backlog
-- None pending - MVP complete
+- Calendar integration (Google Calendar)
+- Automated meeting link generation
+- SMS notifications
+- Mobile app
