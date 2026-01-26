@@ -291,6 +291,104 @@ async def send_welcome_email(name: str, email: str, plan_name: str, amount: int)
         logger.error(f"Failed to send welcome email to {email}: {str(e)}")
         return None
 
+async def send_booking_request_email(mentor_name: str, mentor_email: str, mentee_name: str, company_name: str, slots: list):
+    """Send email to mentor when mentee requests a booking"""
+    try:
+        slots_html = "".join([f"<li style='color: #e2e8f0; padding: 8px 0;'>{slot}</li>" for slot in slots])
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <body style="margin: 0; padding: 40px; font-family: Arial, sans-serif; background-color: #0f172a;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #1e293b; border-radius: 16px; overflow: hidden;">
+                <div style="padding: 30px; text-align: center; border-bottom: 1px solid #334155;">
+                    <img src="{LOGO_URL}" alt="Codementee" style="height: 50px;" />
+                </div>
+                <div style="padding: 40px;">
+                    <h1 style="color: #06b6d4; margin: 0 0 20px 0; font-size: 24px;">New Booking Request 📅</h1>
+                    <p style="color: #e2e8f0; font-size: 16px;">Hi {mentor_name},</p>
+                    <p style="color: #94a3b8; font-size: 14px; line-height: 1.6;">
+                        <strong style="color: #e2e8f0;">{mentee_name}</strong> has requested a mock interview for <strong style="color: #06b6d4;">{company_name}</strong>.
+                    </p>
+                    <div style="background-color: #0f172a; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                        <h3 style="color: #06b6d4; margin: 0 0 12px 0; font-size: 14px; text-transform: uppercase;">Preferred Slots</h3>
+                        <ul style="margin: 0; padding-left: 20px;">{slots_html}</ul>
+                    </div>
+                    <p style="color: #94a3b8; font-size: 14px;">Please login to your dashboard to confirm one of the slots.</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="https://codementee.com/login" style="display: inline-block; background-color: #06b6d4; color: #0f172a; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px;">
+                            View Request
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        params = {"from": SENDER_EMAIL, "to": [mentor_email], "subject": f"New Booking Request from {mentee_name}", "html": html_content}
+        if BCC_EMAIL:
+            params["bcc"] = [BCC_EMAIL]
+        
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Booking request email sent to {mentor_email}")
+        return result
+    except Exception as e:
+        logger.error(f"Failed to send booking request email: {str(e)}")
+        return None
+
+async def send_booking_confirmed_email(recipient_name: str, recipient_email: str, company_name: str, slot_time: str, meeting_link: str, is_mentor: bool = False):
+    """Send email when booking is confirmed"""
+    try:
+        role_text = "You have confirmed" if is_mentor else "Your mock interview has been confirmed"
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <body style="margin: 0; padding: 40px; font-family: Arial, sans-serif; background-color: #0f172a;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #1e293b; border-radius: 16px; overflow: hidden;">
+                <div style="padding: 30px; text-align: center; border-bottom: 1px solid #334155;">
+                    <img src="{LOGO_URL}" alt="Codementee" style="height: 50px;" />
+                </div>
+                <div style="padding: 40px;">
+                    <h1 style="color: #10b981; margin: 0 0 20px 0; font-size: 24px;">Mock Interview Confirmed ✅</h1>
+                    <p style="color: #e2e8f0; font-size: 16px;">Hi {recipient_name},</p>
+                    <p style="color: #94a3b8; font-size: 14px; line-height: 1.6;">{role_text} for <strong style="color: #06b6d4;">{company_name}</strong>.</p>
+                    <div style="background-color: #0f172a; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                        <table width="100%">
+                            <tr>
+                                <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Date & Time</td>
+                                <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{slot_time}</td>
+                            </tr>
+                            <tr>
+                                <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Company</td>
+                                <td style="color: #06b6d4; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{company_name}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="{meeting_link}" style="display: inline-block; background-color: #10b981; color: white; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px;">
+                            Join Meeting
+                        </a>
+                    </div>
+                    <p style="color: #64748b; font-size: 12px; text-align: center;">Add this to your calendar and be ready 5 minutes early.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        params = {"from": SENDER_EMAIL, "to": [recipient_email], "subject": f"Mock Interview Confirmed - {company_name}", "html": html_content}
+        if BCC_EMAIL:
+            params["bcc"] = [BCC_EMAIL]
+        
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Booking confirmed email sent to {recipient_email}")
+        return result
+    except Exception as e:
+        logger.error(f"Failed to send booking confirmed email: {str(e)}")
+        return None
+
 # ============ AUTH ROUTES ============
 @api_router.post("/auth/register")
 async def register(user: UserCreate):
