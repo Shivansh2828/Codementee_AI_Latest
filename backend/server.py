@@ -230,6 +230,44 @@ async def get_all_feedbacks(user=Depends(get_current_user)):
     feedbacks = await db.feedbacks.find().to_list(1000)
     return [serialize_doc(dict(f)) for f in feedbacks]
 
+@api_router.get("/admin/orders")
+async def get_all_orders(user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    orders = await db.orders.find().sort("created_at", -1).to_list(1000)
+    return [serialize_doc(dict(o)) for o in orders]
+
+@api_router.get("/admin/revenue-stats")
+async def get_revenue_stats(user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    # Get all paid orders
+    paid_orders = await db.orders.find({"status": "paid"}).to_list(1000)
+    
+    # Calculate stats
+    total_revenue = sum(o.get("amount", 0) for o in paid_orders) / 100  # Convert paise to rupees
+    total_orders = len(paid_orders)
+    
+    # Revenue by plan
+    plan_revenue = {}
+    plan_counts = {}
+    for order in paid_orders:
+        plan = order.get("plan_id", "unknown")
+        plan_revenue[plan] = plan_revenue.get(plan, 0) + (order.get("amount", 0) / 100)
+        plan_counts[plan] = plan_counts.get(plan, 0) + 1
+    
+    # Recent orders (last 10)
+    recent_orders = paid_orders[:10] if paid_orders else []
+    
+    return {
+        "total_revenue": total_revenue,
+        "total_orders": total_orders,
+        "plan_revenue": plan_revenue,
+        "plan_counts": plan_counts,
+        "recent_orders": [serialize_doc(dict(o)) for o in recent_orders]
+    }
+
 # ============ MOCK INTERVIEW ROUTES ============
 @api_router.post("/mocks")
 async def create_mock(mock: MockInterviewCreate, user=Depends(get_current_user)):
