@@ -22,17 +22,22 @@ import AdminMentors from "./pages/admin/AdminMentors";
 import AdminMocks from "./pages/admin/AdminMocks";
 import AdminFeedbacks from "./pages/admin/AdminFeedbacks";
 import AdminPayments from "./pages/admin/AdminPayments";
+import AdminCompanies from "./pages/admin/AdminCompanies";
+import AdminTimeSlots from "./pages/admin/AdminTimeSlots";
+import AdminBookings from "./pages/admin/AdminBookings";
 
 // Mentor pages
 import MentorDashboard from "./pages/mentor/MentorDashboard";
 import MentorMentees from "./pages/mentor/MentorMentees";
 import MentorMocks from "./pages/mentor/MentorMocks";
 import MentorFeedbacks from "./pages/mentor/MentorFeedbacks";
+import MentorBookingRequests from "./pages/mentor/MentorBookingRequests";
 
 // Mentee pages
 import MenteeDashboard from "./pages/mentee/MenteeDashboard";
 import MenteeMocks from "./pages/mentee/MenteeMocks";
 import MenteeFeedbacks from "./pages/mentee/MenteeFeedbacks";
+import MenteeBooking from "./pages/mentee/MenteeBooking";
 
 function App() {
   return (
