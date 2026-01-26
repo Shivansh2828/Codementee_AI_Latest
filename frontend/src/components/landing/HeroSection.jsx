@@ -24,7 +24,7 @@ const HeroSection = () => {
 
           {/* Main Headline */}
           <h1 className="brand-display mb-6">
-            Real mock interviews with engineers who've <span className="gradient-text">cracked product companies</span>
+            Real mock interviews with engineers who've <span className="gradient-text">cracked product based companies</span>
           </h1>
 
           {/* Subheadline */}
