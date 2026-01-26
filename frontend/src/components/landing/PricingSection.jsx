@@ -1,9 +1,56 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, ArrowRight, Star } from 'lucide-react';
-import { cohortData, pricingPlans } from '../../data/mock';
+import { cohortData } from '../../data/mock';
+import api from '../../utils/api';
 
 const PricingSection = () => {
+  const [pricingPlans, setPricingPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchPricingPlans = async () => {
+    try {
+      console.log('Fetching pricing plans from API...');
+      // Add cache busting to ensure fresh data
+      const response = await api.get(`/pricing-plans?t=${Date.now()}`);
+      console.log('API Response:', response.data);
+      setPricingPlans(response.data);
+    } catch (error) {
+      console.error('Error fetching pricing plans:', error);
+      console.log('Falling back to mock data');
+      // Fallback to mock data if API fails
+      const { pricingPlans: mockPlans } = await import('../../data/mock');
+      console.log('Mock data:', mockPlans);
+      setPricingPlans(mockPlans);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPricingPlans();
+  }, []);
+
+  const handleRefresh = () => {
+    setLoading(true);
+    fetchPricingPlans();
+  };
+
+  if (loading) {
+    return (
+      <section id="pricing" className="section bg-[#1e293b]">
+        <div className="container">
+          <div className="max-w-3xl mx-auto text-center">
+            <div className="animate-pulse">
+              <div className="h-8 bg-slate-700 rounded mb-4"></div>
+              <div className="h-12 bg-slate-700 rounded mb-6"></div>
+              <div className="h-6 bg-slate-700 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
   return (
     <section id="pricing" className="section bg-[#1e293b]">
       <div className="container">

@@ -124,6 +124,36 @@ class AssignMentor(BaseModel):
 class UpdateStatus(BaseModel):
     status: str  # Applied, Active, Interviewed, Upgraded, Paused
 
+# ============ PRICING MODELS ============
+class PricingPlan(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    plan_id: str  # monthly, quarterly, biannual
+    name: str
+    price: int  # in paise
+    duration_months: int
+    features: List[str] = []
+    is_active: bool = True
+    display_order: int = 1
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class PricingPlanCreate(BaseModel):
+    plan_id: str
+    name: str
+    price: int  # in paise
+    duration_months: int
+    features: List[str] = []
+    is_active: bool = True
+    display_order: int = 1
+
+class PricingPlanUpdate(BaseModel):
+    name: Optional[str] = None
+    price: Optional[int] = None  # in paise
+    duration_months: Optional[int] = None
+    features: Optional[List[str]] = None
+    is_active: Optional[bool] = None
+    display_order: Optional[int] = None
+
 # ============ BOOKING SYSTEM MODELS ============
 class CompanyCreate(BaseModel):
     name: str
@@ -583,6 +613,123 @@ async def get_all_booking_requests(user=Depends(get_current_user)):
     requests = await db.booking_requests.find().sort("created_at", -1).to_list(1000)
     return [serialize_doc(dict(r)) for r in requests]
 
+# ============ ADMIN PRICING MANAGEMENT ============
+@api_router.get("/admin/pricing-plans")
+async def get_pricing_plans(user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    plans = await db.pricing_plans.find().sort("display_order", 1).to_list(100)
+    return [serialize_doc(dict(p)) for p in plans]
+
+@api_router.post("/admin/pricing-plans")
+async def create_pricing_plan(data: PricingPlanCreate, user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    # Check if plan_id already exists
+    existing = await db.pricing_plans.find_one({"plan_id": data.plan_id})
+    if existing:
+        raise HTTPException(status_code=400, detail="Plan ID already exists")
+    
+    plan_doc = {
+        "id": str(uuid.uuid4()),
+        "plan_id": data.plan_id,
+        "name": data.name,
+        "price": data.price,
+        "duration_months": data.duration_months,
+        "features": data.features,
+        "is_active": data.is_active,
+        "display_order": data.display_order,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.pricing_plans.insert_one(plan_doc)
+    return serialize_doc(plan_doc)
+
+@api_router.put("/admin/pricing-plans/{plan_id}")
+async def update_pricing_plan(plan_id: str, data: PricingPlanUpdate, user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    plan = await db.pricing_plans.find_one({"plan_id": plan_id})
+    if not plan:
+        raise HTTPException(status_code=404, detail="Pricing plan not found")
+    
+    update_data = {k: v for k, v in data.dict().items() if v is not None}
+    if update_data:
+        update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await db.pricing_plans.update_one({"plan_id": plan_id}, {"$set": update_data})
+    
+    updated_plan = await db.pricing_plans.find_one({"plan_id": plan_id})
+    return serialize_doc(dict(updated_plan))
+
+@api_router.delete("/admin/pricing-plans/{plan_id}")
+async def delete_pricing_plan(plan_id: str, user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    result = await db.pricing_plans.delete_one({"plan_id": plan_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Pricing plan not found")
+    
+    return {"message": "Pricing plan deleted successfully"}
+
+# ============ PUBLIC PRICING ROUTES ============
+@api_router.get("/pricing-plans")
+async def get_public_pricing_plans():
+    """Get active pricing plans for public display"""
+    plans = await db.pricing_plans.find({"is_active": True}).sort("display_order", 1).to_list(100)
+    
+    # Transform backend data to frontend format
+    transformed_plans = []
+    for plan in plans:
+        # Calculate per month price
+        per_month = plan["price"] // (plan["duration_months"] * 100)  # Convert from paise to rupees
+        
+        # Determine if popular (middle plan or explicitly marked)
+        popular = plan.get("popular", plan["plan_id"] == "quarterly")
+        
+        # Calculate original price and savings for multi-month plans
+        original_price = None
+        savings = None
+        if plan["duration_months"] > 1:
+            monthly_price = 1999  # Base monthly price
+            original_price = monthly_price * plan["duration_months"]
+            savings_amount = original_price - (plan["price"] // 100)
+            if savings_amount > 0:
+                savings = f"Save ₹{savings_amount:,}"
+        
+        # Map duration
+        duration_map = {
+            1: "1 Month",
+            3: "3 Months", 
+            6: "6 Months",
+            12: "12 Months"
+        }
+        
+        # Map CTA text
+        cta_map = {
+            "monthly": "Start Monthly",
+            "quarterly": "Best Value",
+            "biannual": "Maximum Prep"
+        }
+        
+        transformed_plan = {
+            "id": plan["plan_id"],
+            "name": plan["name"],
+            "duration": duration_map.get(plan["duration_months"], f"{plan['duration_months']} Months"),
+            "price": plan["price"] // 100,  # Convert from paise to rupees
+            "originalPrice": original_price,
+            "perMonth": per_month,
+            "popular": popular,
+            "savings": savings,
+            "features": plan.get("features", []),
+            "cta": cta_map.get(plan["plan_id"], "Choose Plan")
+        }
+        transformed_plans.append(transformed_plan)
+    
+    return transformed_plans
+
 # ============ MEET LINKS MANAGEMENT ============
 @api_router.get("/admin/meet-links")
 async def get_meet_links(user=Depends(get_current_user)):
@@ -923,16 +1070,38 @@ class VerifyPaymentRequest(BaseModel):
     order_id: str  # Our internal order ID
 
 PLAN_PRICES = {
-    "monthly": 199900,      # ₹1,999 in paise
-    "quarterly": 499900,    # ₹4,999 in paise
-    "biannual": 899900      # ₹8,999 in paise
+    "monthly": 199900,      # ₹1,999 in paise - DEPRECATED: Use dynamic pricing
+    "quarterly": 499900,    # ₹4,999 in paise - DEPRECATED: Use dynamic pricing
+    "biannual": 899900      # ₹8,999 in paise - DEPRECATED: Use dynamic pricing
 }
 
 PLAN_NAMES = {
-    "monthly": "Monthly Plan",
-    "quarterly": "3 Months Plan",
-    "biannual": "6 Months Plan"
+    "monthly": "Monthly Plan",      # DEPRECATED: Use dynamic pricing
+    "quarterly": "3 Months Plan",   # DEPRECATED: Use dynamic pricing
+    "biannual": "6 Months Plan"     # DEPRECATED: Use dynamic pricing
 }
+
+async def get_pricing_plan(plan_id: str):
+    """Get pricing plan from database, fallback to hardcoded values"""
+    plan = await db.pricing_plans.find_one({"plan_id": plan_id, "is_active": True})
+    if plan:
+        return {
+            "price": plan["price"],
+            "name": plan["name"],
+            "duration_months": plan["duration_months"],
+            "features": plan.get("features", [])
+        }
+    
+    # Fallback to hardcoded values for backward compatibility
+    if plan_id in PLAN_PRICES:
+        return {
+            "price": PLAN_PRICES[plan_id],
+            "name": PLAN_NAMES[plan_id],
+            "duration_months": 1 if plan_id == "monthly" else (3 if plan_id == "quarterly" else 6),
+            "features": []
+        }
+    
+    return None
 
 @api_router.post("/payment/create-order")
 async def create_payment_order(data: CreateOrderRequest):
@@ -941,11 +1110,13 @@ async def create_payment_order(data: CreateOrderRequest):
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered. Please login instead.")
     
-    # Validate plan
-    if data.plan_id not in PLAN_PRICES:
+    # Get pricing plan (dynamic or fallback)
+    plan_info = await get_pricing_plan(data.plan_id)
+    if not plan_info:
         raise HTTPException(status_code=400, detail="Invalid plan selected")
     
-    amount = PLAN_PRICES[data.plan_id]
+    amount = plan_info["price"]
+    plan_name = plan_info["name"]
     
     # Create Razorpay order
     try:
@@ -969,7 +1140,7 @@ async def create_payment_order(data: CreateOrderRequest):
         "email": data.email,
         "password": hash_password(data.password),
         "plan_id": data.plan_id,
-        "plan_name": PLAN_NAMES[data.plan_id],
+        "plan_name": plan_name,
         "amount": amount,
         "current_role": data.current_role,
         "target_role": data.target_role,
