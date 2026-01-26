@@ -42,7 +42,7 @@ const ApplyPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#1a1c1b]">
+    <div className="min-h-screen bg-[#0f172a]">
       <Header />
       <main className="pt-24 pb-16 md:pt-32 md:pb-24">
         <div className="container">
@@ -50,7 +50,7 @@ const ApplyPage = () => {
             {/* Back Link */}
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 text-[#888680] hover:text-[#d9fb06] transition-colors mb-8"
+              className="flex items-center gap-2 text-slate-400 hover:text-[#06b6d4] transition-colors mb-8"
             >
               <ArrowLeft size={18} />
               Back to Home
@@ -58,8 +58,8 @@ const ApplyPage = () => {
 
             {/* Header */}
             <div className="mb-10">
-              <span className="caption text-[#d9fb06] mb-4 block">Apply Now</span>
-              <h1 className="heading-1 text-white mb-4">
+              <span className="caption mb-4 block">Apply Now</span>
+              <h1 className="heading-1 mb-4">
                 Join the Founding Cohort
               </h1>
               <p className="body-large">
@@ -67,10 +67,10 @@ const ApplyPage = () => {
               </p>
               
               {/* Seat Counter */}
-              <div className="inline-flex items-center gap-2 mt-6 px-4 py-2 rounded-full border border-[#d9fb06] bg-[#3f4816]/30">
-                <span className="w-2 h-2 bg-[#d9fb06] rounded-full seat-pulse" />
-                <span className="text-sm text-white">
-                  <span className="text-[#d9fb06] font-semibold">{cohortData.seatsRemaining}</span> founding seats remaining
+              <div className="inline-flex items-center gap-2 mt-6 px-4 py-2 rounded-full border border-[#06b6d4]/30 bg-[#06b6d4]/10">
+                <span className="w-2 h-2 bg-[#06b6d4] rounded-full seat-pulse" />
+                <span className="text-sm text-slate-200">
+                  <span className="text-[#06b6d4] font-semibold">{cohortData.seatsRemaining}</span> founding seats remaining
                 </span>
               </div>
             </div>
@@ -80,7 +80,7 @@ const ApplyPage = () => {
               {/* Name */}
               <div>
                 <label htmlFor="name" className="block text-white font-medium mb-2">
-                  Full Name <span className="text-[#d9fb06]">*</span>
+                  Full Name <span className="text-[#06b6d4]">*</span>
                 </label>
                 <input
                   type="text"
@@ -89,7 +89,7 @@ const ApplyPage = () => {
                   value={formData.name}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-3 rounded-lg bg-[#302f2c] border border-[#3f4816] text-white placeholder-[#888680] focus:outline-none focus:border-[#d9fb06] transition-colors"
+                  className="w-full px-4 py-3 rounded-lg bg-[#1e293b] border border-[#334155] text-white placeholder-slate-500 focus:outline-none focus:border-[#06b6d4] transition-colors"
                   placeholder="Enter your full name"
                 />
               </div>
@@ -97,7 +97,7 @@ const ApplyPage = () => {
               {/* Email */}
               <div>
                 <label htmlFor="email" className="block text-white font-medium mb-2">
-                  Email Address <span className="text-[#d9fb06]">*</span>
+                  Email Address <span className="text-[#06b6d4]">*</span>
                 </label>
                 <input
                   type="email"
@@ -106,7 +106,7 @@ const ApplyPage = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-3 rounded-lg bg-[#302f2c] border border-[#3f4816] text-white placeholder-[#888680] focus:outline-none focus:border-[#d9fb06] transition-colors"
+                  className="w-full px-4 py-3 rounded-lg bg-[#1e293b] border border-[#334155] text-white placeholder-slate-500 focus:outline-none focus:border-[#06b6d4] transition-colors"
                   placeholder="you@example.com"
                 />
               </div>
@@ -114,7 +114,7 @@ const ApplyPage = () => {
               {/* Current Role */}
               <div>
                 <label htmlFor="currentRole" className="block text-white font-medium mb-2">
-                  Current Role & Experience <span className="text-[#d9fb06]">*</span>
+                  Current Role & Experience <span className="text-[#06b6d4]">*</span>
                 </label>
                 <input
                   type="text"
@@ -123,7 +123,7 @@ const ApplyPage = () => {
                   value={formData.currentRole}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-3 rounded-lg bg-[#302f2c] border border-[#3f4816] text-white placeholder-[#888680] focus:outline-none focus:border-[#d9fb06] transition-colors"
+                  className="w-full px-4 py-3 rounded-lg bg-[#1e293b] border border-[#334155] text-white placeholder-slate-500 focus:outline-none focus:border-[#06b6d4] transition-colors"
                   placeholder="e.g., SDE-1, 3 years experience"
                 />
               </div>
@@ -131,7 +131,7 @@ const ApplyPage = () => {
               {/* Target Role */}
               <div>
                 <label htmlFor="targetRole" className="block text-white font-medium mb-2">
-                  Target Role & Companies <span className="text-[#d9fb06]">*</span>
+                  Target Role & Companies <span className="text-[#06b6d4]">*</span>
                 </label>
                 <input
                   type="text"
@@ -140,7 +140,7 @@ const ApplyPage = () => {
                   value={formData.targetRole}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-3 rounded-lg bg-[#302f2c] border border-[#3f4816] text-white placeholder-[#888680] focus:outline-none focus:border-[#d9fb06] transition-colors"
+                  className="w-full px-4 py-3 rounded-lg bg-[#1e293b] border border-[#334155] text-white placeholder-slate-500 focus:outline-none focus:border-[#06b6d4] transition-colors"
                   placeholder="e.g., SDE-2 at Google, Amazon, Flipkart"
                 />
               </div>
@@ -148,7 +148,7 @@ const ApplyPage = () => {
               {/* Timeline */}
               <div>
                 <label htmlFor="timeline" className="block text-white font-medium mb-2">
-                  Interview Timeline <span className="text-[#d9fb06]">*</span>
+                  Interview Timeline <span className="text-[#06b6d4]">*</span>
                 </label>
                 <select
                   id="timeline"
@@ -156,7 +156,7 @@ const ApplyPage = () => {
                   value={formData.timeline}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-3 rounded-lg bg-[#302f2c] border border-[#3f4816] text-white focus:outline-none focus:border-[#d9fb06] transition-colors appearance-none cursor-pointer"
+                  className="w-full px-4 py-3 rounded-lg bg-[#1e293b] border border-[#334155] text-white focus:outline-none focus:border-[#06b6d4] transition-colors appearance-none cursor-pointer"
                 >
                   <option value="" disabled>Select your timeline</option>
                   <option value="within_30">Within 30 days</option>
@@ -169,7 +169,7 @@ const ApplyPage = () => {
               {/* Biggest Struggle */}
               <div>
                 <label htmlFor="struggle" className="block text-white font-medium mb-2">
-                  What's your biggest interview struggle? <span className="text-[#d9fb06]">*</span>
+                  What's your biggest interview struggle? <span className="text-[#06b6d4]">*</span>
                 </label>
                 <textarea
                   id="struggle"
@@ -178,7 +178,7 @@ const ApplyPage = () => {
                   onChange={handleInputChange}
                   required
                   rows={4}
-                  className="w-full px-4 py-3 rounded-lg bg-[#302f2c] border border-[#3f4816] text-white placeholder-[#888680] focus:outline-none focus:border-[#d9fb06] transition-colors resize-none"
+                  className="w-full px-4 py-3 rounded-lg bg-[#1e293b] border border-[#334155] text-white placeholder-slate-500 focus:outline-none focus:border-[#06b6d4] transition-colors resize-none"
                   placeholder="Be specific. This helps us understand how to help you."
                 />
               </div>
@@ -186,7 +186,7 @@ const ApplyPage = () => {
               {/* Plan Selection */}
               <div>
                 <label className="block text-white font-medium mb-3">
-                  Which plan interests you? <span className="text-[#d9fb06]">*</span>
+                  Which plan interests you? <span className="text-[#06b6d4]">*</span>
                 </label>
                 <div className="grid grid-cols-1 gap-3">
                   {pricingPlans.map((plan) => (
@@ -194,8 +194,8 @@ const ApplyPage = () => {
                       key={plan.id}
                       className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-all ${
                         formData.selectedPlan === plan.id
-                          ? 'border-[#d9fb06] bg-[#3f4816]/50'
-                          : 'border-[#3f4816] bg-[#302f2c] hover:border-[#888680]'
+                          ? 'border-[#06b6d4] bg-[#06b6d4]/10'
+                          : 'border-[#334155] bg-[#1e293b] hover:border-[#475569]'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -210,27 +210,27 @@ const ApplyPage = () => {
                         />
                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                           formData.selectedPlan === plan.id
-                            ? 'border-[#d9fb06] bg-[#d9fb06]'
-                            : 'border-[#888680]'
+                            ? 'border-[#06b6d4] bg-[#06b6d4]'
+                            : 'border-slate-500'
                         }`}>
                           {formData.selectedPlan === plan.id && (
-                            <div className="w-2 h-2 rounded-full bg-[#1a1c1b]" />
+                            <div className="w-2 h-2 rounded-full bg-[#0f172a]" />
                           )}
                         </div>
                         <div>
                           <span className="text-white font-medium">{plan.name}</span>
                           {plan.popular && (
-                            <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-[#d9fb06] text-[#1a1c1b] font-semibold">
+                            <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-[#06b6d4] text-[#0f172a] font-semibold">
                               Best Value
                             </span>
                           )}
-                          <p className="text-[#888680] text-sm">{plan.duration}</p>
+                          <p className="text-slate-400 text-sm">{plan.duration}</p>
                         </div>
                       </div>
                       <div className="text-right">
                         <span className="text-white font-bold">{cohortData.currency}{plan.price.toLocaleString()}</span>
                         {plan.savings && (
-                          <p className="text-[#d9fb06] text-xs">{plan.savings}</p>
+                          <p className="text-[#06b6d4] text-xs">{plan.savings}</p>
                         )}
                       </div>
                     </label>
@@ -257,7 +257,7 @@ const ApplyPage = () => {
                 )}
               </button>
 
-              <p className="text-center text-sm text-[#888680]">
+              <p className="text-center text-sm text-slate-400">
                 We review applications within 24 hours. Payment link sent after approval.
               </p>
             </form>
