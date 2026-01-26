@@ -155,6 +155,120 @@ def serialize_doc(doc):
         del doc['password']
     return doc
 
+# ============ EMAIL FUNCTIONS ============
+async def send_welcome_email(name: str, email: str, plan_name: str, amount: int):
+    """Send welcome email to new mentee after successful payment"""
+    try:
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 40px 20px;">
+                <tr>
+                    <td align="center">
+                        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #1e293b; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
+                            <!-- Header with Logo -->
+                            <tr>
+                                <td style="padding: 30px 40px; text-align: center; border-bottom: 1px solid #334155;">
+                                    <img src="{LOGO_URL}" alt="Codementee" style="height: 50px; width: auto;" />
+                                </td>
+                            </tr>
+                            
+                            <!-- Welcome Message -->
+                            <tr>
+                                <td style="padding: 40px;">
+                                    <h1 style="color: #06b6d4; margin: 0 0 20px 0; font-size: 28px; font-weight: 600;">Welcome to Codementee! 🎉</h1>
+                                    <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        Hi <strong>{name}</strong>,
+                                    </p>
+                                    <p style="color: #94a3b8; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        Thank you for joining Codementee! Your payment has been successfully processed, and your account is now active.
+                                    </p>
+                                    
+                                    <!-- Order Summary -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; border-radius: 12px; margin: 30px 0;">
+                                        <tr>
+                                            <td style="padding: 24px;">
+                                                <h3 style="color: #06b6d4; margin: 0 0 16px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Order Summary</h3>
+                                                <table width="100%" cellpadding="0" cellspacing="0">
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Plan</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{plan_name}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Amount Paid</td>
+                                                        <td style="color: #10b981; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">₹{amount:,}</td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <!-- What's Next -->
+                                    <h3 style="color: #e2e8f0; margin: 30px 0 16px 0; font-size: 18px;">What's Next?</h3>
+                                    <ul style="color: #94a3b8; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+                                        <li>A mentor will be assigned to you within 24-48 hours</li>
+                                        <li>You'll receive mock interview schedules via email</li>
+                                        <li>Access your dashboard to track progress and view feedback</li>
+                                    </ul>
+                                    
+                                    <!-- CTA Button -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                                        <tr>
+                                            <td align="center">
+                                                <a href="https://codementee.com/login" style="display: inline-block; background-color: #06b6d4; color: #0f172a; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px;">
+                                                    Go to Dashboard
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+                                        If you have any questions, feel free to reach out to us at <a href="mailto:Support@codementee.com" style="color: #06b6d4; text-decoration: none;">Support@codementee.com</a>
+                                    </p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td style="padding: 24px 40px; background-color: #0f172a; border-top: 1px solid #334155;">
+                                    <p style="color: #64748b; font-size: 12px; margin: 0; text-align: center;">
+                                        © 2025 Codementee. All rights reserved.<br>
+                                        Real mock interviews with engineers who've cracked product-based companies.
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        
+        params = {
+            "from": SENDER_EMAIL,
+            "to": [email],
+            "subject": f"Welcome to Codementee, {name}! 🚀",
+            "html": html_content
+        }
+        
+        # Add BCC if configured
+        if BCC_EMAIL:
+            params["bcc"] = [BCC_EMAIL]
+        
+        # Run sync SDK in thread to keep FastAPI non-blocking
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Welcome email sent to {email}, id: {result.get('id')}")
+        return result
+    except Exception as e:
+        logger.error(f"Failed to send welcome email to {email}: {str(e)}")
+        return None
+
 # ============ AUTH ROUTES ============
 @api_router.post("/auth/register")
 async def register(user: UserCreate):
