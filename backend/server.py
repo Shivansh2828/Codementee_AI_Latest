@@ -124,6 +124,27 @@ class AssignMentor(BaseModel):
 class UpdateStatus(BaseModel):
     status: str  # Applied, Active, Interviewed, Upgraded, Paused
 
+# ============ BOOKING SYSTEM MODELS ============
+class CompanyCreate(BaseModel):
+    name: str
+    logo_url: Optional[str] = ""
+    description: Optional[str] = ""
+
+class TimeSlotCreate(BaseModel):
+    date: str  # YYYY-MM-DD
+    start_time: str  # HH:MM
+    end_time: str  # HH:MM
+    mentor_id: Optional[str] = None  # If None, any mentor can take it
+
+class BookingRequestCreate(BaseModel):
+    company_id: str
+    slot_ids: List[str]  # Up to 2 preferred slots
+
+class ConfirmBookingRequest(BaseModel):
+    booking_request_id: str
+    confirmed_slot_id: str
+    meeting_link: str
+
 # ============ HELPERS ============
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
