@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus } from 'lucide-react';
 import { useState } from 'react';
 
 const DashboardLayout = ({ children, title }) => {
@@ -20,6 +20,9 @@ const DashboardLayout = ({ children, title }) => {
       return [
         { path: '/admin', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/admin/orders', label: 'Orders', icon: ShoppingCart },
+        { path: '/admin/bookings', label: 'Bookings', icon: ClipboardList },
+        { path: '/admin/companies', label: 'Companies', icon: Building2 },
+        { path: '/admin/time-slots', label: 'Time Slots', icon: Clock },
         { path: '/admin/mentees', label: 'Mentees', icon: Users },
         { path: '/admin/mentors', label: 'Mentors', icon: Users },
         { path: '/admin/mocks', label: 'Mock Interviews', icon: Calendar },
@@ -28,6 +31,7 @@ const DashboardLayout = ({ children, title }) => {
     } else if (user?.role === 'mentor') {
       return [
         { path: '/mentor', label: 'Dashboard', icon: LayoutDashboard },
+        { path: '/mentor/booking-requests', label: 'Booking Requests', icon: ClipboardList },
         { path: '/mentor/mentees', label: 'My Mentees', icon: Users },
         { path: '/mentor/mocks', label: 'Mock Interviews', icon: Calendar },
         { path: '/mentor/feedbacks', label: 'Feedbacks', icon: MessageSquare },
@@ -35,6 +39,7 @@ const DashboardLayout = ({ children, title }) => {
     } else {
       return [
         { path: '/mentee', label: 'Dashboard', icon: LayoutDashboard },
+        { path: '/mentee/book', label: 'Schedule Mock', icon: CalendarPlus },
         { path: '/mentee/mocks', label: 'My Mocks', icon: Calendar },
         { path: '/mentee/feedbacks', label: 'My Feedbacks', icon: MessageSquare },
       ];
