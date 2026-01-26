@@ -58,7 +58,7 @@ const RefundPolicy = () => {
             <section>
               <h2 className="text-xl font-semibold text-white mb-4">4. How to Request a Refund</h2>
               <ol className="list-decimal pl-6 space-y-2">
-                <li>Email us at <a href="mailto:hello@codementee.com" className="text-[#06b6d4] hover:underline">hello@codementee.com</a></li>
+                <li>Email us at <a href="mailto:support@codementee.com" className="text-[#06b6d4] hover:underline">support@codementee.com</a></li>
                 <li>Include your registered email and order/transaction ID</li>
                 <li>Briefly explain the reason for your refund request</li>
                 <li>We will respond within 2-3 business days</li>
@@ -77,7 +77,7 @@ const RefundPolicy = () => {
             <section>
               <h2 className="text-xl font-semibold text-white mb-4">6. Contact Us</h2>
               <p>For refund requests or questions about this policy:</p>
-              <p className="mt-2"><strong>Email:</strong> <a href="mailto:hello@codementee.com" className="text-[#06b6d4] hover:underline">hello@codementee.com</a></p>
+              <p className="mt-2"><strong>Email:</strong> <a href="mailto:support@codementee.com" className="text-[#06b6d4] hover:underline">support@codementee.com</a></p>
               <p className="mt-1"><strong>Response Time:</strong> Within 24-48 hours</p>
             </section>
           </div>

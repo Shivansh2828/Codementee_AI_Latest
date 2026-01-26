@@ -80,7 +80,7 @@ const PrivacyPolicy = () => {
             <section>
               <h2 className="text-xl font-semibold text-white mb-4">8. Contact Us</h2>
               <p>If you have questions about this Privacy Policy, please contact us at:</p>
-              <p className="mt-2"><strong>Email:</strong> <a href="mailto:hello@codementee.com" className="text-[#06b6d4] hover:underline">hello@codementee.com</a></p>
+              <p className="mt-2"><strong>Email:</strong> <a href="mailto:support@codementee.com" className="text-[#06b6d4] hover:underline">support@codementee.com</a></p>
             </section>
           </div>
         </div>
