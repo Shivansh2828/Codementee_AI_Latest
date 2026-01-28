@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Update pricing plans with proper features
+Update pricing plans with proper features and consistent pricing
 """
 import asyncio
 import os
@@ -20,13 +20,13 @@ async def update_pricing_plans():
     client = AsyncIOMotorClient(mongo_url)
     db = client[db_name]
     
-    print("🚀 Updating pricing plans...")
+    print("🚀 Updating pricing plans with consistent pricing...")
     
     # Delete existing pricing plans
     result = await db.pricing_plans.delete_many({})
     print(f"🗑️  Deleted {result.deleted_count} existing pricing plans")
     
-    # Create new pricing plans with proper features
+    # Create new pricing plans with consistent pricing (all in paise)
     pricing_plans = [
         {
             "plan_id": "monthly",
@@ -95,7 +95,8 @@ async def update_pricing_plans():
         await db.pricing_plans.insert_one(plan_doc)
         print(f"✅ Created pricing plan: {plan_data['name']} - ₹{plan_data['price']/100}")
     
-    print("\n🎉 Pricing plans updated successfully!")
+    print("\n🎉 Pricing plans updated successfully with consistent pricing!")
+    print("📋 All prices are now stored in paise for consistency")
     
     # Close connection
     client.close()

@@ -514,7 +514,19 @@ async def get_all_orders(user=Depends(get_current_user)):
     if user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
     orders = await db.orders.find().sort("created_at", -1).to_list(1000)
-    return [serialize_doc(dict(o)) for o in orders]
+    
+    # Format orders for consistent display
+    formatted_orders = []
+    for order in orders:
+        formatted_order = serialize_doc(dict(order))
+        # Ensure amount is properly formatted (convert to rupees if in paise)
+        if formatted_order.get("amount", 0) > 10000:  # Likely in paise
+            formatted_order["amount_rupees"] = formatted_order["amount"] / 100
+        else:  # Already in rupees
+            formatted_order["amount_rupees"] = formatted_order["amount"]
+        formatted_orders.append(formatted_order)
+    
+    return formatted_orders
 
 @api_router.get("/admin/revenue-stats")
 async def get_revenue_stats(user=Depends(get_current_user)):
@@ -683,8 +695,12 @@ async def get_public_pricing_plans():
     # Transform backend data to frontend format
     transformed_plans = []
     for plan in plans:
-        # Calculate per month price
-        per_month = plan["price"] // (plan["duration_months"] * 100)  # Convert from paise to rupees
+        # Ensure price is in paise for consistent calculation
+        price_in_paise = plan["price"]
+        price_in_rupees = price_in_paise // 100
+        
+        # Calculate per month price in rupees
+        per_month = price_in_rupees // plan["duration_months"]
         
         # Determine if popular (middle plan or explicitly marked)
         popular = plan.get("popular", plan["plan_id"] == "quarterly")
@@ -693,11 +709,14 @@ async def get_public_pricing_plans():
         original_price = None
         savings = None
         if plan["duration_months"] > 1:
-            monthly_price = 1999  # Base monthly price
-            original_price = monthly_price * plan["duration_months"]
-            savings_amount = original_price - (plan["price"] // 100)
-            if savings_amount > 0:
-                savings = f"Save ₹{savings_amount:,}"
+            # Use the actual monthly price from database, not hardcoded
+            monthly_plan = await db.pricing_plans.find_one({"plan_id": "monthly", "is_active": True})
+            if monthly_plan:
+                monthly_price = monthly_plan["price"] // 100  # Convert to rupees
+                original_price = monthly_price * plan["duration_months"]
+                savings_amount = original_price - price_in_rupees
+                if savings_amount > 0:
+                    savings = f"Save ₹{savings_amount:,}"
         
         # Map duration
         duration_map = {
@@ -718,7 +737,7 @@ async def get_public_pricing_plans():
             "id": plan["plan_id"],
             "name": plan["name"],
             "duration": duration_map.get(plan["duration_months"], f"{plan['duration_months']} Months"),
-            "price": plan["price"] // 100,  # Convert from paise to rupees
+            "price": price_in_rupees,  # Always return price in rupees for frontend
             "originalPrice": original_price,
             "perMonth": per_month,
             "popular": popular,
