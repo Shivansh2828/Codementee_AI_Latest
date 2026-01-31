@@ -40,6 +40,10 @@ import MenteeDashboard from "./pages/mentee/MenteeDashboard";
 import MenteeMocks from "./pages/mentee/MenteeMocks";
 import MenteeFeedbacks from "./pages/mentee/MenteeFeedbacks";
 import MenteeBooking from "./pages/mentee/MenteeBooking";
+import MenteeResumeAnalyzer from "./pages/mentee/MenteeResumeAnalyzer";
+import MenteeInterviewPrep from "./pages/mentee/MenteeInterviewPrep";
+import MenteeCommunity from "./pages/mentee/MenteeCommunity";
+import MenteeMentorSelection from "./pages/mentee/MenteeMentorSelection";
 
 function App() {
   return (
@@ -93,6 +97,10 @@ function App() {
           <Route path="/mentee/mocks" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeMocks /></ProtectedRoute>} />
           <Route path="/mentee/feedbacks" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeFeedbacks /></ProtectedRoute>} />
           <Route path="/mentee/book" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeBooking /></ProtectedRoute>} />
+          <Route path="/mentee/resume-analyzer" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeResumeAnalyzer /></ProtectedRoute>} />
+          <Route path="/mentee/interview-prep" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeInterviewPrep /></ProtectedRoute>} />
+          <Route path="/mentee/community" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeCommunity /></ProtectedRoute>} />
+          <Route path="/mentee/mocks" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeMentorSelection /></ProtectedRoute>} />
 
           {/* Catch all */}
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -2,7 +2,7 @@
 
 A full-stack mentorship-based interview preparation platform that connects mentees with experienced mentors from top product-based companies for mock interviews.
 
-![Codementee](https://customer-assets.emergentagent.com/job_interview-mentor-8/artifacts/w3mrzkd9_codementee_logo.png)
+![Codementee](https://codementee.com/logo.png)
 
 ---
 
@@ -579,12 +579,12 @@ curl -X POST "http://localhost:8001/api/auth/register" \
 
 ## Deployment Strategy
 
-### Option 1: Emergent Platform (Recommended)
+### Standard Deployment Options
 
-The application is optimized for deployment on [Emergent](https://emergent.sh).
+The application can be deployed on any cloud platform or VPS that supports Node.js and Python applications.
 
-1. **Push to GitHub** using "Save to Github" feature
-2. **Deploy** via Emergent dashboard
+1. **Push to GitHub** repository
+2. **Deploy** via your preferred hosting platform (AWS, DigitalOcean, Heroku, etc.)
 3. **Configure** environment variables in deployment settings
 
 ### Option 2: Docker Deployment

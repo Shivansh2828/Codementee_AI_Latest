@@ -59,9 +59,19 @@ const PricingSection = () => {
           <h2 className="heading-1 mb-6">
             Simple, transparent pricing
           </h2>
-          <p className="body-large">
+          <p className="body-large mb-6">
             Choose the plan that fits your interview timeline. All plans include founding member pricing.
           </p>
+          
+          {/* Transparency Notice */}
+          <div className="bg-[#06b6d4]/10 border border-[#06b6d4]/30 rounded-lg p-4 mb-6">
+            <p className="text-[#06b6d4] text-sm font-medium">
+              💡 What you see is what you pay - No hidden fees, no surprises
+            </p>
+            <p className="text-slate-300 text-xs mt-1">
+              Prices shown include all taxes. Mock interview limits are clearly stated for each plan.
+            </p>
+          </div>
           
           {/* Seat Counter */}
           <div className="inline-flex items-center gap-2 mt-6 px-4 py-2 rounded-full border border-[#06b6d4]/30 bg-[#06b6d4]/10">
@@ -134,9 +144,30 @@ const PricingSection = () => {
                   ))}
                 </ul>
 
+                {/* Clear Limits Display */}
+                <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-3 mb-6">
+                  <p className="text-slate-400 text-xs font-medium mb-1">What's included:</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-white text-sm">Mock Interviews</span>
+                    <span className="text-[#06b6d4] font-bold">
+                      {plan.id === 'foundation' ? '1 total' : 
+                       plan.id === 'growth' ? '3 total' : 
+                       '6 total'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-white text-sm">Duration</span>
+                    <span className="text-slate-300 text-sm">{plan.duration}</span>
+                  </div>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-white text-sm">Per Month Cost</span>
+                    <span className="text-slate-300 text-sm">₹{plan.perMonth.toLocaleString()}</span>
+                  </div>
+                </div>
+
                 {/* CTA */}
                 <Link 
-                  to="/apply" 
+                  to="/register" 
                   className={`w-full justify-center gap-2 ${
                     plan.popular ? 'btn-primary' : 'btn-secondary'
                   }`}

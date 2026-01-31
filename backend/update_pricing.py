@@ -26,54 +26,84 @@ async def update_pricing_plans():
     result = await db.pricing_plans.delete_many({})
     print(f"🗑️  Deleted {result.deleted_count} existing pricing plans")
     
-    # Create new pricing plans with consistent pricing (all in paise)
+    # Create new minimal launch pricing plans with sustainable limits (all in paise)
+    # Foundation: ₹1,999/month - 1 mock (₹800 mentor payout = 60% profit margin)
+    # Growth: ₹4,999/3 months - 3 mocks total (₹2,400 mentor payout = 52% profit margin)  
+    # Accelerator: ₹8,999/6 months - 6 mocks total (₹4,800 mentor payout = 47% profit margin)
     pricing_plans = [
         {
-            "plan_id": "monthly",
-            "name": "Monthly",
+            "plan_id": "foundation",
+            "name": "Foundation",
             "price": 199900,  # ₹1,999 in paise
             "duration_months": 1,
             "features": [
-                "1 mock interview",
-                "Detailed feedback report",
-                "Resume review",
-                "Private mentor group access",
+                "1 Mock Interview",
+                "Basic Resume Review (AI-powered)",
+                "1 AI Interview Prep Tool",
+                "Community access",
                 "Email support"
             ],
+            "limits": {
+                "mock_interviews": 1,
+                "resume_reviews": 1,
+                "ai_tools": 1,
+                "community_access": True
+            },
             "is_active": True,
             "display_order": 1
         },
         {
-            "plan_id": "quarterly",
-            "name": "3 Months",
+            "plan_id": "growth",
+            "name": "Growth",
             "price": 499900,  # ₹4,999 in paise
             "duration_months": 3,
             "features": [
-                "3 mock interviews (1/month)",
-                "Detailed feedback reports",
-                "Resume review + optimization",
-                "Private mentor group access",
-                "Priority scheduling",
-                "1 system design session"
+                "3 Mock Interviews (total)",
+                "Expert Resume Review + Templates",
+                "All AI Interview Prep Tools",
+                "Priority community access",
+                "Mentor selection",
+                "Video recordings of sessions",
+                "Chat support"
             ],
+            "limits": {
+                "mock_interviews": 3,
+                "resume_reviews": 2,
+                "ai_tools": "all",
+                "community_access": True,
+                "mentor_selection": True,
+                "video_recordings": True
+            },
             "is_active": True,
             "display_order": 2
         },
         {
-            "plan_id": "biannual",
-            "name": "6 Months",
+            "plan_id": "accelerator",
+            "name": "Accelerator",
             "price": 899900,  # ₹8,999 in paise
             "duration_months": 6,
             "features": [
-                "6 mock interviews (1/month)",
-                "Detailed feedback reports",
-                "Complete resume overhaul",
-                "Private mentor group access",
-                "Priority scheduling",
-                "2 system design sessions",
-                "Salary negotiation guidance",
-                "Direct mentor WhatsApp access"
+                "6 Mock Interviews (total)",
+                "Everything in Growth",
+                "1 Career Coaching session",
+                "Company insider insights",
+                "Priority mentor booking",
+                "Custom interview preparation plan",
+                "WhatsApp support",
+                "Job referral assistance"
             ],
+            "limits": {
+                "mock_interviews": 6,
+                "resume_reviews": 3,
+                "ai_tools": "all",
+                "community_access": True,
+                "mentor_selection": True,
+                "video_recordings": True,
+                "career_coaching": 1,
+                "priority_booking": True,
+                "custom_prep_plan": True,
+                "job_referrals": True
+            },
             "is_active": True,
             "display_order": 3
         }
@@ -87,6 +117,7 @@ async def update_pricing_plans():
             "price": plan_data["price"],
             "duration_months": plan_data["duration_months"],
             "features": plan_data["features"],
+            "limits": plan_data["limits"],
             "is_active": plan_data["is_active"],
             "display_order": plan_data["display_order"],
             "created_at": datetime.now(timezone.utc).isoformat(),

@@ -1,14 +1,24 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus, Video, DollarSign } from 'lucide-react';
-import { useState } from 'react';
+import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus, Video, DollarSign, Brain, FileText, UserCheck, MessageCircle } from 'lucide-react';
 
 const DashboardLayout = ({ children, title }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setSidebarOpen(false);
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -42,8 +52,18 @@ const DashboardLayout = ({ children, title }) => {
       return [
         { path: '/mentee', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/mentee/book', label: 'Schedule Mock', icon: CalendarPlus },
-        { path: '/mentee/mocks', label: 'My Mocks', icon: Calendar },
+        { path: '/mentee/mocks', label: 'My Interviews', icon: Calendar },
         { path: '/mentee/feedbacks', label: 'My Feedbacks', icon: MessageSquare },
+        { 
+          label: 'AI Tools', 
+          icon: Brain, 
+          isSection: true,
+          items: [
+            { path: '/mentee/resume-analyzer', label: 'Resume Analyzer', icon: FileText },
+            { path: '/mentee/interview-prep', label: 'Interview Prep', icon: Brain },
+          ]
+        },
+        { path: '/mentee/community', label: 'Community', icon: MessageCircle },
       ];
     }
   };
@@ -55,32 +75,63 @@ const DashboardLayout = ({ children, title }) => {
       {/* Mobile header */}
       <div className="lg:hidden flex items-center justify-between p-4 border-b border-[#334155]">
         <span className="text-xl font-bold text-white">Codementee</span>
-        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-white">
+        <button 
+          onClick={() => setSidebarOpen(!sidebarOpen)} 
+          className="text-white p-2 hover:bg-[#334155] rounded"
+        >
           {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#1e293b] border-r border-[#334155] transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 transition-transform`}>
+        <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#1e293b] border-r border-[#334155] transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 transition-transform duration-300 ease-in-out`}>
           <div className="p-6 border-b border-[#334155] hidden lg:block">
             <Link to="/" className="text-xl font-bold text-white">Codementee</Link>
           </div>
           <nav className="p-4 space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.path;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-[#06b6d4] text-[#0f172a]' : 'text-slate-300 hover:bg-[#334155]'}`}
-                >
-                  <Icon size={20} />
-                  {item.label}
-                </Link>
-              );
+            {navItems.map((item, index) => {
+              if (item.isSection) {
+                return (
+                  <div key={index} className="space-y-1">
+                    <div className="px-4 py-2 text-slate-400 text-sm font-medium uppercase tracking-wide">
+                      <div className="flex items-center gap-2">
+                        <item.icon size={16} />
+                        {item.label}
+                      </div>
+                    </div>
+                    {item.items.map((subItem) => {
+                      const SubIcon = subItem.icon;
+                      const isActive = location.pathname === subItem.path;
+                      return (
+                        <Link
+                          key={subItem.path}
+                          to={subItem.path}
+                          onClick={() => setSidebarOpen(false)}
+                          className={`flex items-center gap-3 px-8 py-2 rounded-lg transition-colors ${isActive ? 'bg-[#06b6d4] text-[#0f172a]' : 'text-slate-300 hover:bg-[#334155]'}`}
+                        >
+                          <SubIcon size={18} />
+                          {subItem.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                );
+              } else {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setSidebarOpen(false)}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-[#06b6d4] text-[#0f172a]' : 'text-slate-300 hover:bg-[#334155]'}`}
+                  >
+                    <Icon size={20} />
+                    {item.label}
+                  </Link>
+                );
+              }
             })}
           </nav>
           <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-[#334155]">
@@ -103,11 +154,15 @@ const DashboardLayout = ({ children, title }) => {
         </main>
       </div>
 
-      {/* Overlay */}
-      {sidebarOpen && <div className="fixed inset-0 bg-black/50 lg:hidden z-40" onClick={() => setSidebarOpen(false)} />}
+      {/* Mobile overlay - Only on mobile */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 lg:hidden z-40" 
+          onClick={() => setSidebarOpen(false)} 
+        />
+      )}
     </div>
   );
 };
 
 export default DashboardLayout;
-// Cache bust: 1769418235

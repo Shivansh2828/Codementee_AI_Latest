@@ -24,6 +24,7 @@ const AdminPricing = () => {
     price: '',
     duration_months: '',
     features: '',
+    limits: '',
     is_active: true,
     display_order: 1
   });
@@ -53,6 +54,7 @@ const AdminPricing = () => {
         price: parseInt(formData.price) * 100, // Convert to paise
         duration_months: parseInt(formData.duration_months),
         features: formData.features.split('\n').filter(f => f.trim()),
+        limits: formData.limits ? JSON.parse(formData.limits) : {},
         display_order: parseInt(formData.display_order)
       };
 
@@ -68,7 +70,11 @@ const AdminPricing = () => {
       resetForm();
       fetchPricingPlans();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to save pricing plan');
+      if (error.message.includes('JSON')) {
+        toast.error('Invalid JSON format in limits field');
+      } else {
+        toast.error(error.response?.data?.detail || 'Failed to save pricing plan');
+      }
     }
   };
 
@@ -80,6 +86,7 @@ const AdminPricing = () => {
       price: (plan.price / 100).toString(), // Convert from paise
       duration_months: plan.duration_months.toString(),
       features: plan.features.join('\n'),
+      limits: JSON.stringify(plan.limits || {}, null, 2),
       is_active: plan.is_active,
       display_order: plan.display_order.toString()
     });
@@ -103,6 +110,7 @@ const AdminPricing = () => {
       price: '',
       duration_months: '',
       features: '',
+      limits: '',
       is_active: true,
       display_order: 1
     });
@@ -200,9 +208,22 @@ const AdminPricing = () => {
                     id="features"
                     value={formData.features}
                     onChange={(e) => setFormData({...formData, features: e.target.value})}
-                    placeholder="Unlimited mock interviews&#10;Detailed feedback reports&#10;Email support"
+                    placeholder="2 Mock Interviews/month&#10;Basic Resume Review (AI-powered)&#10;Community access"
                     rows={4}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="limits">Usage Limits (JSON format)</Label>
+                  <Textarea
+                    id="limits"
+                    value={formData.limits}
+                    onChange={(e) => setFormData({...formData, limits: e.target.value})}
+                    placeholder='{"mock_interviews": 2, "resume_reviews": 1, "ai_tools": 1}'
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Define usage limits in JSON format. Leave empty for no limits.
+                  </p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center space-x-2">
@@ -288,6 +309,20 @@ const AdminPricing = () => {
                           </li>
                         ))}
                       </ul>
+                    </div>
+                  )}
+                  
+                  {plan.limits && Object.keys(plan.limits).length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Usage Limits:</h4>
+                      <div className="text-sm space-y-1">
+                        {Object.entries(plan.limits).map(([key, value]) => (
+                          <div key={key} className="flex justify-between">
+                            <span className="capitalize">{key.replace('_', ' ')}:</span>
+                            <span className="font-medium">{typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                   

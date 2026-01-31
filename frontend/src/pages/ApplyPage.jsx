@@ -21,7 +21,7 @@ const ApplyPage = () => {
     targetRole: '',
     timeline: '',
     struggle: '',
-    selectedPlan: 'quarterly'
+    selectedPlan: 'growth'
   });
 
   // Load Razorpay script
@@ -156,7 +156,10 @@ const ApplyPage = () => {
             <form onSubmit={handlePayment} className="space-y-6">
               {/* Plan Selection */}
               <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-6">
-                <h3 className="text-white font-semibold mb-4">Select Your Plan</h3>
+                <h3 className="text-white font-semibold mb-2">Select Your Plan</h3>
+                <p className="text-slate-400 text-sm mb-4">
+                  All prices are final - no hidden fees or additional charges
+                </p>
                 <div className="grid grid-cols-1 gap-3">
                   {pricingPlans.map((plan) => (
                     <label
@@ -182,14 +185,22 @@ const ApplyPage = () => {
                           {formData.selectedPlan === plan.id && <div className="w-2 h-2 rounded-full bg-[#0f172a]" />}
                         </div>
                         <div>
-                          <span className="text-white font-medium">{plan.name}</span>
-                          {plan.popular && <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-[#06b6d4] text-[#0f172a] font-semibold">Best Value</span>}
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-medium">{plan.name}</span>
+                            {plan.popular && <span className="text-xs px-2 py-0.5 rounded-full bg-[#06b6d4] text-[#0f172a] font-semibold">Best Value</span>}
+                          </div>
                           <p className="text-slate-400 text-sm">{plan.features[0]}</p>
+                          <p className="text-slate-500 text-xs">
+                            {plan.id === 'foundation' ? '1 mock interview total' : 
+                             plan.id === 'growth' ? '3 mock interviews total' : 
+                             '6 mock interviews total'} • {plan.duration}
+                          </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <span className="text-white font-bold text-lg">{cohortData.currency}{plan.price.toLocaleString()}</span>
                         {plan.savings && <p className="text-[#06b6d4] text-xs">{plan.savings}</p>}
+                        <p className="text-slate-500 text-xs">{cohortData.currency}{plan.perMonth.toLocaleString()}/month</p>
                       </div>
                     </label>
                   ))}

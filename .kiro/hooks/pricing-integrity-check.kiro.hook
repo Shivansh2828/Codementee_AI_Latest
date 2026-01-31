@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "Pricing Integrity Validator",
+  "description": "Automatically validates and fixes pricing plan integrity when backend files are modified",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "backend/server.py",
+      "backend/setup_initial_data.py",
+      "backend/*pricing*.py"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run the pricing integrity validator to ensure no duplicate pricing plans exist. Execute: cd backend && python validate_pricing_integrity.py"
+  }
+}

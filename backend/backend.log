@@ -1,0 +1,70 @@
+INFO:     Will watch for changes in these directories: ['/Users/shivanshbajpai/Workplace/Codementee_AI_Latest/backend']
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [13059] using StatReload
+/Users/shivanshbajpai/Workplace/Codementee_AI_Latest/backend/venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+INFO:     Started server process [13132]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:62886 - "GET /api/companies HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63253 - "GET /api/pricing-plans?t=1769844887717 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63254 - "GET /api/pricing-plans?t=1769844887719 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63676 - "OPTIONS /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63676 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63676 - "OPTIONS /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63680 - "OPTIONS /api/mentor/mentees HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63682 - "OPTIONS /api/mocks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63684 - "OPTIONS /api/mentor/feedbacks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63685 - "OPTIONS /api/mentor/mentees HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63687 - "OPTIONS /api/mocks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63680 - "OPTIONS /api/mentor/feedbacks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63676 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63682 - "GET /api/mentor/mentees HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63676 - "GET /api/mentor/mentees HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63685 - "GET /api/mentor/feedbacks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63684 - "GET /api/mocks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63676 - "GET /api/mentor/feedbacks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63685 - "GET /api/mocks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63685 - "OPTIONS /api/mentor/booking-requests HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63676 - "OPTIONS /api/mentor/booking-requests HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63685 - "GET /api/mentor/booking-requests HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63676 - "GET /api/mentor/booking-requests HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63676 - "GET /api/mentor/mentees HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63685 - "GET /api/mentor/mentees HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63685 - "GET /api/mocks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63676 - "GET /api/mentor/mentees HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63706 - "GET /api/mocks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63685 - "GET /api/mentor/mentees HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63706 - "GET /api/mentor/mentees HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63685 - "GET /api/mentor/feedbacks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63676 - "GET /api/mentor/mentees HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63706 - "GET /api/mentor/feedbacks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63714 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63720 - "OPTIONS /api/mentee/feedbacks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63721 - "OPTIONS /api/pricing-plans HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63724 - "OPTIONS /api/mentee/feedbacks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63725 - "OPTIONS /api/pricing-plans HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63714 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63718 - "GET /api/mocks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63720 - "GET /api/mentee/feedbacks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63725 - "GET /api/pricing-plans HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63714 - "GET /api/mocks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63718 - "GET /api/mentee/feedbacks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63720 - "GET /api/pricing-plans HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63743 - "OPTIONS /api/companies HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63744 - "OPTIONS /api/available-slots HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63748 - "OPTIONS /api/companies HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63749 - "OPTIONS /api/available-slots HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63743 - "GET /api/companies HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63744 - "GET /api/available-slots HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63749 - "GET /api/companies HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63745 - "GET /api/pricing-plans HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63743 - "GET /api/available-slots HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63749 - "GET /api/pricing-plans HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63809 - "OPTIONS /api/payment/create-order HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63809 - "POST /api/payment/create-order HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:63820 - "POST /api/payment/create-order HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:63834 - "GET /api/mocks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63834 - "GET /api/mocks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63944 - "GET /api/pricing-plans?t=1769845423333 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63943 - "GET /api/pricing-plans?t=1769845423332 HTTP/1.1" 200 OK

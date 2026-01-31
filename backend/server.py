@@ -44,7 +44,7 @@ BCC_EMAIL = os.environ.get('BCC_EMAIL')
 resend.api_key = RESEND_API_KEY
 
 # Logo URL for emails
-LOGO_URL = "https://customer-assets.emergentagent.com/job_interview-mentor-8/artifacts/w3mrzkd9_codementee_logo.png"
+LOGO_URL = "https://codementee.com/logo.png"
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -59,6 +59,13 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     role: str = "mentee"  # admin, mentor, mentee
+
+class FreeUserCreate(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    current_role: str = ""
+    target_role: str = ""
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -127,11 +134,12 @@ class UpdateStatus(BaseModel):
 # ============ PRICING MODELS ============
 class PricingPlan(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    plan_id: str  # monthly, quarterly, biannual
+    plan_id: str  # starter, professional, premium
     name: str
     price: int  # in paise
     duration_months: int
     features: List[str] = []
+    limits: dict = {}  # Usage limits for the plan
     is_active: bool = True
     display_order: int = 1
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -143,6 +151,7 @@ class PricingPlanCreate(BaseModel):
     price: int  # in paise
     duration_months: int
     features: List[str] = []
+    limits: dict = {}
     is_active: bool = True
     display_order: int = 1
 
@@ -151,6 +160,7 @@ class PricingPlanUpdate(BaseModel):
     price: Optional[int] = None  # in paise
     duration_months: Optional[int] = None
     features: Optional[List[str]] = None
+    limits: Optional[dict] = None
     is_active: Optional[bool] = None
     display_order: Optional[int] = None
 
@@ -159,12 +169,16 @@ class CompanyCreate(BaseModel):
     name: str
     logo_url: Optional[str] = ""
     description: Optional[str] = ""
+    category: Optional[str] = "product"  # "product", "service", "startup", "unicorn"
+    interview_tracks: Optional[List[str]] = []  # Available interview tracks for this company
+    difficulty_levels: Optional[List[str]] = ["junior", "mid", "senior"]  # Supported levels
 
 class TimeSlotCreate(BaseModel):
     date: str  # YYYY-MM-DD
     start_time: str  # HH:MM
     end_time: str  # HH:MM
     mentor_id: Optional[str] = None  # If None, any mentor can take it
+    interview_types: Optional[List[str]] = ["coding", "system_design", "behavioral", "hr_round"]  # Supported types
 
 class MeetLinkCreate(BaseModel):
     link: str
@@ -173,6 +187,11 @@ class MeetLinkCreate(BaseModel):
 class BookingRequestCreate(BaseModel):
     company_id: str
     slot_ids: List[str]  # Up to 2 preferred slots
+    interview_type: str  # "coding", "system_design", "behavioral", "hr_round", "mixed"
+    experience_level: str  # "junior", "mid", "senior", "staff_plus"
+    specific_topics: Optional[List[str]] = []  # Specific areas to focus on
+    additional_notes: Optional[str] = ""
+    interview_track: Optional[str] = "general"  # Company-specific track or "general"
 
 class ConfirmBookingRequest(BaseModel):
     booking_request_id: str
@@ -371,10 +390,20 @@ async def send_booking_request_email(mentor_name: str, mentor_email: str, mentee
         logger.error(f"Failed to send booking request email: {str(e)}")
         return None
 
-async def send_booking_confirmed_email(recipient_name: str, recipient_email: str, company_name: str, slot_time: str, meeting_link: str, is_mentor: bool = False):
+async def send_booking_confirmed_email(recipient_name: str, recipient_email: str, company_name: str, slot_time: str, meeting_link: str, is_mentor: bool = False, mentor_name: str = None, mentor_email: str = None):
     """Send email when booking is confirmed"""
     try:
-        role_text = "You have confirmed" if is_mentor else "Your mock interview has been confirmed"
+        if is_mentor:
+            role_text = "You have confirmed"
+            mentor_section = ""
+        else:
+            role_text = "Your mock interview has been confirmed"
+            mentor_section = f"""
+                            <tr>
+                                <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Mentor</td>
+                                <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{mentor_name or 'Assigned'}</td>
+                            </tr>
+            """ if mentor_name else ""
         
         html_content = f"""
         <!DOCTYPE html>
@@ -398,6 +427,7 @@ async def send_booking_confirmed_email(recipient_name: str, recipient_email: str
                                 <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Company</td>
                                 <td style="color: #06b6d4; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{company_name}</td>
                             </tr>
+                            {mentor_section}
                         </table>
                     </div>
                     <div style="text-align: center; margin: 30px 0;">
@@ -442,6 +472,43 @@ async def register(user: UserCreate):
     }
     await db.users.insert_one(user_doc)
     return {"message": "User created successfully"}
+
+@api_router.post("/auth/register-free")
+async def register_free_user(data: FreeUserCreate):
+    """Register a free mentee account - no payment required"""
+    
+    # Check if email already exists
+    existing_user = await db.users.find_one({"email": data.email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Create free mentee account
+    user_doc = {
+        "id": str(uuid.uuid4()),
+        "name": data.name,
+        "email": data.email,
+        "password": hash_password(data.password),
+        "role": "mentee",
+        "status": "Free",  # Free tier
+        "plan_id": None,
+        "plan_name": "Free Tier",
+        "mentor_id": None,
+        "current_role": data.current_role,
+        "target_role": data.target_role,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.users.insert_one(user_doc)
+    
+    # Generate token for auto-login
+    token = create_token(user_doc["id"], user_doc["role"])
+    
+    return {
+        "success": True,
+        "message": "Welcome to Codementee! Explore your dashboard to get started.",
+        "access_token": token,
+        "user": serialize_doc(user_doc)
+    }
 
 @api_router.post("/auth/login")
 async def login(credentials: UserLogin):
@@ -625,6 +692,117 @@ async def get_all_booking_requests(user=Depends(get_current_user)):
     requests = await db.booking_requests.find().sort("created_at", -1).to_list(1000)
     return [serialize_doc(dict(r)) for r in requests]
 
+class AdminConfirmBookingRequest(BaseModel):
+    booking_request_id: str
+    mentor_id: str
+    confirmed_slot_id: str
+
+@api_router.post("/admin/confirm-booking")
+async def admin_confirm_booking(data: AdminConfirmBookingRequest, user=Depends(get_current_user)):
+    """Admin confirms booking by assigning mentor and slot"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    # Get booking request
+    request = await db.booking_requests.find_one({"id": data.booking_request_id})
+    if not request:
+        raise HTTPException(status_code=404, detail="Booking request not found")
+    
+    if request["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Booking already processed")
+    
+    # Get mentor details
+    mentor = await db.users.find_one({"id": data.mentor_id, "role": "mentor"})
+    if not mentor:
+        raise HTTPException(status_code=404, detail="Mentor not found")
+    
+    # Find the confirmed slot
+    confirmed_slot = None
+    for slot in request["preferred_slots"]:
+        if slot["id"] == data.confirmed_slot_id:
+            confirmed_slot = slot
+            break
+    
+    if not confirmed_slot:
+        raise HTTPException(status_code=400, detail="Invalid slot selection")
+    
+    # Auto-assign meeting link from pool
+    meet_link_doc = await get_available_meet_link()
+    if not meet_link_doc:
+        raise HTTPException(status_code=400, detail="No available meeting links. Please add more meeting links first.")
+    
+    meeting_link = meet_link_doc["link"]
+    await assign_meet_link(meet_link_doc["id"], data.booking_request_id)
+    
+    # Update booking request with mentor assignment and confirmation
+    await db.booking_requests.update_one(
+        {"id": data.booking_request_id},
+        {"$set": {
+            "status": "confirmed",
+            "mentor_id": mentor["id"],
+            "mentor_name": mentor["name"],
+            "mentor_email": mentor["email"],
+            "confirmed_slot": confirmed_slot,
+            "meeting_link": meeting_link,
+            "meet_link_id": meet_link_doc["id"],
+            "confirmed_at": datetime.now(timezone.utc).isoformat(),
+            "confirmed_by": user["id"]
+        }}
+    )
+    
+    # Mark the slot as booked
+    await db.time_slots.update_one({"id": data.confirmed_slot_id}, {"$set": {"status": "booked"}})
+    
+    # Create a mock interview record
+    mock_doc = {
+        "id": str(uuid.uuid4()),
+        "mentee_id": request["mentee_id"],
+        "mentor_id": mentor["id"],
+        "company_name": request["company_name"],
+        "scheduled_at": f"{confirmed_slot['date']}T{confirmed_slot['start_time']}:00",
+        "meet_link": meeting_link,
+        "status": "scheduled",
+        "booking_request_id": data.booking_request_id,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.mocks.insert_one(mock_doc)
+    
+    # Get mentee details
+    mentee = await db.users.find_one({"id": request["mentee_id"]})
+    
+    # Send confirmation emails
+    slot_time_str = f"{confirmed_slot['date']} at {confirmed_slot['start_time']} - {confirmed_slot['end_time']}"
+    
+    # Email to mentee with mentor details
+    if mentee:
+        asyncio.create_task(send_booking_confirmed_email(
+            recipient_name=mentee["name"],
+            recipient_email=mentee["email"],
+            company_name=request["company_name"],
+            slot_time=slot_time_str,
+            meeting_link=meeting_link,
+            is_mentor=False,
+            mentor_name=mentor["name"],
+            mentor_email=mentor["email"]
+        ))
+    
+    # Email to mentor
+    asyncio.create_task(send_booking_confirmed_email(
+        recipient_name=mentor["name"],
+        recipient_email=mentor["email"],
+        company_name=request["company_name"],
+        slot_time=slot_time_str,
+        meeting_link=meeting_link,
+        is_mentor=True
+    ))
+    
+    return {
+        "message": "Booking confirmed successfully", 
+        "mock_id": mock_doc["id"], 
+        "meeting_link": meeting_link,
+        "mentor_name": mentor["name"]
+    }
+
 # ============ ADMIN PRICING MANAGEMENT ============
 @api_router.get("/admin/pricing-plans")
 async def get_pricing_plans(user=Depends(get_current_user)):
@@ -703,17 +881,21 @@ async def get_public_pricing_plans():
         per_month = price_in_rupees // plan["duration_months"]
         
         # Determine if popular (middle plan or explicitly marked)
-        popular = plan.get("popular", plan["plan_id"] == "quarterly")
+        popular = plan.get("popular", plan["plan_id"] == "growth")
         
         # Calculate original price and savings for multi-month plans
         original_price = None
         savings = None
         if plan["duration_months"] > 1:
-            # Use the actual monthly price from database, not hardcoded
-            monthly_plan = await db.pricing_plans.find_one({"plan_id": "monthly", "is_active": True})
-            if monthly_plan:
-                monthly_price = monthly_plan["price"] // 100  # Convert to rupees
-                original_price = monthly_price * plan["duration_months"]
+            # Use the actual foundation price from database, not hardcoded
+            foundation_plan = await db.pricing_plans.find_one({"plan_id": "foundation", "is_active": True})
+            if not foundation_plan:
+                # Fallback to starter plan for backward compatibility
+                foundation_plan = await db.pricing_plans.find_one({"plan_id": "starter", "is_active": True})
+            
+            if foundation_plan:
+                foundation_price = foundation_plan["price"] // 100  # Convert to rupees
+                original_price = foundation_price * plan["duration_months"]
                 savings_amount = original_price - price_in_rupees
                 if savings_amount > 0:
                     savings = f"Save ₹{savings_amount:,}"
@@ -728,6 +910,13 @@ async def get_public_pricing_plans():
         
         # Map CTA text
         cta_map = {
+            "foundation": "Start Basic",
+            "growth": "Best Value",
+            "accelerator": "Maximum Prep",
+            # Legacy support for old plan IDs
+            "starter": "Start Basic",
+            "professional": "Best Value", 
+            "premium": "Maximum Prep",
             "monthly": "Start Monthly",
             "quarterly": "Best Value",
             "biannual": "Maximum Prep"
@@ -868,6 +1057,10 @@ async def create_booking_request(data: BookingRequestCreate, user=Depends(get_cu
         "company_id": data.company_id,
         "company_name": company["name"],
         "preferred_slots": slot_details,
+        "interview_type": data.interview_type,
+        "experience_level": data.experience_level,
+        "specific_topics": data.specific_topics,
+        "additional_notes": data.additional_notes,
         "status": "pending",  # pending, confirmed, cancelled
         "created_at": datetime.now(timezone.utc).isoformat()
     }
@@ -974,7 +1167,9 @@ async def confirm_booking(data: ConfirmBookingRequest, user=Depends(get_current_
             company_name=request["company_name"],
             slot_time=slot_time_str,
             meeting_link=meeting_link,
-            is_mentor=False
+            is_mentor=False,
+            mentor_name=user["name"],
+            mentor_email=user["email"]
         ))
     
     # Email to mentor
@@ -1071,12 +1266,305 @@ async def get_user(user_id: str, user=Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="User not found")
     return serialize_doc(dict(target))
 
+# ============ INTERVIEW PREPARATION FEATURES ============
+
+class ResumeAnalysisRequest(BaseModel):
+    resume_text: str
+    target_role: str
+    target_companies: List[str]
+
+class ResumeAnalysisResponse(BaseModel):
+    overall_score: int  # 1-100
+    strengths: List[str]
+    weaknesses: List[str]
+    suggestions: List[str]
+    ats_score: int  # 1-100
+    keyword_analysis: dict
+    section_feedback: dict
+
+@api_router.post("/ai-tools/resume-analysis")
+async def analyze_resume(data: ResumeAnalysisRequest, user=Depends(get_current_user)):
+    """AI-powered resume analysis"""
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    # For now, return mock analysis - will integrate with AI service later
+    analysis = {
+        "overall_score": 75,
+        "strengths": [
+            "Strong technical skills mentioned",
+            "Good project descriptions",
+            "Relevant experience for target role"
+        ],
+        "weaknesses": [
+            "Missing quantified achievements",
+            "Could improve action verbs",
+            "Skills section needs better organization"
+        ],
+        "suggestions": [
+            "Add metrics to your achievements (e.g., 'Improved performance by 30%')",
+            "Use stronger action verbs like 'architected', 'optimized', 'delivered'",
+            "Reorganize skills by relevance to target role",
+            "Add more specific technologies used in projects"
+        ],
+        "ats_score": 68,
+        "keyword_analysis": {
+            "missing_keywords": ["microservices", "cloud", "agile", "CI/CD"],
+            "present_keywords": ["python", "javascript", "react", "sql"],
+            "keyword_density": "moderate"
+        },
+        "section_feedback": {
+            "summary": "Good but could be more targeted to role",
+            "experience": "Strong but needs more metrics",
+            "skills": "Comprehensive but poorly organized",
+            "projects": "Good technical depth"
+        }
+    }
+    
+    # Store analysis in database
+    analysis_doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "resume_text": data.resume_text[:1000],  # Store first 1000 chars for reference
+        "target_role": data.target_role,
+        "target_companies": data.target_companies,
+        "analysis": analysis,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.resume_analyses.insert_one(analysis_doc)
+    
+    return analysis
+
+class InterviewPrepRequest(BaseModel):
+    company: str
+    role: str
+    interview_type: str  # "technical", "behavioral", "system_design"
+    experience_level: str
+
+@api_router.post("/ai-tools/interview-prep")
+async def get_interview_prep(data: InterviewPrepRequest, user=Depends(get_current_user)):
+    """AI-powered interview preparation suggestions"""
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    # Mock response - will integrate with AI service later
+    prep_data = {
+        "company_insights": {
+            "culture": f"{data.company} values innovation, customer obsession, and technical excellence",
+            "interview_process": "Typically 4-5 rounds including technical, system design, and behavioral",
+            "common_questions": [
+                "Tell me about a time you had to make a trade-off",
+                "How would you design a scalable system?",
+                "Describe a challenging technical problem you solved"
+            ]
+        },
+        "technical_topics": [
+            "Data Structures & Algorithms",
+            "System Design Fundamentals",
+            "Database Design",
+            "API Design",
+            "Scalability Concepts"
+        ],
+        "behavioral_framework": {
+            "method": "STAR (Situation, Task, Action, Result)",
+            "key_areas": ["Leadership", "Problem Solving", "Customer Focus", "Innovation"]
+        },
+        "practice_problems": [
+            "Design a URL shortener like bit.ly",
+            "Implement LRU Cache",
+            "Design a chat application",
+            "Two Sum problem variations"
+        ],
+        "timeline": {
+            "week_1": "Focus on core algorithms and data structures",
+            "week_2": "System design fundamentals",
+            "week_3": "Behavioral preparation and mock interviews",
+            "week_4": "Company-specific preparation and final practice"
+        }
+    }
+    
+    return prep_data
+
+@api_router.get("/ai-tools/interview-questions")
+async def get_interview_questions(
+    company: str,
+    role: str,
+    interview_type: str,
+    user=Depends(get_current_user)
+):
+    """Get AI-generated interview questions"""
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    # Mock questions - will integrate with AI service later
+    questions = {
+        "technical": [
+            "Implement a function to reverse a linked list",
+            "Design a data structure for a social media feed",
+            "How would you optimize a slow database query?",
+            "Explain the difference between SQL and NoSQL databases"
+        ],
+        "behavioral": [
+            "Tell me about a time you disagreed with your manager",
+            "Describe a project where you had to learn a new technology quickly",
+            "How do you handle competing priorities?",
+            "Give an example of when you went above and beyond"
+        ],
+        "system_design": [
+            "Design a notification system",
+            "How would you design Instagram?",
+            "Design a distributed cache",
+            "Architecture for a real-time chat application"
+        ]
+    }
+    
+    return {
+        "questions": questions.get(interview_type, []),
+        "tips": [
+            "Practice explaining your thought process out loud",
+            "Ask clarifying questions before starting",
+            "Consider edge cases and scalability",
+            "Be prepared to discuss trade-offs"
+        ]
+    }
+
+# ============ COMMUNITY FEATURES ============
+
+class ForumPostCreate(BaseModel):
+    title: str
+    content: str
+    category: str  # "general", "technical", "behavioral", "offers", "referrals"
+    tags: List[str] = []
+
+class ForumCommentCreate(BaseModel):
+    post_id: str
+    content: str
+
+@api_router.post("/community/posts")
+async def create_forum_post(data: ForumPostCreate, user=Depends(get_current_user)):
+    """Create a new forum post"""
+    post_doc = {
+        "id": str(uuid.uuid4()),
+        "author_id": user["id"],
+        "author_name": user["name"],
+        "title": data.title,
+        "content": data.content,
+        "category": data.category,
+        "tags": data.tags,
+        "upvotes": 0,
+        "downvotes": 0,
+        "comment_count": 0,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.forum_posts.insert_one(post_doc)
+    return serialize_doc(post_doc)
+
+@api_router.get("/community/posts")
+async def get_forum_posts(
+    category: Optional[str] = None,
+    limit: int = 20,
+    skip: int = 0,
+    user=Depends(get_current_user)
+):
+    """Get forum posts"""
+    query = {}
+    if category:
+        query["category"] = category
+    
+    posts = await db.forum_posts.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    return [serialize_doc(dict(p)) for p in posts]
+
+@api_router.post("/community/posts/{post_id}/comments")
+async def create_comment(post_id: str, data: ForumCommentCreate, user=Depends(get_current_user)):
+    """Add comment to a forum post"""
+    # Check if post exists
+    post = await db.forum_posts.find_one({"id": post_id})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    comment_doc = {
+        "id": str(uuid.uuid4()),
+        "post_id": post_id,
+        "author_id": user["id"],
+        "author_name": user["name"],
+        "content": data.content,
+        "upvotes": 0,
+        "downvotes": 0,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.forum_comments.insert_one(comment_doc)
+    
+    # Update comment count
+    await db.forum_posts.update_one({"id": post_id}, {"$inc": {"comment_count": 1}})
+    
+    return serialize_doc(comment_doc)
+
+@api_router.get("/community/posts/{post_id}/comments")
+async def get_post_comments(post_id: str, user=Depends(get_current_user)):
+    """Get comments for a forum post"""
+    comments = await db.forum_comments.find({"post_id": post_id}).sort("created_at", 1).to_list(100)
+    return [serialize_doc(dict(c)) for c in comments]
+
+# ============ MENTOR SELECTION FEATURE ============
+
+@api_router.get("/mentors/available")
+async def get_available_mentors(user=Depends(get_current_user)):
+    """Get list of available mentors with their profiles"""
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    mentors = await db.users.find({"role": "mentor", "status": "active"}).to_list(100)
+    
+    # Enhance mentor data with stats
+    enhanced_mentors = []
+    for mentor in mentors:
+        # Get mentor stats
+        total_mocks = await db.mocks.count_documents({"mentor_id": mentor["id"]})
+        avg_rating = 4.8  # Mock rating - will calculate from feedback later
+        
+        mentor_profile = {
+            "id": mentor["id"],
+            "name": mentor["name"],
+            "email": mentor["email"],
+            "experience": mentor.get("experience", "5+ years at top companies"),
+            "companies": mentor.get("companies", ["Amazon", "Google"]),
+            "specializations": mentor.get("specializations", ["System Design", "Algorithms"]),
+            "total_interviews": total_mocks,
+            "rating": avg_rating,
+            "bio": mentor.get("bio", "Experienced engineer passionate about helping others succeed"),
+            "availability": mentor.get("availability", "Weekends and evenings"),
+            "languages": mentor.get("languages", ["English", "Hindi"])
+        }
+        enhanced_mentors.append(mentor_profile)
+    
+    return enhanced_mentors
+
+@api_router.post("/mentee/select-mentor")
+async def select_mentor(mentor_id: str, user=Depends(get_current_user)):
+    """Allow mentee to select their preferred mentor"""
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    # Check if mentor exists and is available
+    mentor = await db.users.find_one({"id": mentor_id, "role": "mentor", "status": "active"})
+    if not mentor:
+        raise HTTPException(status_code=404, detail="Mentor not found or unavailable")
+    
+    # Update mentee's mentor assignment
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"mentor_id": mentor_id, "mentor_assigned_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"message": f"Mentor {mentor['name']} assigned successfully"}
+
 # ============ RAZORPAY PAYMENT ROUTES ============
 class CreateOrderRequest(BaseModel):
     name: str
     email: EmailStr
     password: str
-    plan_id: str  # monthly, quarterly, biannual
+    plan_id: str  # starter, professional, premium
     current_role: str = ""
     target_role: str = ""
     timeline: str = ""
@@ -1089,15 +1577,31 @@ class VerifyPaymentRequest(BaseModel):
     order_id: str  # Our internal order ID
 
 PLAN_PRICES = {
-    "monthly": 199900,      # ₹1,999 in paise - DEPRECATED: Use dynamic pricing
-    "quarterly": 499900,    # ₹4,999 in paise - DEPRECATED: Use dynamic pricing
-    "biannual": 899900      # ₹8,999 in paise - DEPRECATED: Use dynamic pricing
+    # New minimal launch pricing
+    "foundation": 199900,   # ₹1,999 in paise
+    "growth": 499900,       # ₹4,999 in paise  
+    "accelerator": 899900,  # ₹8,999 in paise
+    # Legacy support for old plan IDs - DEPRECATED: Use dynamic pricing
+    "starter": 199900,      # ₹1,999 in paise
+    "professional": 499900, # ₹4,999 in paise
+    "premium": 899900,      # ₹8,999 in paise
+    "monthly": 199900,      # ₹1,999 in paise
+    "quarterly": 499900,    # ₹4,999 in paise
+    "biannual": 899900      # ₹8,999 in paise
 }
 
 PLAN_NAMES = {
-    "monthly": "Monthly Plan",      # DEPRECATED: Use dynamic pricing
-    "quarterly": "3 Months Plan",   # DEPRECATED: Use dynamic pricing
-    "biannual": "6 Months Plan"     # DEPRECATED: Use dynamic pricing
+    # New minimal launch plans
+    "foundation": "Foundation Plan",
+    "growth": "Growth Plan",
+    "accelerator": "Accelerator Plan", 
+    # Legacy support for old plan IDs - DEPRECATED: Use dynamic pricing
+    "starter": "Starter Plan",
+    "professional": "Professional Plan", 
+    "premium": "Premium Plan",
+    "monthly": "Monthly Plan",
+    "quarterly": "3 Months Plan",
+    "biannual": "6 Months Plan"
 }
 
 async def get_pricing_plan(plan_id: str):
@@ -1113,10 +1617,23 @@ async def get_pricing_plan(plan_id: str):
     
     # Fallback to hardcoded values for backward compatibility
     if plan_id in PLAN_PRICES:
+        duration_map = {
+            # New minimal launch plans
+            "foundation": 1,
+            "growth": 3,
+            "accelerator": 6,
+            # Legacy support
+            "starter": 1,
+            "professional": 3,
+            "premium": 6,
+            "monthly": 1,
+            "quarterly": 3,
+            "biannual": 6
+        }
         return {
             "price": PLAN_PRICES[plan_id],
             "name": PLAN_NAMES[plan_id],
-            "duration_months": 1 if plan_id == "monthly" else (3 if plan_id == "quarterly" else 6),
+            "duration_months": duration_map.get(plan_id, 1),
             "features": []
         }
     

@@ -93,14 +93,88 @@ async def setup_initial_data():
         else:
             print("ℹ️  Mentee user already exists")
         
-        # 4. Create Sample Companies
+        # 4. Create Enhanced Companies with Interview Tracks
         companies_data = [
-            {"name": "Amazon", "logo_url": "", "description": "E-commerce & Cloud Giant"},
-            {"name": "Google", "logo_url": "", "description": "Search & Technology Leader"},
-            {"name": "Microsoft", "logo_url": "", "description": "Software & Cloud Services"},
-            {"name": "Meta", "logo_url": "", "description": "Social Media & VR/AR"},
-            {"name": "Apple", "logo_url": "", "description": "Consumer Electronics & Software"},
-            {"name": "Netflix", "logo_url": "", "description": "Streaming & Entertainment"},
+            {
+                "name": "Amazon", 
+                "logo_url": "", 
+                "description": "E-commerce & Cloud Giant",
+                "category": "product",
+                "interview_tracks": ["sde", "sde2", "senior_sde", "principal", "leadership"],
+                "difficulty_levels": ["junior", "mid", "senior", "staff_plus"]
+            },
+            {
+                "name": "Google", 
+                "logo_url": "", 
+                "description": "Search & Technology Leader",
+                "category": "product",
+                "interview_tracks": ["l3", "l4", "l5", "l6", "staff", "senior_staff"],
+                "difficulty_levels": ["junior", "mid", "senior", "staff_plus"]
+            },
+            {
+                "name": "Microsoft", 
+                "logo_url": "", 
+                "description": "Software & Cloud Services",
+                "category": "product",
+                "interview_tracks": ["sde", "sde2", "senior", "principal", "partner"],
+                "difficulty_levels": ["junior", "mid", "senior", "staff_plus"]
+            },
+            {
+                "name": "Meta", 
+                "logo_url": "", 
+                "description": "Social Media & VR/AR",
+                "category": "product",
+                "interview_tracks": ["e3", "e4", "e5", "e6", "e7"],
+                "difficulty_levels": ["junior", "mid", "senior", "staff_plus"]
+            },
+            {
+                "name": "Apple", 
+                "logo_url": "", 
+                "description": "Consumer Electronics & Software",
+                "category": "product",
+                "interview_tracks": ["ict2", "ict3", "ict4", "ict5", "ict6"],
+                "difficulty_levels": ["junior", "mid", "senior", "staff_plus"]
+            },
+            {
+                "name": "Netflix", 
+                "logo_url": "", 
+                "description": "Streaming & Entertainment",
+                "category": "product",
+                "interview_tracks": ["l4", "l5", "l6", "l7", "senior_staff"],
+                "difficulty_levels": ["mid", "senior", "staff_plus"]
+            },
+            {
+                "name": "Flipkart", 
+                "logo_url": "", 
+                "description": "Indian E-commerce Leader",
+                "category": "unicorn",
+                "interview_tracks": ["sde1", "sde2", "sde3", "principal", "architect"],
+                "difficulty_levels": ["junior", "mid", "senior", "staff_plus"]
+            },
+            {
+                "name": "Zomato", 
+                "logo_url": "", 
+                "description": "Food Delivery & Restaurant Discovery",
+                "category": "unicorn",
+                "interview_tracks": ["sde1", "sde2", "senior", "lead", "principal"],
+                "difficulty_levels": ["junior", "mid", "senior"]
+            },
+            {
+                "name": "Paytm", 
+                "logo_url": "", 
+                "description": "Digital Payments & Financial Services",
+                "category": "unicorn",
+                "interview_tracks": ["associate", "sde", "senior_sde", "principal", "architect"],
+                "difficulty_levels": ["junior", "mid", "senior", "staff_plus"]
+            },
+            {
+                "name": "Swiggy", 
+                "logo_url": "", 
+                "description": "Food Delivery & Quick Commerce",
+                "category": "unicorn",
+                "interview_tracks": ["sde1", "sde2", "sde3", "staff", "principal"],
+                "difficulty_levels": ["junior", "mid", "senior", "staff_plus"]
+            }
         ]
         
         for company_data in companies_data:
@@ -111,20 +185,37 @@ async def setup_initial_data():
                     "name": company_data["name"],
                     "logo_url": company_data["logo_url"],
                     "description": company_data["description"],
+                    "category": company_data["category"],
+                    "interview_tracks": company_data["interview_tracks"],
+                    "difficulty_levels": company_data["difficulty_levels"],
                     "created_at": datetime.now(timezone.utc).isoformat()
                 }
                 await db.companies.insert_one(company_doc)
-                print(f"✅ Company created: {company_data['name']}")
+                print(f"✅ Company created: {company_data['name']} ({company_data['category']})")
+            else:
+                # Update existing companies with new fields
+                await db.companies.update_one(
+                    {"name": company_data["name"]},
+                    {"$set": {
+                        "category": company_data["category"],
+                        "interview_tracks": company_data["interview_tracks"],
+                        "difficulty_levels": company_data["difficulty_levels"]
+                    }}
+                )
+                print(f"✅ Company updated: {company_data['name']} ({company_data['category']})")
         
-        # 5. Create Sample Time Slots
+        # 5. Create Enhanced Time Slots with Interview Types
         from datetime import date, timedelta
         
         time_slots = [
-            {"date": "2026-02-01", "start_time": "10:00", "end_time": "11:00"},
-            {"date": "2026-02-01", "start_time": "14:00", "end_time": "15:00"},
-            {"date": "2026-02-02", "start_time": "10:00", "end_time": "11:00"},
-            {"date": "2026-02-02", "start_time": "16:00", "end_time": "17:00"},
-            {"date": "2026-02-03", "start_time": "11:00", "end_time": "12:00"},
+            {"date": "2026-02-01", "start_time": "10:00", "end_time": "11:00", "interview_types": ["coding", "behavioral"]},
+            {"date": "2026-02-01", "start_time": "14:00", "end_time": "15:00", "interview_types": ["system_design", "coding"]},
+            {"date": "2026-02-02", "start_time": "10:00", "end_time": "11:00", "interview_types": ["coding", "hr_round"]},
+            {"date": "2026-02-02", "start_time": "16:00", "end_time": "17:00", "interview_types": ["behavioral", "coding"]},
+            {"date": "2026-02-03", "start_time": "11:00", "end_time": "12:00", "interview_types": ["system_design"]},
+            {"date": "2026-02-03", "start_time": "15:00", "end_time": "16:30", "interview_types": ["coding", "system_design"]},
+            {"date": "2026-02-04", "start_time": "09:00", "end_time": "10:00", "interview_types": ["behavioral", "hr_round"]},
+            {"date": "2026-02-04", "start_time": "14:00", "end_time": "15:30", "interview_types": ["coding", "behavioral"]},
         ]
         
         for slot_data in time_slots:
@@ -140,10 +231,18 @@ async def setup_initial_data():
                     "end_time": slot_data["end_time"],
                     "mentor_id": None,
                     "status": "available",
+                    "interview_types": slot_data["interview_types"],
                     "created_at": datetime.now(timezone.utc).isoformat()
                 }
                 await db.time_slots.insert_one(slot_doc)
-                print(f"✅ Time slot created: {slot_data['date']} {slot_data['start_time']}-{slot_data['end_time']}")
+                print(f"✅ Time slot created: {slot_data['date']} {slot_data['start_time']}-{slot_data['end_time']} ({', '.join(slot_data['interview_types'])})")
+            else:
+                # Update existing slots with interview types
+                await db.time_slots.update_one(
+                    {"date": slot_data["date"], "start_time": slot_data["start_time"]},
+                    {"$set": {"interview_types": slot_data["interview_types"]}}
+                )
+                print(f"✅ Time slot updated: {slot_data['date']} {slot_data['start_time']}-{slot_data['end_time']}")
         
         # 6. Create Sample Meet Links
         meet_links = [
@@ -166,7 +265,7 @@ async def setup_initial_data():
                 await db.meet_links.insert_one(link_doc)
                 print(f"✅ Meet link created: {link_data['name']}")
         
-        # 7. Create Default Pricing Plans
+        # 7. Create Default Pricing Plans with Enhanced Features
         pricing_plans = [
             {
                 "plan_id": "monthly",
@@ -174,8 +273,11 @@ async def setup_initial_data():
                 "price": 199900,  # ₹1,999 in paise
                 "duration_months": 1,
                 "features": [
-                    "Unlimited mock interviews",
+                    "1 mock interview per month",
                     "Detailed feedback reports",
+                    "AI resume analyzer",
+                    "Interview prep AI assistant",
+                    "Community forum access",
                     "Company-specific preparation",
                     "Email support"
                 ],
@@ -188,12 +290,16 @@ async def setup_initial_data():
                 "price": 499900,  # ₹4,999 in paise
                 "duration_months": 3,
                 "features": [
-                    "Unlimited mock interviews",
+                    "3 mock interviews (1 per month)",
                     "Detailed feedback reports",
+                    "AI resume analyzer + optimization",
+                    "Interview prep AI assistant",
+                    "Community forum access",
+                    "Priority mentor selection",
                     "Company-specific preparation",
-                    "Priority mentor assignment",
+                    "Behavioral interview training",
                     "Email & chat support",
-                    "Progress tracking"
+                    "Progress tracking dashboard"
                 ],
                 "is_active": True,
                 "display_order": 2
@@ -204,14 +310,20 @@ async def setup_initial_data():
                 "price": 899900,  # ₹8,999 in paise
                 "duration_months": 6,
                 "features": [
-                    "Unlimited mock interviews",
+                    "6 mock interviews (1 per month)",
                     "Detailed feedback reports",
+                    "AI resume analyzer + complete overhaul",
+                    "Interview prep AI assistant",
+                    "Community forum access",
+                    "Priority mentor selection",
                     "Company-specific preparation",
-                    "Priority mentor assignment",
+                    "System design interview training",
+                    "Behavioral interview training",
                     "24/7 support",
-                    "Progress tracking",
+                    "Progress tracking dashboard",
                     "Career guidance sessions",
-                    "Resume review"
+                    "Salary negotiation guidance",
+                    "Direct mentor WhatsApp access"
                 ],
                 "is_active": True,
                 "display_order": 3
@@ -236,7 +348,16 @@ async def setup_initial_data():
                 await db.pricing_plans.insert_one(plan_doc)
                 print(f"✅ Pricing plan created: {plan_data['name']} - ₹{plan_data['price']/100}")
         
-        print("\n🎉 Initial data setup completed successfully!")
+        # Validate pricing integrity
+    print("🔍 Validating pricing plan integrity...")
+    from validate_pricing_integrity import validate_pricing_integrity
+    integrity_ok = await validate_pricing_integrity()
+    if integrity_ok:
+        print("✅ Pricing integrity validated")
+    else:
+        print("🔧 Pricing integrity issues fixed")
+
+    print("\n🎉 Initial data setup completed successfully!")
         print("\n📋 Test Credentials:")
         print("   Admin:  admin@codementee.com / Admin@123")
         print("   Mentor: mentor@codementee.com / Mentor@123")

@@ -11,7 +11,7 @@ const Header = () => {
     { href: '/#how-it-works', label: 'How It Works' },
     { href: '/#pricing', label: 'Pricing' },
     { href: '/login', label: 'Login' },
-    { href: '/apply', label: 'Apply Now' }
+    { href: '/register', label: 'Get Started' }
   ];
 
   const scrollToSection = (e, href) => {
@@ -57,10 +57,10 @@ const Header = () => {
               Login
             </Link>
             <Link
-              to="/apply"
+              to="/register"
               className="btn-primary text-sm py-2.5 px-5"
             >
-              Apply Now
+              Get Started
             </Link>
           </nav>
 
@@ -79,7 +79,7 @@ const Header = () => {
           <div className="md:hidden py-4 border-t border-[#334155]/50">
             <nav className="flex flex-col gap-4">
               {navLinks.map((link) => (
-                link.href === '/apply' ? (
+                link.href === '/register' ? (
                   <Link
                     key={link.href}
                     to={link.href}

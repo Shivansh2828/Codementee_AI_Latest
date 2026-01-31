@@ -1,7 +1,7 @@
 # Technology Stack & Development Guide
 
 ## Architecture
-Full-stack application with separate frontend and backend services.
+Full-stack freemium application with separate frontend and backend services.
 
 ## Frontend Stack
 - **Framework**: React 19.x with React Router 7.x for routing
@@ -9,7 +9,7 @@ Full-stack application with separate frontend and backend services.
 - **UI Components**: Shadcn/UI component library (Radix UI primitives)
 - **Build Tool**: Create React App with CRACO for customization
 - **HTTP Client**: Axios with interceptors for authentication
-- **State Management**: React Context (AuthContext)
+- **State Management**: React Context (AuthContext) with user tier detection
 - **Icons**: Lucide React
 - **Notifications**: Sonner for toast messages
 
@@ -17,19 +17,23 @@ Full-stack application with separate frontend and backend services.
 - **Framework**: FastAPI (Python 3.11+)
 - **Database**: MongoDB Atlas (cloud) with Motor async driver
 - **Authentication**: JWT tokens with bcrypt password hashing
-- **Payment**: Razorpay integration (live keys)
-- **Email**: Resend API for transactional emails
+- **Payment**: Razorpay integration (live keys) with booking flow integration
+- **Email**: Resend API for transactional emails (welcome, upgrade notifications)
 - **Process Management**: Supervisor for production
 
 ## Database Collections
-- `users` - All user accounts (admin, mentor, mentee)
-- `orders` - Payment transactions
-- `companies` - Available companies for mock interviews
-- `time_slots` - Bookable time slots
-- `meet_links` - Google Meet link pool
-- `booking_requests` - Interview booking requests
-- `mocks` - Confirmed mock interviews
+- `users` - All user accounts (admin, mentor, mentee) with tier status (Free/Paid)
+- `orders` - Payment transactions linked to user upgrades
+- `companies` - Available companies with categories, interview tracks, and difficulty levels
+- `time_slots` - Bookable time slots with interview type compatibility
+- `meet_links` - Google Meet link pool for auto-assignment by admin
+- `booking_requests` - Interview booking requests with admin assignment tracking
+- `mocks` - Confirmed mock interviews with mentor assignments
 - `feedbacks` - Post-interview evaluations
+- `pricing_plans` - Dynamic pricing plans (Foundation, Growth, Accelerator) with transparent limits
+- `resume_analyses` - AI-powered resume analysis results (paid tier)
+- `forum_posts` - Community forum posts (paid tier)
+- `forum_comments` - Community forum comments (paid tier)
 
 ## Development Commands
 
@@ -74,9 +78,23 @@ BCC_EMAIL=admin@yourdomain.com
 - Base URL: `/api`
 - Authentication: Bearer token in Authorization header
 - Role-based endpoints: `/admin/*`, `/mentor/*`, `/mentee/*`
-- Public endpoints: `/auth/*`, `/companies`, `/available-slots`
+- Admin booking management: `/admin/booking-requests`, `/admin/confirm-booking`
+- Public endpoints: `/auth/*`, `/companies`, `/pricing-plans`
+- Free registration: `/auth/register-free` (no payment required)
+- Integrated payment: `/payment/*` (within booking flow)
+
+## User Tier System
+- **Free Tier**: 
+  - Status: "Free"
+  - Access: Dashboard exploration, pricing view, booking process start
+  - Limitations: Cannot complete bookings without payment
+- **Paid Tier**: 
+  - Status: "Active" 
+  - Access: Full platform features, mock interviews, AI tools
+  - Plan tracking: Foundation/Growth/Accelerator with usage limits
 
 ## Testing Credentials
 - **Admin**: admin@codementee.com / Admin@123
 - **Mentor**: mentor@codementee.com / Mentor@123
-- **Mentee**: mentee@codementee.com / Mentee@123
+- **Mentee (Paid)**: mentee@codementee.com / Mentee@123
+- **Free User**: Register via `/register` page (no payment required)

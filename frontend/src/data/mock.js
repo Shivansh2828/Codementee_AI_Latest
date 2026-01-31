@@ -25,28 +25,28 @@ export const cohortData = {
   currency: "₹"
 };
 
-// Pricing Plans
+// Pricing Plans - Clean and Transparent
 export const pricingPlans = [
   {
-    id: "monthly",
-    name: "Monthly",
+    id: "foundation",
+    name: "Foundation",
     duration: "1 Month",
     price: 1999,
     originalPrice: null,
     perMonth: 1999,
     popular: false,
     features: [
-      "1 mock interview",
-      "Detailed feedback report",
-      "Resume review",
-      "Private mentor group access",
+      "1 Mock Interview",
+      "Basic Resume Review (AI-powered)",
+      "1 AI Interview Prep Tool",
+      "Community access",
       "Email support"
     ],
-    cta: "Start Monthly"
+    cta: "Start Basic"
   },
   {
-    id: "quarterly",
-    name: "3 Months",
+    id: "growth",
+    name: "Growth",
     duration: "3 Months",
     price: 4999,
     originalPrice: 5997,
@@ -54,33 +54,33 @@ export const pricingPlans = [
     popular: true,
     savings: "Save ₹998",
     features: [
-      "3 mock interviews (1/month)",
-      "Detailed feedback reports",
-      "Resume review + optimization",
-      "Private mentor group access",
-      "Priority scheduling",
-      "1 system design session"
+      "3 Mock Interviews (total)",
+      "Expert Resume Review + Templates",
+      "All AI Interview Prep Tools",
+      "Priority community access",
+      "Video recordings of sessions",
+      "Chat support"
     ],
     cta: "Best Value"
   },
   {
-    id: "biannual",
-    name: "6 Months",
+    id: "accelerator",
+    name: "Accelerator",
     duration: "6 Months",
     price: 8999,
     originalPrice: 11994,
-    perMonth: 1500,
+    perMonth: 1499,
     popular: false,
     savings: "Save ₹2,995",
     features: [
-      "6 mock interviews (1/month)",
-      "Detailed feedback reports",
-      "Complete resume overhaul",
-      "Private mentor group access",
-      "Priority scheduling",
-      "2 system design sessions",
-      "Salary negotiation guidance",
-      "Direct mentor WhatsApp access"
+      "6 Mock Interviews (total)",
+      "Everything in Growth",
+      "1 Career Coaching session",
+      "Company insider insights",
+      "Priority mentor booking",
+      "Custom interview preparation plan",
+      "WhatsApp support",
+      "Job referral assistance"
     ],
     cta: "Maximum Prep"
   }
@@ -220,8 +220,8 @@ export const formFields = [
   ]},
   { id: "struggle", label: "What's your biggest interview struggle?", type: "textarea", required: true },
   { id: "selectedPlan", label: "Which plan are you interested in?", type: "select", required: true, options: [
-    "Monthly - ₹1,999",
-    "3 Months - ₹4,999 (Best Value)",
-    "6 Months - ₹8,999"
+    "Foundation - ₹1,999 (1 Mock Interview)",
+    "Growth - ₹4,999 (3 Mock Interviews - Best Value)",
+    "Accelerator - ₹8,999 (6 Mock Interviews)"
   ]}
 ];
