@@ -1,7 +1,14 @@
 # Technology Stack & Development Guide
 
 ## Architecture
-Full-stack freemium application with separate frontend and backend services.
+Full-stack freemium application with separate frontend and backend services, designed for scalability from startup to enterprise level.
+
+### Current Production Status
+- **Deployed**: Production-ready on Hostinger VPS (62.72.13.129)
+- **Containerized**: Docker-based deployment with docker-compose
+- **Database**: MongoDB Atlas cloud database
+- **SSL**: Let's Encrypt certificates ready
+- **Monitoring**: Health checks and logging implemented
 
 ## Frontend Stack
 - **Framework**: React 19.x with React Router 7.x for routing
@@ -54,18 +61,34 @@ uvicorn server:app --reload        # Development server (port 8001)
 uvicorn server:app --host 0.0.0.0 --port 8001  # Production
 ```
 
+### Production Deployment
+```bash
+# Deploy to production VPS
+./deploy-codementee.sh
+
+# Check deployment status
+docker-compose -f docker-compose.prod.yml ps
+
+# View logs
+docker logs codementee-backend
+docker logs codementee-frontend
+```
+
 ## Environment Configuration
 
 ### Frontend (.env)
 ```
-REACT_APP_BACKEND_URL=http://localhost:8001
+REACT_APP_BACKEND_URL=http://localhost:8001  # Development
+REACT_APP_BACKEND_URL=https://api.codementee.io  # Production
 ```
 
 ### Backend (.env)
 ```
-MONGO_URL=mongodb://localhost:27017  # or Atlas connection string
+MONGO_URL=mongodb://localhost:27017  # Local development
+MONGO_URL=mongodb+srv://...  # MongoDB Atlas (production)
 DB_NAME=codementee
-CORS_ORIGINS=*
+CORS_ORIGINS=*  # Development
+CORS_ORIGINS=https://codementee.io,https://www.codementee.io  # Production
 JWT_SECRET=your-secret-key
 RAZORPAY_KEY_ID=your_key_id
 RAZORPAY_KEY_SECRET=your_key_secret
@@ -87,14 +110,30 @@ BCC_EMAIL=admin@yourdomain.com
 - **Free Tier**: 
   - Status: "Free"
   - Access: Dashboard exploration, pricing view, booking process start
+  - Registration: `/auth/register-free` endpoint (no payment required)
   - Limitations: Cannot complete bookings without payment
 - **Paid Tier**: 
   - Status: "Active" 
   - Access: Full platform features, mock interviews, AI tools
   - Plan tracking: Foundation/Growth/Accelerator with usage limits
+  - Upgrade: Integrated payment flow within booking process
+
+## Production Architecture
+- **Frontend**: React app served via Nginx in Docker container
+- **Backend**: FastAPI with Gunicorn in Docker container  
+- **Database**: MongoDB Atlas (cloud-hosted)
+- **Cache**: Redis container for session and data caching
+- **Proxy**: Nginx reverse proxy with SSL termination
+- **Deployment**: Docker Compose on VPS with health monitoring
 
 ## Testing Credentials
 - **Admin**: admin@codementee.com / Admin@123
 - **Mentor**: mentor@codementee.com / Mentor@123
 - **Mentee (Paid)**: mentee@codementee.com / Mentee@123
 - **Free User**: Register via `/register` page (no payment required)
+
+## Production URLs
+- **Frontend**: https://codementee.io (when DNS configured)
+- **Backend API**: https://api.codementee.io (when DNS configured)
+- **Current IP Access**: http://62.72.13.129:3000 (frontend), http://62.72.13.129:8001 (backend)
+- **Health Check**: http://62.72.13.129:8001/api/health
