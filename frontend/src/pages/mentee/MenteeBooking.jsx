@@ -132,7 +132,7 @@ const MenteeBooking = () => {
         target_role: user.target_role || ''
       });
 
-      const { razorpay_order_id, amount, currency } = orderResponse.data;
+      const { order_id, razorpay_order_id, amount, currency } = orderResponse.data;
       const selectedPlanDetails = pricingPlans.find(p => p.id === selectedPlan);
 
       // Razorpay options
@@ -154,6 +154,7 @@ const MenteeBooking = () => {
           try {
             // Verify payment
             const verifyResponse = await api.post('/payment/verify', {
+              order_id: order_id, // Add the missing order_id
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature
