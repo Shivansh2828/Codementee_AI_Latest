@@ -359,6 +359,97 @@ async def send_welcome_email(name: str, email: str, plan_name: str, amount: int)
         logger.error(f"Failed to send welcome email to {email}: {str(e)}")
         return None
 
+async def send_upgrade_email(name: str, email: str, plan_name: str, amount: int):
+    """Send upgrade email to existing user after successful payment"""
+    try:
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 40px 20px;">
+                <tr>
+                    <td align="center">
+                        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #1e293b; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
+                            <!-- Header with Logo -->
+                            <tr>
+                                <td style="padding: 30px 40px; text-align: center; border-bottom: 1px solid #334155;">
+                                    <img src="{LOGO_URL}" alt="Codementee" style="height: 50px; width: auto;" />
+                                </td>
+                            </tr>
+                            
+                            <!-- Upgrade Message -->
+                            <tr>
+                                <td style="padding: 40px;">
+                                    <h1 style="color: #10b981; margin: 0 0 20px 0; font-size: 28px; font-weight: 600;">Account Upgraded! 🚀</h1>
+                                    <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        Hi <strong>{name}</strong>,
+                                    </p>
+                                    <p style="color: #94a3b8; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        Great news! Your account has been successfully upgraded. You now have access to all premium features.
+                                    </p>
+                                    
+                                    <!-- Order Summary -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; border-radius: 12px; margin: 30px 0;">
+                                        <tr>
+                                            <td style="padding: 24px;">
+                                                <h3 style="color: #10b981; margin: 0 0 16px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Upgrade Summary</h3>
+                                                <table width="100%" cellpadding="0" cellspacing="0">
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">New Plan</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{plan_name}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Amount Paid</td>
+                                                        <td style="color: #10b981; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">₹{amount:,}</td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <!-- CTA Button -->
+                                    <div style="text-align: center; margin: 30px 0;">
+                                        <a href="https://codementee.com/mentee" style="display: inline-block; background-color: #10b981; color: #0f172a; padding: 16px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
+                                            Start Booking Interviews
+                                        </a>
+                                    </div>
+                                    
+                                    <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0; text-align: center;">
+                                        Questions? Reply to this email or contact us at support@codementee.com
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        
+        params = {
+            "from": SENDER_EMAIL,
+            "to": [email],
+            "subject": f"Account Upgraded - Welcome to {plan_name}!",
+            "html": html_content
+        }
+        
+        # Add BCC if configured
+        if BCC_EMAIL:
+            params["bcc"] = [BCC_EMAIL]
+        
+        # Run sync SDK in thread to keep FastAPI non-blocking
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Upgrade email sent to {email}, id: {result.get('id')}")
+        return result
+    except Exception as e:
+        logger.error(f"Failed to send upgrade email to {email}: {str(e)}")
+        return None
+
 async def send_booking_request_email(mentor_name: str, mentor_email: str, mentee_name: str, company_name: str, slots: list):
     """Send email to mentor when mentee requests a booking"""
     try:
@@ -1659,7 +1750,17 @@ async def create_payment_order(data: CreateOrderRequest):
     # Check if email already exists
     existing = await db.users.find_one({"email": data.email})
     if existing:
-        raise HTTPException(status_code=400, detail="Email already registered. Please login instead.")
+        # If user exists and is already paid, reject
+        if existing.get("status") == "Active" or existing.get("plan_id"):
+            raise HTTPException(status_code=400, detail="Email already registered with a paid plan. Please login instead.")
+        
+        # If user exists but is free tier, allow upgrade
+        if existing.get("status") == "Free":
+            # This is a free user trying to upgrade - allow it
+            pass
+        else:
+            # Other cases (shouldn't happen, but be safe)
+            raise HTTPException(status_code=400, detail="Email already registered. Please login instead.")
     
     # Get pricing plan (dynamic or fallback)
     plan_info = await get_pricing_plan(data.plan_id)
@@ -1677,7 +1778,8 @@ async def create_payment_order(data: CreateOrderRequest):
             "receipt": f"order_{uuid.uuid4().hex[:10]}",
             "notes": {
                 "email": data.email,
-                "plan": data.plan_id
+                "plan": data.plan_id,
+                "upgrade": "true" if existing else "false"
             }
         })
     except Exception as e:
@@ -1689,7 +1791,7 @@ async def create_payment_order(data: CreateOrderRequest):
         "razorpay_order_id": razorpay_order["id"],
         "name": data.name,
         "email": data.email,
-        "password": hash_password(data.password),
+        "password": hash_password(data.password) if not existing else existing["password"],
         "plan_id": data.plan_id,
         "plan_name": plan_name,
         "amount": amount,
@@ -1698,6 +1800,7 @@ async def create_payment_order(data: CreateOrderRequest):
         "timeline": data.timeline,
         "struggle": data.struggle,
         "status": "pending",
+        "is_upgrade": True if existing else False,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.orders.insert_one(order_doc)
@@ -1745,40 +1848,80 @@ async def verify_payment(data: VerifyPaymentRequest):
         }}
     )
     
-    # Create user account
-    user_doc = {
-        "id": str(uuid.uuid4()),
-        "name": order["name"],
-        "email": order["email"],
-        "password": order["password"],
-        "role": "mentee",
-        "status": "Active",
-        "plan_id": order["plan_id"],
-        "plan_name": order["plan_name"],
-        "mentor_id": None,
-        "current_role": order.get("current_role", ""),
-        "target_role": order.get("target_role", ""),
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.users.insert_one(user_doc)
+    # Check if this is an upgrade (user already exists)
+    existing_user = await db.users.find_one({"email": order["email"]})
     
-    # Generate token for auto-login
-    token = create_token(user_doc["id"], user_doc["role"])
+    if existing_user and order.get("is_upgrade"):
+        # This is an upgrade - update existing user
+        await db.users.update_one(
+            {"email": order["email"]},
+            {"$set": {
+                "status": "Active",
+                "plan_id": order["plan_id"],
+                "plan_name": order["plan_name"],
+                "current_role": order.get("current_role", existing_user.get("current_role", "")),
+                "target_role": order.get("target_role", existing_user.get("target_role", "")),
+                "upgraded_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        # Get updated user
+        updated_user = await db.users.find_one({"email": order["email"]})
+        user_doc = updated_user
+        
+        # Generate token for auto-login
+        token = create_token(user_doc["id"], user_doc["role"])
+        
+        # Send upgrade email (non-blocking)
+        asyncio.create_task(send_upgrade_email(
+            name=order["name"],
+            email=order["email"],
+            plan_name=order["plan_name"],
+            amount=int(order["amount"] / 100)  # Convert paise to rupees
+        ))
+        
+        return {
+            "success": True,
+            "message": "Payment successful! Your account has been upgraded.",
+            "access_token": token,
+            "user": serialize_doc(user_doc)
+        }
     
-    # Send welcome email (non-blocking)
-    asyncio.create_task(send_welcome_email(
-        name=order["name"],
-        email=order["email"],
-        plan_name=order["plan_name"],
-        amount=int(order["amount"] / 100)  # Convert paise to rupees
-    ))
-    
-    return {
-        "success": True,
-        "message": "Payment successful! Welcome to Codementee.",
-        "access_token": token,
-        "user": serialize_doc(user_doc)
-    }
+    else:
+        # This is a new user - create account
+        user_doc = {
+            "id": str(uuid.uuid4()),
+            "name": order["name"],
+            "email": order["email"],
+            "password": order["password"],
+            "role": "mentee",
+            "status": "Active",
+            "plan_id": order["plan_id"],
+            "plan_name": order["plan_name"],
+            "mentor_id": None,
+            "current_role": order.get("current_role", ""),
+            "target_role": order.get("target_role", ""),
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.users.insert_one(user_doc)
+        
+        # Generate token for auto-login
+        token = create_token(user_doc["id"], user_doc["role"])
+        
+        # Send welcome email (non-blocking)
+        asyncio.create_task(send_welcome_email(
+            name=order["name"],
+            email=order["email"],
+            plan_name=order["plan_name"],
+            amount=int(order["amount"] / 100)  # Convert paise to rupees
+        ))
+        
+        return {
+            "success": True,
+            "message": "Payment successful! Welcome to Codementee.",
+            "access_token": token,
+            "user": serialize_doc(user_doc)
+        }
 
 @api_router.get("/payment/config")
 async def get_payment_config():
