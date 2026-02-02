@@ -44,7 +44,7 @@ async def setup_initial_data():
                 "email": "admin@codementee.com",
                 "password": hash_password("Admin@123"),
                 "role": "admin",
-                "status": "active",
+                "status": "Active",
                 "mentor_id": None,
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
@@ -62,7 +62,7 @@ async def setup_initial_data():
                 "email": "mentor@codementee.com",
                 "password": hash_password("Mentor@123"),
                 "role": "mentor",
-                "status": "active",
+                "status": "Active",
                 "mentor_id": None,
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
@@ -71,7 +71,7 @@ async def setup_initial_data():
         else:
             print("ℹ️  Mentor user already exists")
         
-        # 3. Create Mentee User
+        # 3. Create Mentee User (Paid)
         mentee_exists = await db.users.find_one({"email": "mentee@codementee.com"})
         if not mentee_exists:
             mentee_user = {
@@ -92,6 +92,28 @@ async def setup_initial_data():
             print("✅ Mentee user created: mentee@codementee.com / Mentee@123")
         else:
             print("ℹ️  Mentee user already exists")
+        
+        # 4. Create Free Test User (for payment testing)
+        free_user_exists = await db.users.find_one({"email": "free@codementee.com"})
+        if not free_user_exists:
+            free_user = {
+                "id": str(uuid.uuid4()),
+                "name": "Free Test User",
+                "email": "free@codementee.com",
+                "password": hash_password("Free@123"),
+                "role": "mentee",
+                "status": "Free",
+                "plan_id": None,
+                "plan_name": "Free Tier",
+                "mentor_id": None,
+                "current_role": "SDE 1",
+                "target_role": "Amazon SDE 2",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.users.insert_one(free_user)
+            print("✅ Free test user created: free@codementee.com / Free@123")
+        else:
+            print("ℹ️  Free test user already exists")
         
         # 4. Create Enhanced Companies with Interview Tracks
         companies_data = [
@@ -349,19 +371,20 @@ async def setup_initial_data():
                 print(f"✅ Pricing plan created: {plan_data['name']} - ₹{plan_data['price']/100}")
         
         # Validate pricing integrity
-    print("🔍 Validating pricing plan integrity...")
-    from validate_pricing_integrity import validate_pricing_integrity
-    integrity_ok = await validate_pricing_integrity()
-    if integrity_ok:
-        print("✅ Pricing integrity validated")
-    else:
-        print("🔧 Pricing integrity issues fixed")
+        print("🔍 Validating pricing plan integrity...")
+        from validate_pricing_integrity import validate_pricing_integrity
+        integrity_ok = await validate_pricing_integrity()
+        if integrity_ok:
+            print("✅ Pricing integrity validated")
+        else:
+            print("🔧 Pricing integrity issues fixed")
 
-    print("\n🎉 Initial data setup completed successfully!")
+        print("\n🎉 Initial data setup completed successfully!")
         print("\n📋 Test Credentials:")
         print("   Admin:  admin@codementee.com / Admin@123")
         print("   Mentor: mentor@codementee.com / Mentor@123")
         print("   Mentee: mentee@codementee.com / Mentee@123")
+        print("   Free:   free@codementee.com / Free@123 (for payment testing)")
         
     except Exception as e:
         print(f"❌ Error setting up initial data: {str(e)}")
