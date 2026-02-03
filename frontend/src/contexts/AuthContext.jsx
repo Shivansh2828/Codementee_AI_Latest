@@ -20,40 +20,71 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
 
   useEffect(() => {
+    // Set a maximum loading time to prevent infinite loading
+    const loadingTimeout = setTimeout(() => {
+      if (loading) {
+        console.warn('Auth loading timeout - proceeding without authentication');
+        setLoading(false);
+      }
+    }, 3000); // 3 second maximum loading time
+
     if (token) {
-      fetchUser();
+      fetchUser().finally(() => {
+        clearTimeout(loadingTimeout);
+      });
     } else {
       setLoading(false);
+      clearTimeout(loadingTimeout);
     }
+
+    return () => clearTimeout(loadingTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const fetchUser = async () => {
     try {
       const response = await axios.get(`${API}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 3000 // 3 second timeout
       });
       setUser(response.data);
     } catch (error) {
       console.error('Failed to fetch user:', error);
-      logout();
+      // Don't logout on network errors, only on auth errors
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        logout();
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const login = async (email, password) => {
-    const response = await axios.post(`${API}/auth/login`, { email, password });
-    const { access_token, user: userData } = response.data;
-    localStorage.setItem('token', access_token);
-    setToken(access_token);
-    setUser(userData);
-    return userData;
+    try {
+      const response = await axios.post(`${API}/auth/login`, { email, password }, {
+        timeout: 10000 // 10 second timeout for login
+      });
+      const { access_token, user: userData } = response.data;
+      localStorage.setItem('token', access_token);
+      setToken(access_token);
+      setUser(userData);
+      return userData;
+    } catch (error) {
+      console.error('Login failed:', error);
+      throw error;
+    }
   };
 
   const register = async (userData) => {
-    const response = await axios.post(`${API}/auth/register`, userData);
-    return response.data;
+    try {
+      const response = await axios.post(`${API}/auth/register`, userData, {
+        timeout: 10000 // 10 second timeout for registration
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Registration failed:', error);
+      throw error;
+    }
   };
 
   const logout = () => {
