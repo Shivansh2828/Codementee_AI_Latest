@@ -4,6 +4,8 @@ import { Toaster } from "sonner";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
+console.log('🚀 APP.JS: Starting App component');
+
 // Public pages
 import LandingPage from "./pages/LandingPage";
 import ApplyPage from "./pages/ApplyPage";
@@ -45,7 +47,11 @@ import MenteeInterviewPrep from "./pages/mentee/MenteeInterviewPrep";
 import MenteeCommunity from "./pages/mentee/MenteeCommunity";
 import MenteeMentorSelection from "./pages/mentee/MenteeMentorSelection";
 
+console.log('🚀 APP.JS: All imports loaded successfully');
+
 function App() {
+  console.log('🚀 APP.JS: App function called');
+  
   return (
     <AuthProvider>
       <BrowserRouter>
@@ -118,5 +124,7 @@ function App() {
     </AuthProvider>
   );
 }
+
+console.log('🚀 APP.JS: App component defined');
 
 export default App;
