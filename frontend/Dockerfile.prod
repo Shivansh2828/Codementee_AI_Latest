@@ -48,4 +48,4 @@ RUN nginx -t
 EXPOSE 80
 
 # Start nginx with error logging
-CMD ["nginx", "-g", "daemon off;", "-e", "/dev/stderr"]
+CMD ["nginx", "-g", "daemon off;"]
