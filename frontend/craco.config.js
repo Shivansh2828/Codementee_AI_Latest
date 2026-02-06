@@ -61,6 +61,59 @@ const webpackConfig = {
         ],
       };
 
+      // OPTIMIZATION: Split chunks for better mobile loading
+      webpackConfig.optimization = {
+        ...webpackConfig.optimization,
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            // Vendor libraries (React, etc.)
+            vendor: {
+              test: /[\\/]node_modules[\\/](react|react-dom|react-router-dom)[\\/]/,
+              name: 'vendor',
+              priority: 10,
+            },
+            // UI components (Radix UI, Shadcn)
+            ui: {
+              test: /[\\/]node_modules[\\/](@radix-ui|lucide-react|sonner)[\\/]/,
+              name: 'ui',
+              priority: 9,
+            },
+            // Other node_modules
+            commons: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'commons',
+              priority: 8,
+              minChunks: 2,
+            },
+          },
+        },
+        // Better runtime chunk for caching
+        runtimeChunk: 'single',
+      };
+
+      // OPTIMIZATION: Minimize bundle size
+      if (webpackConfig.mode === 'production') {
+        webpackConfig.optimization.minimize = true;
+        
+        // Remove console logs in production
+        if (webpackConfig.optimization.minimizer) {
+          webpackConfig.optimization.minimizer.forEach((minimizer) => {
+            if (minimizer.constructor.name === 'TerserPlugin') {
+              minimizer.options.terserOptions = {
+                ...minimizer.options.terserOptions,
+                compress: {
+                  ...minimizer.options.terserOptions?.compress,
+                  drop_console: false, // Keep console for debugging (we need 🔥 logs)
+                  drop_debugger: true,
+                  pure_funcs: ['console.debug'], // Only remove console.debug
+                },
+              };
+            }
+          });
+        }
+      }
+
       // Add health check plugin to webpack if enabled
       if (config.enableHealthCheck && healthPluginInstance) {
         webpackConfig.plugins.push(healthPluginInstance);

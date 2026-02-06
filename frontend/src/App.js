@@ -1,4 +1,4 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -6,46 +6,58 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 console.log('🚀 APP.JS: Starting App component');
 
-// Public pages
+// Loading component
+const LoadingFallback = () => (
+  <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+      <p className="text-slate-300">Loading...</p>
+    </div>
+  </div>
+);
+
+// Public pages - Load immediately (critical for first paint)
 import LandingPage from "./pages/LandingPage";
-import ApplyPage from "./pages/ApplyPage";
-import ConfirmationPage from "./pages/ConfirmationPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
-import RefundPolicy from "./pages/RefundPolicy";
-import ContactUs from "./pages/ContactUs";
 
-// Admin pages
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminMentees from "./pages/admin/AdminMentees";
-import AdminMentors from "./pages/admin/AdminMentors";
-import AdminMocks from "./pages/admin/AdminMocks";
-import AdminFeedbacks from "./pages/admin/AdminFeedbacks";
-import AdminPayments from "./pages/admin/AdminPayments";
-import AdminCompanies from "./pages/admin/AdminCompanies";
-import AdminTimeSlots from "./pages/admin/AdminTimeSlots";
-import AdminBookings from "./pages/admin/AdminBookings";
-import AdminMeetLinks from "./pages/admin/AdminMeetLinks";
-import AdminPricing from "./pages/admin/AdminPricing";
+// Lazy load other pages to reduce initial bundle size
+const ApplyPage = lazy(() => import("./pages/ApplyPage"));
+const ConfirmationPage = lazy(() => import("./pages/ConfirmationPage"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const RefundPolicy = lazy(() => import("./pages/RefundPolicy"));
+const ContactUs = lazy(() => import("./pages/ContactUs"));
 
-// Mentor pages
-import MentorDashboard from "./pages/mentor/MentorDashboard";
-import MentorMentees from "./pages/mentor/MentorMentees";
-import MentorMocks from "./pages/mentor/MentorMocks";
-import MentorFeedbacks from "./pages/mentor/MentorFeedbacks";
-import MentorBookingRequests from "./pages/mentor/MentorBookingRequests";
+// Admin pages - Lazy load (not needed for initial load)
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminMentees = lazy(() => import("./pages/admin/AdminMentees"));
+const AdminMentors = lazy(() => import("./pages/admin/AdminMentors"));
+const AdminMocks = lazy(() => import("./pages/admin/AdminMocks"));
+const AdminFeedbacks = lazy(() => import("./pages/admin/AdminFeedbacks"));
+const AdminPayments = lazy(() => import("./pages/admin/AdminPayments"));
+const AdminCompanies = lazy(() => import("./pages/admin/AdminCompanies"));
+const AdminTimeSlots = lazy(() => import("./pages/admin/AdminTimeSlots"));
+const AdminBookings = lazy(() => import("./pages/admin/AdminBookings"));
+const AdminMeetLinks = lazy(() => import("./pages/admin/AdminMeetLinks"));
+const AdminPricing = lazy(() => import("./pages/admin/AdminPricing"));
 
-// Mentee pages
-import MenteeDashboard from "./pages/mentee/MenteeDashboard";
-import MenteeMocks from "./pages/mentee/MenteeMocks";
-import MenteeFeedbacks from "./pages/mentee/MenteeFeedbacks";
-import MenteeBooking from "./pages/mentee/MenteeBooking";
-import MenteeResumeAnalyzer from "./pages/mentee/MenteeResumeAnalyzer";
-import MenteeInterviewPrep from "./pages/mentee/MenteeInterviewPrep";
-import MenteeCommunity from "./pages/mentee/MenteeCommunity";
-import MenteeMentorSelection from "./pages/mentee/MenteeMentorSelection";
+// Mentor pages - Lazy load
+const MentorDashboard = lazy(() => import("./pages/mentor/MentorDashboard"));
+const MentorMentees = lazy(() => import("./pages/mentor/MentorMentees"));
+const MentorMocks = lazy(() => import("./pages/mentor/MentorMocks"));
+const MentorFeedbacks = lazy(() => import("./pages/mentor/MentorFeedbacks"));
+const MentorBookingRequests = lazy(() => import("./pages/mentor/MentorBookingRequests"));
+
+// Mentee pages - Lazy load
+const MenteeDashboard = lazy(() => import("./pages/mentee/MenteeDashboard"));
+const MenteeMocks = lazy(() => import("./pages/mentee/MenteeMocks"));
+const MenteeFeedbacks = lazy(() => import("./pages/mentee/MenteeFeedbacks"));
+const MenteeBooking = lazy(() => import("./pages/mentee/MenteeBooking"));
+const MenteeResumeAnalyzer = lazy(() => import("./pages/mentee/MenteeResumeAnalyzer"));
+const MenteeInterviewPrep = lazy(() => import("./pages/mentee/MenteeInterviewPrep"));
+const MenteeCommunity = lazy(() => import("./pages/mentee/MenteeCommunity"));
+const MenteeMentorSelection = lazy(() => import("./pages/mentee/MenteeMentorSelection"));
 
 console.log('🚀 APP.JS: All imports loaded successfully');
 
@@ -66,14 +78,7 @@ function App() {
             },
           }}
         />
-        <React.Suspense fallback={
-          <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
-              <p className="text-slate-300">Loading Codementee...</p>
-            </div>
-          </div>
-        }>
+        <Suspense fallback={<LoadingFallback />}>
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
@@ -119,7 +124,7 @@ function App() {
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </React.Suspense>
+        </Suspense>
       </BrowserRouter>
     </AuthProvider>
   );
