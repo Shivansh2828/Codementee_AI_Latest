@@ -15,74 +15,86 @@ export const targetCompanies = [
   { name: "Google", logo: "https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg" },
   { name: "Microsoft", logo: "https://upload.wikimedia.org/wikipedia/commons/9/96/Microsoft_logo_%282012%29.svg" },
   { name: "Meta", logo: "https://upload.wikimedia.org/wikipedia/commons/7/7b/Meta_Platforms_Inc._logo.svg" },
-  { name: "Flipkart", logo: "https://upload.wikimedia.org/wikipedia/commons/f/f3/Flipkart_logo_2023.svg" },
+  { name: "Netflix", logo: "https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg" },
   { name: "Uber", logo: "https://upload.wikimedia.org/wikipedia/commons/c/cc/Uber_logo_2018.png" }
 ];
 
 export const cohortData = {
   totalSeats: 25,
   seatsRemaining: 18,
-  currency: "₹"
+  intensiveSeatsRemaining: 7,
+  currency: "₹",
+  launchPhase: "Limited Launch - 25 Spots Only"
 };
 
-// Pricing Plans - Clean and Transparent
+// Pricing Plans - One-time Launch Pricing (No Subscriptions)
 export const pricingPlans = [
   {
-    id: "foundation",
-    name: "Foundation",
-    duration: "1 Month",
-    price: 1999,
+    id: "starter",
+    name: "Starter",
+    description: "Perfect for testing the waters",
+    duration: "One-time purchase",
+    price: 2499,
+    priceUSD: 30,
     originalPrice: null,
-    perMonth: 1999,
+    perSession: 2499,
     popular: false,
     features: [
-      "1 Mock Interview",
-      "Basic Resume Review (AI-powered)",
-      "1 AI Interview Prep Tool",
-      "Community access",
+      "1 Live Mock Interview (45-60 min)",
+      "Detailed written feedback report",
+      "Email resume review",
+      "Interview recording access",
       "Email support"
     ],
-    cta: "Start Basic"
+    cta: "Book Your Mock",
+    justification: "Direct access to experienced engineers. No subscriptions, no commitments."
   },
   {
-    id: "growth",
-    name: "Growth",
-    duration: "3 Months",
-    price: 4999,
-    originalPrice: 5997,
-    perMonth: 1666,
+    id: "professional",
+    name: "Professional",
+    description: "Most comprehensive interview preparation",
+    duration: "One-time purchase",
+    price: 6999,
+    priceUSD: 85,
+    originalPrice: 7497,
+    perSession: 2333,
     popular: true,
-    savings: "Save ₹998",
+    savings: "Save ₹498",
     features: [
-      "3 Mock Interviews (total)",
-      "Expert Resume Review + Templates",
-      "All AI Interview Prep Tools",
-      "Priority community access",
-      "Video recordings of sessions",
-      "Chat support"
+      "3 Live Mock Interviews (45-60 min each)",
+      "Detailed feedback after each session",
+      "Live resume review session (30 min)",
+      "Interview recordings access",
+      "Priority scheduling",
+      "WhatsApp support"
     ],
-    cta: "Best Value"
+    cta: "Get Professional Prep",
+    justification: "Complete interview preparation with multiple practice rounds and live resume optimization."
   },
   {
-    id: "accelerator",
-    name: "Accelerator",
-    duration: "6 Months",
-    price: 8999,
-    originalPrice: 11994,
-    perMonth: 1499,
+    id: "intensive",
+    name: "Intensive",
+    description: "Premium preparation for serious candidates",
+    duration: "One-time purchase",
+    price: 12999,
+    priceUSD: 155,
+    originalPrice: 14994,
+    perSession: 2166,
     popular: false,
-    savings: "Save ₹2,995",
+    savings: "Save ₹1,995",
+    limitedSeats: 10,
     features: [
-      "6 Mock Interviews (total)",
-      "Everything in Growth",
-      "1 Career Coaching session",
-      "Company insider insights",
-      "Priority mentor booking",
-      "Custom interview preparation plan",
-      "WhatsApp support",
-      "Job referral assistance"
+      "6 Live Mock Interviews (45-60 min each)",
+      "Comprehensive feedback reports",
+      "2 Live resume review sessions",
+      "Company-specific interview prep",
+      "Priority mentor matching",
+      "Interview recordings access",
+      "Direct mentor WhatsApp access",
+      "Post-interview strategy calls"
     ],
-    cta: "Maximum Prep"
+    cta: "Secure Premium Spot",
+    justification: "Intensive preparation with dedicated mentor support. Limited to 10 candidates for personalized attention."
   }
 ];
 
@@ -91,7 +103,7 @@ export const deliverables = [
   {
     id: 1,
     title: "Mock Interviews",
-    description: "1-on-1 video calls simulating real interviews at Amazon, Google, Flipkart",
+    description: "1-on-1 video calls simulating real interviews at Amazon, Google, Netflix",
     detail: "45-60 min sessions covering DSA, System Design, or Behavioral rounds"
   },
   {
@@ -196,7 +208,7 @@ export const testimonials = [
   {
     id: 2,
     name: "Priya S.",
-    role: "Backend Engineer at Flipkart",
+    role: "Backend Engineer at Netflix",
     quote: "Finally understood why I was getting rejected. The feedback was specific and actionable."
   },
   {

@@ -88,10 +88,18 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     console.log('🚀 AUTH_PROVIDER: login called for email:', email);
+    console.log('🚀 AUTH_PROVIDER: login data being sent:', { email, password: '***' });
     
     try {
-      const response = await axios.post(`${API}/auth/login`, { email, password }, {
-        timeout: 10000 // 10 second timeout for login
+      const requestData = { email, password };
+      console.log('🚀 AUTH_PROVIDER: Making request to:', `${API}/auth/login`);
+      console.log('🚀 AUTH_PROVIDER: Request data:', requestData);
+      
+      const response = await axios.post(`${API}/auth/login`, requestData, {
+        timeout: 10000, // 10 second timeout for login
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
       console.log('🚀 AUTH_PROVIDER: Login successful');
       
@@ -102,6 +110,8 @@ export const AuthProvider = ({ children }) => {
       return userData;
     } catch (error) {
       console.error('🚨 AUTH_PROVIDER: Login failed:', error);
+      console.error('🚨 AUTH_PROVIDER: Error response:', error.response?.data);
+      console.error('🚨 AUTH_PROVIDER: Error status:', error.response?.status);
       throw error;
     }
   };

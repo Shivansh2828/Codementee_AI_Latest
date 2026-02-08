@@ -2,19 +2,22 @@ import React, { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider } from "./contexts/AuthContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 console.log('🚀 APP.JS: Starting App component');
 
 // Loading component
-const LoadingFallback = () => (
-  <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-    <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
-      <p className="text-slate-300">Loading...</p>
+const LoadingFallback = () => {
+  return (
+    <div className="min-h-screen bg-white dark:bg-[#0f172a] flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+        <p className="text-gray-600 dark:text-slate-300">Loading...</p>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // Public pages - Load immediately (critical for first paint)
 import LandingPage from "./pages/LandingPage";
@@ -36,6 +39,7 @@ const AdminMentors = lazy(() => import("./pages/admin/AdminMentors"));
 const AdminMocks = lazy(() => import("./pages/admin/AdminMocks"));
 const AdminFeedbacks = lazy(() => import("./pages/admin/AdminFeedbacks"));
 const AdminPayments = lazy(() => import("./pages/admin/AdminPayments"));
+const AdminPayouts = lazy(() => import("./pages/admin/AdminPayouts"));
 const AdminCompanies = lazy(() => import("./pages/admin/AdminCompanies"));
 const AdminTimeSlots = lazy(() => import("./pages/admin/AdminTimeSlots"));
 const AdminBookings = lazy(() => import("./pages/admin/AdminBookings"));
@@ -45,6 +49,7 @@ const AdminPricing = lazy(() => import("./pages/admin/AdminPricing"));
 // Mentor pages - Lazy load
 const MentorDashboard = lazy(() => import("./pages/mentor/MentorDashboard"));
 const MentorMentees = lazy(() => import("./pages/mentor/MentorMentees"));
+const MentorPayouts = lazy(() => import("./pages/mentor/MentorPayouts"));
 const MentorMocks = lazy(() => import("./pages/mentor/MentorMocks"));
 const MentorFeedbacks = lazy(() => import("./pages/mentor/MentorFeedbacks"));
 const MentorBookingRequests = lazy(() => import("./pages/mentor/MentorBookingRequests"));
@@ -65,21 +70,22 @@ function App() {
   console.log('🚀 APP.JS: App function called');
   
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Toaster 
-          position="top-right" 
-          richColors 
-          toastOptions={{
-            style: {
-              background: '#1e293b',
-              border: '1px solid #334155',
-              color: '#f8fafc',
-            },
-          }}
-        />
-        <Suspense fallback={<LoadingFallback />}>
-          <Routes>
+    <ThemeProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Toaster 
+            position="top-right" 
+            richColors 
+            toastOptions={{
+              style: {
+                background: 'var(--toast-bg)',
+                border: '1px solid var(--toast-border)',
+                color: 'var(--toast-text)',
+              },
+            }}
+          />
+          <Suspense fallback={<LoadingFallback />}>
+            <Routes>
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/apply" element={<ApplyPage />} />
@@ -98,6 +104,7 @@ function App() {
             <Route path="/admin/mocks" element={<ProtectedRoute allowedRoles={['admin']}><AdminMocks /></ProtectedRoute>} />
             <Route path="/admin/feedbacks" element={<ProtectedRoute allowedRoles={['admin']}><AdminFeedbacks /></ProtectedRoute>} />
             <Route path="/admin/orders" element={<ProtectedRoute allowedRoles={['admin']}><AdminPayments /></ProtectedRoute>} />
+            <Route path="/admin/payouts" element={<ProtectedRoute allowedRoles={['admin']}><AdminPayouts /></ProtectedRoute>} />
             <Route path="/admin/pricing" element={<ProtectedRoute allowedRoles={['admin']}><AdminPricing /></ProtectedRoute>} />
             <Route path="/admin/companies" element={<ProtectedRoute allowedRoles={['admin']}><AdminCompanies /></ProtectedRoute>} />
             <Route path="/admin/time-slots" element={<ProtectedRoute allowedRoles={['admin']}><AdminTimeSlots /></ProtectedRoute>} />
@@ -108,6 +115,7 @@ function App() {
             <Route path="/mentor" element={<ProtectedRoute allowedRoles={['mentor']}><MentorDashboard /></ProtectedRoute>} />
             <Route path="/mentor/mentees" element={<ProtectedRoute allowedRoles={['mentor']}><MentorMentees /></ProtectedRoute>} />
             <Route path="/mentor/mocks" element={<ProtectedRoute allowedRoles={['mentor']}><MentorMocks /></ProtectedRoute>} />
+            <Route path="/mentor/payouts" element={<ProtectedRoute allowedRoles={['mentor']}><MentorPayouts /></ProtectedRoute>} />
             <Route path="/mentor/feedbacks" element={<ProtectedRoute allowedRoles={['mentor']}><MentorFeedbacks /></ProtectedRoute>} />
             <Route path="/mentor/booking-requests" element={<ProtectedRoute allowedRoles={['mentor']}><MentorBookingRequests /></ProtectedRoute>} />
 
@@ -127,6 +135,7 @@ function App() {
         </Suspense>
       </BrowserRouter>
     </AuthProvider>
+  </ThemeProvider>
   );
 }
 

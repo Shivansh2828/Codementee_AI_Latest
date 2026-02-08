@@ -1,18 +1,25 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import ThemeToggle from '../components/ui/ThemeToggle';
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
+  const { theme } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
+
+  // Debug: Log environment variables
+  console.log('🔍 LOGIN_PAGE: Backend URL:', process.env.REACT_APP_BACKEND_URL);
+  console.log('🔍 LOGIN_PAGE: Environment:', process.env.REACT_APP_ENVIRONMENT);
 
   const from = location.state?.from?.pathname || '/';
 
@@ -41,42 +48,45 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4">
+    <div className={`min-h-screen ${theme.bg.primary} flex items-center justify-center p-4`}>
       <div className="w-full max-w-md">
-        <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-[#06b6d4] transition-colors mb-8">
-          <ArrowLeft size={18} />
-          Back to Home
-        </Link>
+        <div className="flex items-center justify-between mb-8">
+          <Link to="/" className={`flex items-center gap-2 ${theme.text.secondary} hover:${theme.text.accent} transition-colors`}>
+            <ArrowLeft size={18} />
+            Back to Home
+          </Link>
+          <ThemeToggle />
+        </div>
 
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-8">
+        <div className={`${theme.bg.card} rounded-xl ${theme.border.primary} border p-8 ${theme.shadow}`}>
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-white mb-2">Welcome Back</h1>
-            <p className="text-slate-400">Sign in to your account</p>
+            <h1 className={`text-2xl font-bold ${theme.text.primary} mb-2`}>Welcome Back</h1>
+            <p className={theme.text.secondary}>Sign in to your account</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-white text-sm font-medium mb-2">Email</label>
+              <label className={`block ${theme.text.primary} text-sm font-medium mb-2`}>Email</label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 rounded-lg bg-[#0f172a] border border-[#334155] text-white placeholder-slate-500 focus:outline-none focus:border-[#06b6d4] transition-colors"
+                className={`w-full px-4 py-3 rounded-lg ${theme.input.base} transition-colors`}
                 placeholder="you@example.com"
               />
             </div>
 
             <div>
-              <label className="block text-white text-sm font-medium mb-2">Password</label>
+              <label className={`block ${theme.text.primary} text-sm font-medium mb-2`}>Password</label>
               <input
                 type="password"
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 rounded-lg bg-[#0f172a] border border-[#334155] text-white placeholder-slate-500 focus:outline-none focus:border-[#06b6d4] transition-colors"
+                className={`w-full px-4 py-3 rounded-lg ${theme.input.base} transition-colors`}
                 placeholder="Enter your password"
               />
             </div>
@@ -94,9 +104,9 @@ const LoginPage = () => {
             </button>
           </form>
 
-          <p className="text-center text-slate-400 text-sm mt-6">
+          <p className={`text-center ${theme.text.secondary} text-sm mt-6`}>
             Don't have an account?{' '}
-            <Link to="/register" className="text-[#06b6d4] hover:underline">Register</Link>
+            <Link to="/register" className={`${theme.text.accent} hover:underline`}>Register</Link>
           </p>
         </div>
       </div>

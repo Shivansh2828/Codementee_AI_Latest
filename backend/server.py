@@ -618,10 +618,19 @@ async def register_free_user(data: FreeUserCreate):
 
 @api_router.post("/auth/login")
 async def login(credentials: UserLogin):
+    logger.info(f"Login attempt for email: {credentials.email}")
+    logger.info(f"Received credentials: email={credentials.email}, password_length={len(credentials.password)}")
+    
     user = await db.users.find_one({"email": credentials.email})
-    if not user or not verify_password(credentials.password, user["password"]):
+    if not user:
+        logger.warning(f"User not found: {credentials.email}")
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
+    if not verify_password(credentials.password, user["password"]):
+        logger.warning(f"Invalid password for user: {credentials.email}")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    logger.info(f"Login successful for user: {credentials.email}")
     token = create_token(user["id"], user["role"])
     return {
         "access_token": token,
@@ -1922,6 +1931,242 @@ async def verify_payment(data: VerifyPaymentRequest):
             "access_token": token,
             "user": serialize_doc(user_doc)
         }
+
+# ============ MENTOR PAYOUT TRACKING SYSTEM ============
+
+class PayoutRequest(BaseModel):
+    mock_id: str
+    mentor_id: str
+    amount: int  # Amount in paise (₹800 = 80000 paise)
+    notes: Optional[str] = None
+
+class PayoutUpdate(BaseModel):
+    status: str  # pending, approved, paid, rejected
+    admin_notes: Optional[str] = None
+
+@api_router.post("/admin/payouts")
+async def create_payout(payout_data: PayoutRequest, user=Depends(get_current_user)):
+    """Admin creates a payout entry for a mentor after mock interview completion"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    # Verify mock interview exists and is completed
+    mock = await db.mocks.find_one({"id": payout_data.mock_id})
+    if not mock:
+        raise HTTPException(status_code=404, detail="Mock interview not found")
+    
+    if mock.get("status") != "completed":
+        raise HTTPException(status_code=400, detail="Mock interview must be completed")
+    
+    # Check if payout already exists for this mock
+    existing_payout = await db.payouts.find_one({"mock_id": payout_data.mock_id})
+    if existing_payout:
+        raise HTTPException(status_code=400, detail="Payout already exists for this mock interview")
+    
+    # Get mentor details
+    mentor = await db.users.find_one({"id": payout_data.mentor_id, "role": "mentor"})
+    if not mentor:
+        raise HTTPException(status_code=404, detail="Mentor not found")
+    
+    payout_doc = {
+        "id": str(uuid.uuid4()),
+        "mock_id": payout_data.mock_id,
+        "mentor_id": payout_data.mentor_id,
+        "mentor_name": mentor["name"],
+        "mentor_email": mentor["email"],
+        "amount": payout_data.amount,
+        "status": "pending",  # pending, approved, paid, rejected
+        "notes": payout_data.notes,
+        "admin_notes": None,
+        "created_by": user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.payouts.insert_one(payout_doc)
+    return serialize_doc(payout_doc)
+
+@api_router.get("/admin/payouts")
+async def get_all_payouts(
+    status: Optional[str] = None,
+    mentor_id: Optional[str] = None,
+    user=Depends(get_current_user)
+):
+    """Admin gets all payouts with optional filtering"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    query = {}
+    if status:
+        query["status"] = status
+    if mentor_id:
+        query["mentor_id"] = mentor_id
+    
+    payouts = await db.payouts.find(query).sort("created_at", -1).to_list(1000)
+    
+    # Enrich with mock interview details
+    for payout in payouts:
+        mock = await db.mocks.find_one({"id": payout["mock_id"]})
+        if mock:
+            payout["mock_details"] = {
+                "company_name": mock.get("company_name"),
+                "interview_type": mock.get("interview_type"),
+                "scheduled_at": mock.get("scheduled_at"),
+                "mentee_name": mock.get("mentee_name")
+            }
+    
+    return [serialize_doc(dict(p)) for p in payouts]
+
+@api_router.put("/admin/payouts/{payout_id}")
+async def update_payout_status(
+    payout_id: str, 
+    update_data: PayoutUpdate, 
+    user=Depends(get_current_user)
+):
+    """Admin updates payout status (approve, reject, mark as paid)"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    payout = await db.payouts.find_one({"id": payout_id})
+    if not payout:
+        raise HTTPException(status_code=404, detail="Payout not found")
+    
+    update_fields = {
+        "status": update_data.status,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_by": user["id"]
+    }
+    
+    if update_data.admin_notes:
+        update_fields["admin_notes"] = update_data.admin_notes
+    
+    if update_data.status == "paid":
+        update_fields["paid_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.payouts.update_one(
+        {"id": payout_id},
+        {"$set": update_fields}
+    )
+    
+    updated_payout = await db.payouts.find_one({"id": payout_id})
+    return serialize_doc(dict(updated_payout))
+
+@api_router.get("/mentor/payouts")
+async def get_mentor_payouts(user=Depends(get_current_user)):
+    """Mentor gets their own payout history"""
+    if user["role"] != "mentor":
+        raise HTTPException(status_code=403, detail="Mentor only")
+    
+    payouts = await db.payouts.find({"mentor_id": user["id"]}).sort("created_at", -1).to_list(1000)
+    
+    # Enrich with mock interview details
+    for payout in payouts:
+        mock = await db.mocks.find_one({"id": payout["mock_id"]})
+        if mock:
+            payout["mock_details"] = {
+                "company_name": mock.get("company_name"),
+                "interview_type": mock.get("interview_type"),
+                "scheduled_at": mock.get("scheduled_at"),
+                "mentee_name": mock.get("mentee_name")
+            }
+    
+    return [serialize_doc(dict(p)) for p in payouts]
+
+@api_router.get("/mentor/payout-stats")
+async def get_mentor_payout_stats(user=Depends(get_current_user)):
+    """Mentor gets their payout statistics"""
+    if user["role"] != "mentor":
+        raise HTTPException(status_code=403, detail="Mentor only")
+    
+    # Aggregate payout statistics
+    pipeline = [
+        {"$match": {"mentor_id": user["id"]}},
+        {"$group": {
+            "_id": "$status",
+            "count": {"$sum": 1},
+            "total_amount": {"$sum": "$amount"}
+        }}
+    ]
+    
+    stats_cursor = db.payouts.aggregate(pipeline)
+    stats_list = await stats_cursor.to_list(length=None)
+    
+    # Format statistics
+    stats = {
+        "total_earned": 0,
+        "pending_amount": 0,
+        "paid_amount": 0,
+        "total_sessions": 0,
+        "pending_sessions": 0,
+        "paid_sessions": 0
+    }
+    
+    for stat in stats_list:
+        status = stat["_id"]
+        count = stat["count"]
+        amount = stat["total_amount"]
+        
+        stats["total_sessions"] += count
+        stats["total_earned"] += amount
+        
+        if status == "pending":
+            stats["pending_amount"] = amount
+            stats["pending_sessions"] = count
+        elif status in ["approved", "paid"]:
+            stats["paid_amount"] += amount
+            stats["paid_sessions"] += count
+    
+    return stats
+
+@api_router.get("/admin/payout-stats")
+async def get_admin_payout_stats(user=Depends(get_current_user)):
+    """Admin gets overall payout statistics"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    # Aggregate overall statistics
+    pipeline = [
+        {"$group": {
+            "_id": "$status",
+            "count": {"$sum": 1},
+            "total_amount": {"$sum": "$amount"}
+        }}
+    ]
+    
+    stats_cursor = db.payouts.aggregate(pipeline)
+    stats_list = await stats_cursor.to_list(length=None)
+    
+    # Format statistics
+    stats = {
+        "total_payouts": 0,
+        "total_amount": 0,
+        "pending_amount": 0,
+        "approved_amount": 0,
+        "paid_amount": 0,
+        "pending_count": 0,
+        "approved_count": 0,
+        "paid_count": 0
+    }
+    
+    for stat in stats_list:
+        status = stat["_id"]
+        count = stat["count"]
+        amount = stat["total_amount"]
+        
+        stats["total_payouts"] += count
+        stats["total_amount"] += amount
+        
+        if status == "pending":
+            stats["pending_amount"] = amount
+            stats["pending_count"] = count
+        elif status == "approved":
+            stats["approved_amount"] = amount
+            stats["approved_count"] = count
+        elif status == "paid":
+            stats["paid_amount"] = amount
+            stats["paid_count"] = count
+    
+    return stats
 
 @api_router.get("/payment/config")
 async def get_payment_config():

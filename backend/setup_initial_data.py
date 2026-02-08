@@ -166,12 +166,12 @@ async def setup_initial_data():
                 "difficulty_levels": ["mid", "senior", "staff_plus"]
             },
             {
-                "name": "Flipkart", 
-                "logo_url": "", 
-                "description": "Indian E-commerce Leader",
-                "category": "unicorn",
-                "interview_tracks": ["sde1", "sde2", "sde3", "principal", "architect"],
-                "difficulty_levels": ["junior", "mid", "senior", "staff_plus"]
+                "name": "Netflix", 
+                "logo_url": "https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg", 
+                "description": "Streaming & Entertainment",
+                "category": "product",
+                "interview_tracks": ["l4", "l5", "l6", "l7", "senior_staff"],
+                "difficulty_levels": ["mid", "senior", "staff_plus"]
             },
             {
                 "name": "Zomato", 
