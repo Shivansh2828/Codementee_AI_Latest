@@ -63,6 +63,7 @@ const DashboardLayout = ({ children, title }) => {
         { path: '/mentee', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/mentee/book', label: 'Schedule Mock', icon: CalendarPlus },
         { path: '/mentee/mocks', label: 'My Interviews', icon: Calendar },
+        { path: '/mentee/prep-checklist', label: 'Prep Checklist', icon: ClipboardList },
         { path: '/mentee/feedbacks', label: 'My Feedbacks', icon: MessageSquare },
         { 
           label: 'AI Tools', 

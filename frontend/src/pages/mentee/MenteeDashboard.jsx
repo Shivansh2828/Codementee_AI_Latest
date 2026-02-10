@@ -205,6 +205,19 @@ const MenteeDashboard = () => {
             </Link>
 
             <Link 
+              to="/mentee/prep-checklist" 
+              className={`p-4 ${theme.glass} ${theme.border.primary} border rounded-xl hover:shadow-md transition-all duration-200 group`}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                  <Check className="w-5 h-5 text-white" />
+                </div>
+                <h4 className={`font-semibold ${theme.text.primary}`}>Prep Checklist</h4>
+              </div>
+              <p className={`text-sm ${theme.text.secondary}`}>Get interview ready</p>
+            </Link>
+
+            <Link 
               to="/mentee/resume-analyzer" 
               className={`p-4 ${theme.glass} ${theme.border.primary} border rounded-xl hover:shadow-md transition-all duration-200 group`}
             >
@@ -248,29 +261,58 @@ const MenteeDashboard = () => {
 
       {/* Upcoming Mock Interview */}
       {nextMock && (
-        <div className={`${theme.glass} ${theme.border.primary} border rounded-2xl p-6 ${theme.shadow}`}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
-              <Clock className="w-5 h-5 text-white" />
+        <div className="space-y-4">
+          {/* Prep Checklist Reminder */}
+          <div className={`${theme.glass} ${theme.border.primary} border rounded-2xl p-6 ${theme.shadow} bg-gradient-to-br from-blue-500/10 to-cyan-500/10`}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3 flex-1">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Check className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className={`text-lg font-semibold ${theme.text.primary} mb-1`}>
+                    Prepare for Your Interview
+                  </h3>
+                  <p className={`${theme.text.secondary} text-sm mb-3`}>
+                    Complete our preparation checklist to ensure you're fully ready for your upcoming mock interview.
+                  </p>
+                  <Link 
+                    to="/mentee/prep-checklist"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-sm font-semibold rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all duration-200"
+                  >
+                    Open Checklist
+                    <ArrowRight size={14} />
+                  </Link>
+                </div>
+              </div>
             </div>
-            <h3 className={`text-lg font-semibold ${theme.text.primary}`}>Upcoming Mock Interview</h3>
           </div>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <p className={`${theme.text.primary} font-medium`}>{new Date(nextMock.scheduled_at).toLocaleString()}</p>
-              <p className={`${theme.text.secondary} text-sm`}>Status: <span className="capitalize">{nextMock.status}</span></p>
+
+          {/* Interview Details */}
+          <div className={`${theme.glass} ${theme.border.primary} border rounded-2xl p-6 ${theme.shadow}`}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
+                <Clock className="w-5 h-5 text-white" />
+              </div>
+              <h3 className={`text-lg font-semibold ${theme.text.primary}`}>Upcoming Mock Interview</h3>
             </div>
-            {nextMock.meet_link && (
-              <a 
-                href={nextMock.meet_link} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-              >
-                Join Interview
-                <ArrowRight size={16} />
-              </a>
-            )}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <p className={`${theme.text.primary} font-medium`}>{new Date(nextMock.scheduled_at).toLocaleString()}</p>
+                <p className={`${theme.text.secondary} text-sm`}>Status: <span className="capitalize">{nextMock.status}</span></p>
+              </div>
+              {nextMock.meet_link && (
+                <a 
+                  href={nextMock.meet_link} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                >
+                  Join Interview
+                  <ArrowRight size={16} />
+                </a>
+              )}
+            </div>
           </div>
         </div>
       )}

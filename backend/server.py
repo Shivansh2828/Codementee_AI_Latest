@@ -1674,6 +1674,279 @@ async def select_mentor(mentor_id: str, user=Depends(get_current_user)):
     
     return {"message": f"Mentor {mentor['name']} assigned successfully"}
 
+# ============ INTERVIEW PREPARATION CHECKLIST ============
+
+class ChecklistItemUpdate(BaseModel):
+    item_id: str
+    completed: bool
+
+class ChecklistProgressUpdate(BaseModel):
+    mock_id: str
+    completed_items: List[str]
+
+@api_router.get("/mentee/prep-checklist")
+async def get_prep_checklist(
+    interview_type: Optional[str] = "coding",
+    company: Optional[str] = None,
+    user=Depends(get_current_user)
+):
+    """Get interview preparation checklist based on interview type and company"""
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    # Base checklist items for all interviews
+    base_checklist = {
+        "technical_setup": {
+            "title": "Technical Setup",
+            "icon": "monitor",
+            "items": [
+                {"id": "test_camera", "text": "Test your camera and ensure good lighting", "required": True},
+                {"id": "test_microphone", "text": "Test your microphone and audio quality", "required": True},
+                {"id": "test_internet", "text": "Check internet connection (minimum 5 Mbps)", "required": True},
+                {"id": "backup_device", "text": "Have a backup device ready", "required": False},
+                {"id": "quiet_space", "text": "Find a quiet, distraction-free space", "required": True},
+                {"id": "close_apps", "text": "Close unnecessary applications", "required": True}
+            ]
+        },
+        "environment": {
+            "title": "Environment Setup",
+            "icon": "home",
+            "items": [
+                {"id": "clean_background", "text": "Ensure clean, professional background", "required": True},
+                {"id": "good_lighting", "text": "Position yourself facing natural light or lamp", "required": True},
+                {"id": "water_ready", "text": "Keep water nearby", "required": False},
+                {"id": "inform_family", "text": "Inform family/roommates about interview", "required": True},
+                {"id": "phone_silent", "text": "Put phone on silent mode", "required": True}
+            ]
+        },
+        "materials": {
+            "title": "Materials Ready",
+            "icon": "file-text",
+            "items": [
+                {"id": "resume_ready", "text": "Have your resume open and ready", "required": True},
+                {"id": "notepad_ready", "text": "Keep notepad and pen for notes", "required": False},
+                {"id": "questions_prepared", "text": "Prepare questions to ask interviewer", "required": True},
+                {"id": "company_research", "text": "Research company background and culture", "required": True}
+            ]
+        }
+    }
+    
+    # Interview type specific items
+    interview_specific = {
+        "coding": {
+            "title": "Coding Interview Prep",
+            "icon": "code",
+            "items": [
+                {"id": "ide_setup", "text": "Set up your preferred IDE/code editor", "required": True},
+                {"id": "review_ds", "text": "Review data structures (Arrays, LinkedList, Trees, Graphs)", "required": True},
+                {"id": "review_algo", "text": "Review algorithms (Sorting, Searching, DP, Greedy)", "required": True},
+                {"id": "practice_problems", "text": "Solve 2-3 warm-up problems", "required": True},
+                {"id": "time_complexity", "text": "Review Big O notation and complexity analysis", "required": True},
+                {"id": "edge_cases", "text": "Practice thinking about edge cases", "required": True},
+                {"id": "test_code_sharing", "text": "Test screen sharing and code editor", "required": True}
+            ]
+        },
+        "system_design": {
+            "title": "System Design Prep",
+            "icon": "layout",
+            "items": [
+                {"id": "whiteboard_tool", "text": "Set up digital whiteboard tool (Excalidraw, Draw.io)", "required": True},
+                {"id": "review_patterns", "text": "Review common design patterns", "required": True},
+                {"id": "scalability", "text": "Review scalability concepts (Load balancing, Caching, Sharding)", "required": True},
+                {"id": "databases", "text": "Review database choices (SQL vs NoSQL)", "required": True},
+                {"id": "microservices", "text": "Review microservices architecture", "required": True},
+                {"id": "caching", "text": "Review caching strategies (Redis, Memcached)", "required": True},
+                {"id": "message_queues", "text": "Review message queues (Kafka, RabbitMQ)", "required": True}
+            ]
+        },
+        "behavioral": {
+            "title": "Behavioral Interview Prep",
+            "icon": "users",
+            "items": [
+                {"id": "star_method", "text": "Review STAR method (Situation, Task, Action, Result)", "required": True},
+                {"id": "prepare_stories", "text": "Prepare 5-7 stories from past experiences", "required": True},
+                {"id": "leadership", "text": "Prepare leadership examples", "required": True},
+                {"id": "conflict", "text": "Prepare conflict resolution examples", "required": True},
+                {"id": "failure", "text": "Prepare failure and learning examples", "required": True},
+                {"id": "teamwork", "text": "Prepare teamwork examples", "required": True},
+                {"id": "company_values", "text": "Research company values and culture fit", "required": True}
+            ]
+        },
+        "hr_round": {
+            "title": "HR Round Prep",
+            "icon": "briefcase",
+            "items": [
+                {"id": "salary_research", "text": "Research salary ranges for the role", "required": True},
+                {"id": "career_goals", "text": "Prepare your career goals statement", "required": True},
+                {"id": "why_company", "text": "Prepare 'Why this company?' answer", "required": True},
+                {"id": "why_role", "text": "Prepare 'Why this role?' answer", "required": True},
+                {"id": "strengths", "text": "Prepare your top 3 strengths with examples", "required": True},
+                {"id": "weaknesses", "text": "Prepare 1-2 weaknesses with improvement plans", "required": True},
+                {"id": "notice_period", "text": "Know your notice period and availability", "required": True}
+            ]
+        }
+    }
+    
+    # Company-specific tips
+    company_tips = {
+        "Amazon": [
+            "Review Amazon's 16 Leadership Principles",
+            "Prepare examples demonstrating 'Customer Obsession'",
+            "Practice 'Dive Deep' scenarios",
+            "Be ready to discuss 'Bias for Action' examples"
+        ],
+        "Google": [
+            "Focus on Googleyness and Leadership",
+            "Prepare examples of ambiguous problem solving",
+            "Review Google's mission and products",
+            "Practice explaining complex topics simply"
+        ],
+        "Microsoft": [
+            "Review Microsoft's culture and growth mindset",
+            "Prepare collaboration examples",
+            "Focus on innovation and learning",
+            "Be ready to discuss technical depth"
+        ],
+        "Meta": [
+            "Review Meta's core values",
+            "Prepare examples of moving fast",
+            "Focus on impact and ownership",
+            "Be ready to discuss scale challenges"
+        ]
+    }
+    
+    # Build complete checklist
+    checklist = {
+        "sections": [base_checklist["technical_setup"], base_checklist["environment"], base_checklist["materials"]],
+        "interview_specific": interview_specific.get(interview_type, interview_specific["coding"]),
+        "company_tips": company_tips.get(company, []),
+        "general_tips": [
+            "Join the meeting 5 minutes early",
+            "Smile and maintain good energy throughout",
+            "Think out loud - explain your thought process",
+            "Ask clarifying questions before diving in",
+            "It's okay to take a moment to think",
+            "Be honest if you don't know something",
+            "Show enthusiasm for the role and company",
+            "Thank the interviewer at the end"
+        ]
+    }
+    
+    # Add interview-specific section to main sections
+    checklist["sections"].append(checklist["interview_specific"])
+    
+    return checklist
+
+@api_router.get("/mentee/prep-checklist/{mock_id}/progress")
+async def get_checklist_progress(mock_id: str, user=Depends(get_current_user)):
+    """Get user's checklist progress for a specific mock interview"""
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    # Get progress from database
+    progress = await db.checklist_progress.find_one({
+        "mock_id": mock_id,
+        "mentee_id": user["id"]
+    })
+    
+    if not progress:
+        return {"completed_items": [], "last_updated": None}
+    
+    return {
+        "completed_items": progress.get("completed_items", []),
+        "last_updated": progress.get("updated_at")
+    }
+
+@api_router.post("/mentee/prep-checklist/{mock_id}/progress")
+async def update_checklist_progress(
+    mock_id: str,
+    data: ChecklistProgressUpdate,
+    user=Depends(get_current_user)
+):
+    """Update user's checklist progress"""
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    # Verify mock belongs to user
+    mock = await db.mocks.find_one({"id": mock_id, "mentee_id": user["id"]})
+    if not mock:
+        raise HTTPException(status_code=404, detail="Mock interview not found")
+    
+    # Update or create progress
+    progress_doc = {
+        "mock_id": mock_id,
+        "mentee_id": user["id"],
+        "completed_items": data.completed_items,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.checklist_progress.update_one(
+        {"mock_id": mock_id, "mentee_id": user["id"]},
+        {"$set": progress_doc},
+        upsert=True
+    )
+    
+    # Calculate completion percentage
+    total_items = len(data.completed_items)
+    completion_percentage = (total_items / 30) * 100  # Approximate total items
+    
+    return {
+        "message": "Progress updated",
+        "completed_items": data.completed_items,
+        "completion_percentage": min(completion_percentage, 100)
+    }
+
+@api_router.get("/prep-resources")
+async def get_prep_resources(user=Depends(get_current_user)):
+    """Get curated preparation resources"""
+    
+    resources = {
+        "coding": {
+            "title": "Coding Interview Resources",
+            "books": [
+                {"title": "Cracking the Coding Interview", "author": "Gayle Laakmann McDowell", "link": ""},
+                {"title": "Elements of Programming Interviews", "author": "Adnan Aziz", "link": ""}
+            ],
+            "websites": [
+                {"name": "LeetCode", "url": "https://leetcode.com", "description": "Practice coding problems"},
+                {"name": "HackerRank", "url": "https://hackerrank.com", "description": "Coding challenges"},
+                {"name": "NeetCode", "url": "https://neetcode.io", "description": "Curated problem lists"}
+            ],
+            "youtube": [
+                {"channel": "NeetCode", "url": "https://youtube.com/@NeetCode"},
+                {"channel": "Tech Interview Pro", "url": "https://youtube.com/@TechInterviewPro"}
+            ]
+        },
+        "system_design": {
+            "title": "System Design Resources",
+            "books": [
+                {"title": "Designing Data-Intensive Applications", "author": "Martin Kleppmann", "link": ""},
+                {"title": "System Design Interview", "author": "Alex Xu", "link": ""}
+            ],
+            "websites": [
+                {"name": "System Design Primer", "url": "https://github.com/donnemartin/system-design-primer", "description": "Comprehensive guide"},
+                {"name": "ByteByteGo", "url": "https://bytebytego.com", "description": "Visual system design"}
+            ],
+            "youtube": [
+                {"channel": "Gaurav Sen", "url": "https://youtube.com/@gkcs"},
+                {"channel": "System Design Interview", "url": "https://youtube.com/@SystemDesignInterview"}
+            ]
+        },
+        "behavioral": {
+            "title": "Behavioral Interview Resources",
+            "frameworks": [
+                {"name": "STAR Method", "description": "Situation, Task, Action, Result"},
+                {"name": "CAR Method", "description": "Context, Action, Result"}
+            ],
+            "websites": [
+                {"name": "Glassdoor", "url": "https://glassdoor.com", "description": "Company reviews and interview questions"},
+                {"name": "Levels.fyi", "url": "https://levels.fyi", "description": "Salary and level information"}
+            ]
+        }
+    }
+    
+    return resources
+
 # ============ RAZORPAY PAYMENT ROUTES ============
 class CreateOrderRequest(BaseModel):
     name: str
