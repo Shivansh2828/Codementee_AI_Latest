@@ -1895,7 +1895,56 @@ async def update_checklist_progress(
         "completion_percentage": min(completion_percentage, 100)
     }
 
-
+@api_router.get("/prep-resources")
+async def get_prep_resources(user=Depends(get_current_user)):
+    """Get curated preparation resources"""
+    
+    resources = {
+        "coding": {
+            "title": "Coding Interview Resources",
+            "books": [
+                {"title": "Cracking the Coding Interview", "author": "Gayle Laakmann McDowell", "link": ""},
+                {"title": "Elements of Programming Interviews", "author": "Adnan Aziz", "link": ""}
+            ],
+            "websites": [
+                {"name": "LeetCode", "url": "https://leetcode.com", "description": "Practice coding problems"},
+                {"name": "HackerRank", "url": "https://hackerrank.com", "description": "Coding challenges"},
+                {"name": "NeetCode", "url": "https://neetcode.io", "description": "Curated problem lists"}
+            ],
+            "youtube": [
+                {"channel": "NeetCode", "url": "https://youtube.com/@NeetCode"},
+                {"channel": "Tech Interview Pro", "url": "https://youtube.com/@TechInterviewPro"}
+            ]
+        },
+        "system_design": {
+            "title": "System Design Resources",
+            "books": [
+                {"title": "Designing Data-Intensive Applications", "author": "Martin Kleppmann", "link": ""},
+                {"title": "System Design Interview", "author": "Alex Xu", "link": ""}
+            ],
+            "websites": [
+                {"name": "System Design Primer", "url": "https://github.com/donnemartin/system-design-primer", "description": "Comprehensive guide"},
+                {"name": "ByteByteGo", "url": "https://bytebytego.com", "description": "Visual system design"}
+            ],
+            "youtube": [
+                {"channel": "Gaurav Sen", "url": "https://youtube.com/@gkcs"},
+                {"channel": "System Design Interview", "url": "https://youtube.com/@SystemDesignInterview"}
+            ]
+        },
+        "behavioral": {
+            "title": "Behavioral Interview Resources",
+            "frameworks": [
+                {"name": "STAR Method", "description": "Situation, Task, Action, Result"},
+                {"name": "CAR Method", "description": "Context, Action, Result"}
+            ],
+            "websites": [
+                {"name": "Glassdoor", "url": "https://glassdoor.com", "description": "Company reviews and interview questions"},
+                {"name": "Levels.fyi", "url": "https://levels.fyi", "description": "Salary and level information"}
+            ]
+        }
+    }
+    
+    return resources
 
 # ============ RAZORPAY PAYMENT ROUTES ============
 class CreateOrderRequest(BaseModel):
