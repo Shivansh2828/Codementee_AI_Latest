@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Checkbox } from '../../components/ui/checkbox';
 import { 
   CheckCircle2, 
@@ -16,20 +16,18 @@ import {
   Layout, 
   Users, 
   Briefcase,
-  BookOpen,
-  ExternalLink,
   Lightbulb,
   Target,
   Clock,
-  Award
+  Award,
+  MessageSquare,
+  CalendarPlus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '../../utils/api';
-import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
 const MenteeInterviewChecklist = () => {
-  const { user } = useAuth();
   const { theme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [checklist, setChecklist] = useState(null);
@@ -37,7 +35,6 @@ const MenteeInterviewChecklist = () => {
   const [upcomingMocks, setUpcomingMocks] = useState([]);
   const [selectedMock, setSelectedMock] = useState(null);
   const [interviewType, setInterviewType] = useState('coding');
-  const [resources, setResources] = useState(null);
 
   const iconMap = {
     monitor: Monitor,
@@ -51,7 +48,6 @@ const MenteeInterviewChecklist = () => {
 
   useEffect(() => {
     fetchUpcomingMocks();
-    fetchResources();
   }, []);
 
   useEffect(() => {
@@ -102,15 +98,6 @@ const MenteeInterviewChecklist = () => {
       setCompletedItems(response.data.completed_items || []);
     } catch (error) {
       console.error('Error fetching progress:', error);
-    }
-  };
-
-  const fetchResources = async () => {
-    try {
-      const response = await api.get('/prep-resources');
-      setResources(response.data);
-    } catch (error) {
-      console.error('Error fetching resources:', error);
     }
   };
 
@@ -394,108 +381,101 @@ const MenteeInterviewChecklist = () => {
           </Card>
         )}
 
-        {/* Resources Section */}
-        {resources && (
-          <Card className="bg-[#1e293b] border-[#334155]">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-cyan-500" />
-                <CardTitle className="text-slate-100">Preparation Resources</CardTitle>
-              </div>
-              <CardDescription className="text-slate-400">
-                Curated resources to help you prepare
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="coding" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 bg-slate-800">
-                  <TabsTrigger value="coding">Coding</TabsTrigger>
-                  <TabsTrigger value="system_design">System Design</TabsTrigger>
-                  <TabsTrigger value="behavioral">Behavioral</TabsTrigger>
-                </TabsList>
+        {/* Platform Features - Keep Users Engaged */}
+        <Card className="bg-[#1e293b] border-[#334155]">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-cyan-500" />
+              <CardTitle className="text-slate-100">Continue Your Preparation</CardTitle>
+            </div>
+            <CardDescription className="text-slate-400">
+              Use our platform tools to prepare effectively
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* AI Resume Analyzer */}
+              <Link 
+                to="/mentee/resume-analyzer"
+                className="p-4 bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/30 rounded-lg hover:border-purple-500/50 transition-all group"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-purple-500/20 rounded-lg">
+                    <FileText className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-slate-100 font-semibold mb-1 group-hover:text-purple-400 transition-colors">
+                      AI Resume Analyzer
+                    </h4>
+                    <p className="text-sm text-slate-400">
+                      Get instant feedback on your resume with AI-powered analysis
+                    </p>
+                  </div>
+                </div>
+              </Link>
 
-                {Object.entries(resources).map(([key, resource]) => (
-                  <TabsContent key={key} value={key} className="space-y-4 mt-4">
-                    {/* Websites */}
-                    {resource.websites && (
-                      <div>
-                        <h4 className="text-sm font-semibold text-slate-300 mb-3">Websites</h4>
-                        <div className="space-y-2">
-                          {resource.websites.map((site, index) => (
-                            <a
-                              key={index}
-                              href={site.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg hover:bg-slate-800 transition-colors group"
-                            >
-                              <div>
-                                <p className="text-slate-200 font-medium">{site.name}</p>
-                                <p className="text-xs text-slate-400">{site.description}</p>
-                              </div>
-                              <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-cyan-500" />
-                            </a>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+              {/* Interview Prep Tool */}
+              <Link 
+                to="/mentee/interview-prep"
+                className="p-4 bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/30 rounded-lg hover:border-green-500/50 transition-all group"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-green-500/20 rounded-lg">
+                    <Award className="w-5 h-5 text-green-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-slate-100 font-semibold mb-1 group-hover:text-green-400 transition-colors">
+                      AI Interview Prep
+                    </h4>
+                    <p className="text-sm text-slate-400">
+                      Practice with AI-generated questions tailored to your target company
+                    </p>
+                  </div>
+                </div>
+              </Link>
 
-                    {/* Books */}
-                    {resource.books && (
-                      <div>
-                        <h4 className="text-sm font-semibold text-slate-300 mb-3">Recommended Books</h4>
-                        <div className="space-y-2">
-                          {resource.books.map((book, index) => (
-                            <div key={index} className="p-3 bg-slate-800/50 rounded-lg">
-                              <p className="text-slate-200 font-medium">{book.title}</p>
-                              <p className="text-xs text-slate-400">by {book.author}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+              {/* Community */}
+              <Link 
+                to="/mentee/community"
+                className="p-4 bg-gradient-to-br from-orange-500/10 to-orange-600/10 border border-orange-500/30 rounded-lg hover:border-orange-500/50 transition-all group"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-orange-500/20 rounded-lg">
+                    <MessageSquare className="w-5 h-5 text-orange-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-slate-100 font-semibold mb-1 group-hover:text-orange-400 transition-colors">
+                      Community Forum
+                    </h4>
+                    <p className="text-sm text-slate-400">
+                      Connect with peers, share experiences, and get advice
+                    </p>
+                  </div>
+                </div>
+              </Link>
 
-                    {/* YouTube Channels */}
-                    {resource.youtube && (
-                      <div>
-                        <h4 className="text-sm font-semibold text-slate-300 mb-3">YouTube Channels</h4>
-                        <div className="space-y-2">
-                          {resource.youtube.map((channel, index) => (
-                            <a
-                              key={index}
-                              href={channel.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg hover:bg-slate-800 transition-colors group"
-                            >
-                              <p className="text-slate-200">{channel.channel}</p>
-                              <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-cyan-500" />
-                            </a>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Frameworks */}
-                    {resource.frameworks && (
-                      <div>
-                        <h4 className="text-sm font-semibold text-slate-300 mb-3">Frameworks</h4>
-                        <div className="space-y-2">
-                          {resource.frameworks.map((framework, index) => (
-                            <div key={index} className="p-3 bg-slate-800/50 rounded-lg">
-                              <p className="text-slate-200 font-medium">{framework.name}</p>
-                              <p className="text-xs text-slate-400">{framework.description}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </TabsContent>
-                ))}
-              </Tabs>
-            </CardContent>
-          </Card>
-        )}
+              {/* Book Another Mock */}
+              <Link 
+                to="/mentee/book"
+                className="p-4 bg-gradient-to-br from-cyan-500/10 to-cyan-600/10 border border-cyan-500/30 rounded-lg hover:border-cyan-500/50 transition-all group"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-cyan-500/20 rounded-lg">
+                    <CalendarPlus className="w-5 h-5 text-cyan-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-slate-100 font-semibold mb-1 group-hover:text-cyan-400 transition-colors">
+                      Schedule More Mocks
+                    </h4>
+                    <p className="text-sm text-slate-400">
+                      Book additional mock interviews to practice more
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );
