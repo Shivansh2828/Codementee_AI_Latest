@@ -127,7 +127,6 @@ function App() {
             <Route path="/mentee/resume-analyzer" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeResumeAnalyzer /></ProtectedRoute>} />
             <Route path="/mentee/interview-prep" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeInterviewPrep /></ProtectedRoute>} />
             <Route path="/mentee/community" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeCommunity /></ProtectedRoute>} />
-            <Route path="/mentee/mocks" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeMentorSelection /></ProtectedRoute>} />
             <Route path="/mentee/prep-checklist" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeInterviewChecklist /></ProtectedRoute>} />
 
             {/* Catch all */}
