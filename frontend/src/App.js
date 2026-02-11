@@ -56,7 +56,6 @@ const MentorBookingRequests = lazy(() => import("./pages/mentor/MentorBookingReq
 
 // Mentee pages - Lazy load
 const MenteeDashboard = lazy(() => import("./pages/mentee/MenteeDashboard"));
-const MenteeMocks = lazy(() => import("./pages/mentee/MenteeMocks"));
 const MenteeFeedbacks = lazy(() => import("./pages/mentee/MenteeFeedbacks"));
 const MenteeBooking = lazy(() => import("./pages/mentee/MenteeBooking"));
 const MenteeResumeAnalyzer = lazy(() => import("./pages/mentee/MenteeResumeAnalyzer"));
@@ -121,13 +120,12 @@ function App() {
 
             {/* Mentee Routes */}
             <Route path="/mentee" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeDashboard /></ProtectedRoute>} />
-            <Route path="/mentee/mocks" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeMocks /></ProtectedRoute>} />
+            <Route path="/mentee/mocks" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeMentorSelection /></ProtectedRoute>} />
             <Route path="/mentee/feedbacks" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeFeedbacks /></ProtectedRoute>} />
             <Route path="/mentee/book" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeBooking /></ProtectedRoute>} />
             <Route path="/mentee/resume-analyzer" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeResumeAnalyzer /></ProtectedRoute>} />
             <Route path="/mentee/interview-prep" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeInterviewPrep /></ProtectedRoute>} />
             <Route path="/mentee/community" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeCommunity /></ProtectedRoute>} />
-            <Route path="/mentee/mocks" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeMentorSelection /></ProtectedRoute>} />
 
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/" replace />} />
