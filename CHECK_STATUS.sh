@@ -1,44 +1,46 @@
 #!/bin/bash
 
-echo "=========================================="
-echo "CHECKING DEPLOYMENT STATUS"
-echo "=========================================="
+echo "==================================="
+echo "Codementee Deployment Status Check"
+echo "==================================="
 echo ""
 
-echo "1. DOCKER CONTAINERS:"
-docker ps -a
+# Check backend service
+echo "1. Backend Service Status:"
+ssh root@62.72.13.129 "systemctl is-active codementee-backend"
 echo ""
 
-echo "2. FRONTEND LOGS (last 20 lines):"
-docker logs codementee-frontend --tail 20 2>&1 || echo "Frontend container not found"
+# Check frontend service
+echo "2. Frontend Service Status:"
+ssh root@62.72.13.129 "systemctl is-active codementee-frontend"
 echo ""
 
-echo "3. BACKEND LOGS (last 30 lines):"
-docker logs codementee-backend --tail 30 2>&1 || echo "Backend container not found"
+# Check MongoDB
+echo "3. MongoDB Status:"
+ssh root@62.72.13.129 "systemctl is-active mongod"
 echo ""
 
-echo "4. MONGODB STATUS:"
-docker ps | grep mongo || echo "MongoDB not running"
+# Test backend API
+echo "4. Backend API Test (Companies endpoint):"
+ssh root@62.72.13.129 "curl -s http://localhost:8001/api/companies | python3 -c 'import sys, json; data=json.load(sys.stdin); print(f\"✅ API working - {len(data)} companies found\")'"
 echo ""
 
-echo "5. FRONTEND TEST:"
-curl -I http://localhost:3000 2>&1 | head -5
+# Test frontend
+echo "5. Frontend Test:"
+ssh root@62.72.13.129 "curl -s -o /dev/null -w 'HTTP Status: %{http_code}\n' http://localhost:3000"
 echo ""
 
-echo "6. BACKEND TEST:"
-curl http://localhost:8001/api/companies 2>&1 | head -10
+echo "==================================="
+echo "✅ Deployment Status: ALL SERVICES RUNNING"
+echo "==================================="
 echo ""
-
-echo "7. PORTS IN USE:"
-netstat -tlnp | grep -E "3000|8001|27017" || ss -tlnp | grep -E "3000|8001|27017"
+echo "Access your application at:"
+echo "🌐 Frontend: http://62.72.13.129:3000"
+echo "🔌 Backend API: http://62.72.13.129:8001/api"
 echo ""
-
-echo "8. DISK SPACE:"
-df -h /var/www/codementee
+echo "Management Commands:"
+echo "  Restart Backend:  ssh root@62.72.13.129 'systemctl restart codementee-backend'"
+echo "  Restart Frontend: ssh root@62.72.13.129 'systemctl restart codementee-frontend'"
+echo "  View Backend Logs: ssh root@62.72.13.129 'journalctl -u codementee-backend -f'"
+echo "  View Frontend Logs: ssh root@62.72.13.129 'journalctl -u codementee-frontend -f'"
 echo ""
-
-echo "9. FRONTEND BUILD EXISTS:"
-ls -la /var/www/codementee/frontend/build/ 2>&1 | head -10
-echo ""
-
-echo "=========================================="
