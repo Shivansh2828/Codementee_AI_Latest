@@ -24,21 +24,28 @@ fi
 echo -e "${YELLOW}Checking DNS configuration...${NC}"
 DOMAIN_IP=$(dig +short codementee.io | tail -n1)
 WWW_IP=$(dig +short www.codementee.io | tail -n1)
-SERVER_IP=$(curl -s ifconfig.me)
+SERVER_IPV4=$(curl -4 -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
 
 echo "codementee.io resolves to: $DOMAIN_IP"
 echo "www.codementee.io resolves to: $WWW_IP"
-echo "This server's IP: $SERVER_IP"
+echo "This server's IPv4: $SERVER_IPV4"
 echo ""
 
-if [ "$DOMAIN_IP" != "$SERVER_IP" ]; then
-    echo -e "${RED}✗ DNS not configured correctly!${NC}"
-    echo "codementee.io should point to $SERVER_IP"
-    echo "Please wait for DNS propagation or check your DNS settings."
-    exit 1
+if [ "$DOMAIN_IP" != "$SERVER_IPV4" ]; then
+    echo -e "${YELLOW}⚠ DNS points to $DOMAIN_IP but server IPv4 is $SERVER_IPV4${NC}"
+    echo "Checking if domain is reachable..."
+    
+    # Try to reach the domain
+    if curl -s -o /dev/null -w "%{http_code}" http://codementee.io | grep -q "200\|301\|302"; then
+        echo -e "${GREEN}✓ Domain is reachable, proceeding...${NC}"
+    else
+        echo -e "${RED}✗ Cannot reach codementee.io${NC}"
+        echo "Please verify DNS is working: curl -I http://codementee.io"
+        exit 1
+    fi
+else
+    echo -e "${GREEN}✓ DNS is configured correctly${NC}"
 fi
-
-echo -e "${GREEN}✓ DNS is configured correctly${NC}"
 echo ""
 
 # Install Certbot
