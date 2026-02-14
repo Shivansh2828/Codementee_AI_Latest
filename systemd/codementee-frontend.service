@@ -1,0 +1,14 @@
+[Unit]
+Description=Codementee Frontend
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/codementee/frontend/build
+ExecStart=/usr/bin/python3 -m http.server 3000
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
