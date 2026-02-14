@@ -27,7 +27,7 @@ cd frontend
 
 # Create production environment file
 cat > .env.production << 'EOF'
-REACT_APP_BACKEND_URL=/api
+REACT_APP_BACKEND_URL=
 REACT_APP_ENVIRONMENT=production
 REACT_APP_RAZORPAY_KEY_ID=rzp_live_S8Pnnj923wxaob
 GENERATE_SOURCEMAP=false
