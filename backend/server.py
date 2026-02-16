@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -17,6 +17,8 @@ import hmac
 import hashlib
 import resend
 import asyncio
+from openai import AsyncOpenAI
+from groq import AsyncGroq
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -42,6 +44,20 @@ SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
 BCC_EMAIL = os.environ.get('BCC_EMAIL')
 resend.api_key = RESEND_API_KEY
 
+# OpenAI Config
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+if OPENAI_API_KEY and OPENAI_API_KEY != 'your-openai-api-key-here':
+    openai_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+else:
+    openai_client = None
+
+# Groq Config (Free alternative!)
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
+if GROQ_API_KEY and GROQ_API_KEY != 'your-groq-api-key-here':
+    groq_client = AsyncGroq(api_key=GROQ_API_KEY)
+else:
+    groq_client = None
+
 # Logo URL for emails
 LOGO_URL = "https://codementee.com/logo.png"
 
@@ -66,6 +82,19 @@ async def health_check():
         }
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Service unavailable: {str(e)}")
+
+# Debug endpoint to check OpenAI configuration
+@app.get("/debug/ai-config")
+async def debug_ai_config():
+    """Debug endpoint to check if AI services are configured"""
+    return {
+        "openai_configured": openai_client is not None,
+        "openai_key_present": bool(OPENAI_API_KEY),
+        "groq_configured": groq_client is not None,
+        "groq_key_present": bool(GROQ_API_KEY),
+        "ai_available": openai_client is not None or groq_client is not None,
+        "version": "1.2.0-with-groq"
+    }
 
 # ============ MODELS ============
 class UserCreate(BaseModel):
@@ -1382,10 +1411,86 @@ async def get_user(user_id: str, user=Depends(get_current_user)):
 
 # ============ INTERVIEW PREPARATION FEATURES ============
 
+# File upload endpoint for resume text extraction
+@api_router.post("/ai-tools/extract-resume-text")
+async def extract_resume_text(file: UploadFile = File(...), user=Depends(get_current_user)):
+    """Extract text from uploaded resume file (PDF, DOCX, TXT)"""
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    try:
+        # Check file size (max 5MB)
+        contents = await file.read()
+        if len(contents) > 5 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="File size must be less than 5MB")
+        
+        # Reset file pointer
+        await file.seek(0)
+        
+        # Extract text based on file type
+        filename = file.filename.lower()
+        
+        if filename.endswith('.txt'):
+            # Plain text file
+            text = contents.decode('utf-8')
+            
+        elif filename.endswith('.pdf'):
+            # PDF file
+            import PyPDF2
+            import io
+            
+            pdf_file = io.BytesIO(contents)
+            pdf_reader = PyPDF2.PdfReader(pdf_file)
+            
+            text_parts = []
+            for page in pdf_reader.pages:
+                text_parts.append(page.extract_text())
+            
+            text = '\n'.join(text_parts)
+            
+        elif filename.endswith('.docx'):
+            # DOCX file
+            import docx
+            import io
+            
+            docx_file = io.BytesIO(contents)
+            doc = docx.Document(docx_file)
+            
+            text_parts = []
+            for paragraph in doc.paragraphs:
+                if paragraph.text.strip():
+                    text_parts.append(paragraph.text)
+            
+            text = '\n'.join(text_parts)
+            
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file type. Please upload TXT, PDF, or DOCX")
+        
+        # Validate extracted text
+        if not text or len(text.strip()) < 50:
+            raise HTTPException(status_code=400, detail="Could not extract sufficient text from file. Please check the file or paste text manually.")
+        
+        logger.info(f"Successfully extracted {len(text)} characters from {filename}")
+        
+        return {
+            "text": text,
+            "filename": file.filename,
+            "length": len(text)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error extracting text from file: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to process file: {str(e)}")
+
 class ResumeAnalysisRequest(BaseModel):
     resume_text: str
     target_role: str
     target_companies: List[str]
+    years_of_experience: Optional[str] = None
+    industry: Optional[str] = None
+    key_skills: Optional[List[str]] = None
 
 class ResumeAnalysisResponse(BaseModel):
     overall_score: int  # 1-100
@@ -1398,43 +1503,171 @@ class ResumeAnalysisResponse(BaseModel):
 
 @api_router.post("/ai-tools/resume-analysis")
 async def analyze_resume(data: ResumeAnalysisRequest, user=Depends(get_current_user)):
-    """AI-powered resume analysis"""
+    """AI-powered resume analysis using OpenAI GPT-4o-mini with Groq fallback"""
     if user["role"] != "mentee":
         raise HTTPException(status_code=403, detail="Mentee only")
-    
-    # For now, return mock analysis - will integrate with AI service later
-    analysis = {
-        "overall_score": 75,
-        "strengths": [
-            "Strong technical skills mentioned",
-            "Good project descriptions",
-            "Relevant experience for target role"
-        ],
-        "weaknesses": [
-            "Missing quantified achievements",
-            "Could improve action verbs",
-            "Skills section needs better organization"
-        ],
-        "suggestions": [
-            "Add metrics to your achievements (e.g., 'Improved performance by 30%')",
-            "Use stronger action verbs like 'architected', 'optimized', 'delivered'",
-            "Reorganize skills by relevance to target role",
-            "Add more specific technologies used in projects"
-        ],
-        "ats_score": 68,
-        "keyword_analysis": {
-            "missing_keywords": ["microservices", "cloud", "agile", "CI/CD"],
-            "present_keywords": ["python", "javascript", "react", "sql"],
-            "keyword_density": "moderate"
-        },
-        "section_feedback": {
-            "summary": "Good but could be more targeted to role",
-            "experience": "Strong but needs more metrics",
-            "skills": "Comprehensive but poorly organized",
-            "projects": "Good technical depth"
+
+    if not openai_client and not groq_client:
+        logger.error("No AI client configured")
+        raise HTTPException(status_code=503, detail="AI service not configured")
+
+    analysis = None
+    ai_provider = None
+
+    # ============ OPENAI TEMPORARILY DISABLED (UNCOMMENT WHEN CREDITS AVAILABLE) ============
+    # # Try OpenAI first
+    # if openai_client:
+    #     try:
+    #         logger.info(f"Starting OpenAI resume analysis for user {user['id']}")
+    #
+    #         # Prepare the prompt for OpenAI
+    #         prompt = f"""Analyze this resume for a {data.target_role} position at {', '.join(data.target_companies) if data.target_companies else 'top tech companies'}.
+    #
+    # Resume:
+    # {data.resume_text}
+    #
+    # Provide a comprehensive analysis in JSON format with:
+    # 1. overall_score (0-100)
+    # 2. strengths (array of 3-5 specific strengths)
+    # 3. weaknesses (array of 3-5 specific weaknesses)
+    # 4. suggestions (array of 4-6 actionable improvements)
+    # 5. ats_score (0-100, how well it passes ATS systems)
+    # 6. keyword_analysis (object with missing_keywords, present_keywords arrays, and keyword_density string)
+    # 7. section_feedback (object with feedback for summary, experience, skills, projects sections)
+    #
+    # Be specific, actionable, and constructive. Focus on quantifiable achievements, action verbs, and relevance to {data.target_role}."""
+    #
+    #         logger.info("Calling OpenAI API...")
+    #
+    #         # Call OpenAI API
+    #         response = await openai_client.chat.completions.create(
+    #             model="gpt-4o-mini",
+    #             messages=[
+    #                 {"role": "system", "content": "You are an expert resume reviewer and career coach. Provide detailed, actionable feedback in JSON format."},
+    #                 {"role": "user", "content": prompt}
+    #             ],
+    #             response_format={"type": "json_object"},
+    #             temperature=0.7,
+    #             max_tokens=1500
+    #         )
+    #
+    #         logger.info("OpenAI API call successful")
+    #
+    #         # Parse the AI response
+    #         import json
+    #         analysis = json.loads(response.choices[0].message.content)
+    #         ai_provider = "openai"
+    #
+    #         logger.info(f"Resume analysis completed with OpenAI, score: {analysis.get('overall_score', 'N/A')}")
+    #
+    #     except Exception as e:
+    #         logger.error(f"OpenAI API error: {str(e)}")
+    #         logger.error(f"Error type: {type(e).__name__}")
+    #         logger.warning("OpenAI failed, attempting Groq fallback...")
+    # ============ END OPENAI SECTION ============
+
+    # Try Groq if OpenAI failed or wasn't available
+    if not analysis and groq_client:
+        try:
+            logger.info(f"Starting Groq resume analysis for user {user['id']}")
+
+            # Build enhanced context from additional fields
+            context_parts = []
+            if data.years_of_experience:
+                context_parts.append(f"Experience Level: {data.years_of_experience} years")
+            if data.industry:
+                context_parts.append(f"Target Industry: {data.industry}")
+            if data.key_skills:
+                context_parts.append(f"Key Skills to Highlight: {', '.join(data.key_skills)}")
+            
+            additional_context = "\n".join(context_parts) if context_parts else ""
+
+            # Prepare the enhanced prompt for Groq
+            prompt = f"""Analyze this resume for a {data.target_role} position at {', '.join(data.target_companies) if data.target_companies else 'top tech companies'}.
+
+{additional_context}
+
+Resume:
+{data.resume_text}
+
+Provide a comprehensive analysis in JSON format with:
+1. overall_score (0-100)
+2. strengths (array of 3-5 specific strengths)
+3. weaknesses (array of 3-5 specific weaknesses)
+4. suggestions (array of 4-6 actionable improvements)
+5. ats_score (0-100, how well it passes ATS systems)
+6. keyword_analysis (object with missing_keywords, present_keywords arrays, and keyword_density string)
+7. section_feedback (object with feedback for summary, experience, skills, projects sections)
+
+Be specific, actionable, and constructive. Focus on quantifiable achievements, action verbs, and relevance to {data.target_role}.
+{f"Pay special attention to these skills: {', '.join(data.key_skills)}" if data.key_skills else ""}
+{f"Consider the candidate's {data.years_of_experience} years of experience level in your analysis." if data.years_of_experience else ""}
+{f"Tailor recommendations for the {data.industry} industry." if data.industry else ""}"""
+
+            logger.info("Calling Groq API...")
+
+            # Call Groq API
+            response = await groq_client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": "You are an expert resume reviewer and career coach. Provide detailed, actionable feedback in JSON format."},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.7,
+                max_tokens=1500
+            )
+
+            logger.info("Groq API call successful")
+
+            # Parse the AI response
+            import json
+            analysis = json.loads(response.choices[0].message.content)
+            ai_provider = "groq"
+
+            logger.info(f"Resume analysis completed with Groq, score: {analysis.get('overall_score', 'N/A')}")
+
+        except Exception as e:
+            logger.error(f"Groq API error: {str(e)}")
+            logger.error(f"Error type: {type(e).__name__}")
+            logger.warning("Groq also failed, using fallback mock data")
+
+    # Final fallback to mock data if both AI providers fail
+    if not analysis:
+        logger.warning("Using fallback mock data - both AI providers failed")
+        analysis = {
+            "overall_score": 70,
+            "strengths": [
+                "Resume structure is clear and organized",
+                "Relevant experience mentioned",
+                "Technical skills are listed"
+            ],
+            "weaknesses": [
+                "Could add more quantified achievements",
+                "Action verbs could be stronger",
+                "Skills section needs better organization"
+            ],
+            "suggestions": [
+                "Add metrics to achievements (e.g., 'Improved performance by 30%')",
+                "Use stronger action verbs like 'architected', 'optimized', 'delivered'",
+                "Reorganize skills by relevance to target role",
+                "Add more specific technologies used in projects"
+            ],
+            "ats_score": 65,
+            "keyword_analysis": {
+                "missing_keywords": ["cloud", "agile", "CI/CD"],
+                "present_keywords": ["python", "javascript", "react"],
+                "keyword_density": "moderate"
+            },
+            "section_feedback": {
+                "summary": "Good but could be more targeted",
+                "experience": "Strong but needs more metrics",
+                "skills": "Comprehensive but poorly organized",
+                "projects": "Good technical depth"
+            }
         }
-    }
-    
+        ai_provider = "fallback"
+
     # Store analysis in database
     analysis_doc = {
         "id": str(uuid.uuid4()),
@@ -1443,11 +1676,12 @@ async def analyze_resume(data: ResumeAnalysisRequest, user=Depends(get_current_u
         "target_role": data.target_role,
         "target_companies": data.target_companies,
         "analysis": analysis,
+        "ai_provider": ai_provider,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.resume_analyses.insert_one(analysis_doc)
-    
-    return analysis
+
+    return {**analysis, "ai_provider": ai_provider}
 
 class InterviewPrepRequest(BaseModel):
     company: str
@@ -1457,47 +1691,156 @@ class InterviewPrepRequest(BaseModel):
 
 @api_router.post("/ai-tools/interview-prep")
 async def get_interview_prep(data: InterviewPrepRequest, user=Depends(get_current_user)):
-    """AI-powered interview preparation suggestions"""
+    """AI-powered interview preparation suggestions using OpenAI GPT-4o-mini with Groq fallback"""
     if user["role"] != "mentee":
         raise HTTPException(status_code=403, detail="Mentee only")
-    
-    # Mock response - will integrate with AI service later
-    prep_data = {
-        "company_insights": {
-            "culture": f"{data.company} values innovation, customer obsession, and technical excellence",
-            "interview_process": "Typically 4-5 rounds including technical, system design, and behavioral",
-            "common_questions": [
-                "Tell me about a time you had to make a trade-off",
-                "How would you design a scalable system?",
-                "Describe a challenging technical problem you solved"
-            ]
-        },
-        "technical_topics": [
-            "Data Structures & Algorithms",
-            "System Design Fundamentals",
-            "Database Design",
-            "API Design",
-            "Scalability Concepts"
-        ],
-        "behavioral_framework": {
-            "method": "STAR (Situation, Task, Action, Result)",
-            "key_areas": ["Leadership", "Problem Solving", "Customer Focus", "Innovation"]
-        },
-        "practice_problems": [
-            "Design a URL shortener like bit.ly",
-            "Implement LRU Cache",
-            "Design a chat application",
-            "Two Sum problem variations"
-        ],
-        "timeline": {
-            "week_1": "Focus on core algorithms and data structures",
-            "week_2": "System design fundamentals",
-            "week_3": "Behavioral preparation and mock interviews",
-            "week_4": "Company-specific preparation and final practice"
+
+    if not openai_client and not groq_client:
+        raise HTTPException(status_code=503, detail="AI service not configured")
+
+    prep_data = None
+    ai_provider = None
+
+    # ============ OPENAI TEMPORARILY DISABLED (UNCOMMENT WHEN CREDITS AVAILABLE) ============
+    # # Try OpenAI first
+    # if openai_client:
+    #     try:
+    #         logger.info(f"Starting OpenAI interview prep for user {user['id']}")
+    #
+    #         # Prepare the prompt for OpenAI
+    #         prompt = f"""Create a comprehensive interview preparation guide for:
+    # Company: {data.company}
+    # Role: {data.role}
+    # Interview Type: {data.interview_type}
+    # Experience Level: {data.experience_level}
+    #
+    # Provide a detailed preparation plan in JSON format with:
+    # 1. company_insights (object with culture, interview_process, common_questions array)
+    # 2. technical_topics (array of 5-7 key topics to study)
+    # 3. behavioral_framework (object with method name and key_areas array)
+    # 4. practice_problems (array of 4-6 specific problems to practice)
+    # 5. timeline (object with week_1, week_2, week_3, week_4 preparation focus)
+    #
+    # Be specific to {data.company}'s interview style and {data.interview_type} interviews. Make it actionable and realistic for {data.experience_level} level."""
+    #
+    #         logger.info("Calling OpenAI API...")
+    #
+    #         # Call OpenAI API
+    #         response = await openai_client.chat.completions.create(
+    #             model="gpt-4o-mini",
+    #             messages=[
+    #                 {"role": "system", "content": "You are an expert interview coach with deep knowledge of tech company interview processes. Provide detailed, company-specific preparation guidance in JSON format."},
+    #                 {"role": "user", "content": prompt}
+    #             ],
+    #             response_format={"type": "json_object"},
+    #             temperature=0.7,
+    #             max_tokens=1500
+    #         )
+    #
+    #         logger.info("OpenAI API call successful")
+    #
+    #         # Parse the AI response
+    #         import json
+    #         prep_data = json.loads(response.choices[0].message.content)
+    #         ai_provider = "openai"
+    #
+    #         logger.info(f"Interview prep completed with OpenAI")
+    #
+    #     except Exception as e:
+    #         logger.error(f"OpenAI API error: {str(e)}")
+    #         logger.error(f"Error type: {type(e).__name__}")
+    #         logger.warning("OpenAI failed, attempting Groq fallback...")
+    # ============ END OPENAI SECTION ============
+
+    # Try Groq if OpenAI failed or wasn't available
+    if not prep_data and groq_client:
+        try:
+            logger.info(f"Starting Groq interview prep for user {user['id']}")
+
+            # Prepare the prompt for Groq
+            prompt = f"""Create a comprehensive interview preparation guide for:
+Company: {data.company}
+Role: {data.role}
+Interview Type: {data.interview_type}
+Experience Level: {data.experience_level}
+
+Provide a detailed preparation plan in JSON format with:
+1. company_insights (object with culture, interview_process, common_questions array)
+2. technical_topics (array of 5-7 key topics to study)
+3. behavioral_framework (object with method name and key_areas array)
+4. practice_problems (array of 4-6 specific problems to practice)
+5. timeline (object with week_1, week_2, week_3, week_4 preparation focus)
+
+Be specific to {data.company}'s interview style and {data.interview_type} interviews. Make it actionable and realistic for {data.experience_level} level."""
+
+            logger.info("Calling Groq API...")
+
+            # Call Groq API
+            response = await groq_client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": "You are an expert interview coach with deep knowledge of tech company interview processes. Provide detailed, company-specific preparation guidance in JSON format."},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.7,
+                max_tokens=1500
+            )
+
+            logger.info("Groq API call successful")
+
+            # Parse the AI response
+            import json
+            prep_data = json.loads(response.choices[0].message.content)
+            ai_provider = "groq"
+
+            logger.info(f"Interview prep completed with Groq")
+
+        except Exception as e:
+            logger.error(f"Groq API error: {str(e)}")
+            logger.error(f"Error type: {type(e).__name__}")
+            logger.warning("Groq also failed, using fallback mock data")
+
+    # Final fallback to mock data if both AI providers fail
+    if not prep_data:
+        logger.warning("Using fallback mock data - both AI providers failed")
+        prep_data = {
+            "company_insights": {
+                "culture": f"{data.company} values innovation, customer focus, and technical excellence",
+                "interview_process": "Typically 4-5 rounds including technical, system design, and behavioral",
+                "common_questions": [
+                    "Tell me about a time you had to make a trade-off",
+                    "How would you design a scalable system?",
+                    "Describe a challenging technical problem you solved"
+                ]
+            },
+            "technical_topics": [
+                "Data Structures & Algorithms",
+                "System Design Fundamentals",
+                "Database Design",
+                "API Design",
+                "Scalability Concepts"
+            ],
+            "behavioral_framework": {
+                "method": "STAR (Situation, Task, Action, Result)",
+                "key_areas": ["Leadership", "Problem Solving", "Customer Focus", "Innovation"]
+            },
+            "practice_problems": [
+                "Design a URL shortener like bit.ly",
+                "Implement LRU Cache",
+                "Design a chat application",
+                "Two Sum problem variations"
+            ],
+            "timeline": {
+                "week_1": "Focus on core algorithms and data structures",
+                "week_2": "System design fundamentals",
+                "week_3": "Behavioral preparation and mock interviews",
+                "week_4": "Company-specific preparation and final practice"
+            }
         }
-    }
-    
-    return prep_data
+        ai_provider = "fallback"
+
+    return {**prep_data, "ai_provider": ai_provider}
 
 @api_router.get("/ai-tools/interview-questions")
 async def get_interview_questions(
@@ -1506,41 +1849,150 @@ async def get_interview_questions(
     interview_type: str,
     user=Depends(get_current_user)
 ):
-    """Get AI-generated interview questions"""
+    """Get AI-generated interview questions using OpenAI GPT-4o-mini with Groq fallback"""
     if user["role"] != "mentee":
         raise HTTPException(status_code=403, detail="Mentee only")
-    
-    # Mock questions - will integrate with AI service later
-    questions = {
-        "technical": [
-            "Implement a function to reverse a linked list",
-            "Design a data structure for a social media feed",
-            "How would you optimize a slow database query?",
-            "Explain the difference between SQL and NoSQL databases"
-        ],
-        "behavioral": [
-            "Tell me about a time you disagreed with your manager",
-            "Describe a project where you had to learn a new technology quickly",
-            "How do you handle competing priorities?",
-            "Give an example of when you went above and beyond"
-        ],
-        "system_design": [
-            "Design a notification system",
-            "How would you design Instagram?",
-            "Design a distributed cache",
-            "Architecture for a real-time chat application"
-        ]
-    }
-    
-    return {
-        "questions": questions.get(interview_type, []),
-        "tips": [
-            "Practice explaining your thought process out loud",
-            "Ask clarifying questions before starting",
-            "Consider edge cases and scalability",
-            "Be prepared to discuss trade-offs"
-        ]
-    }
+
+    if not openai_client and not groq_client:
+        raise HTTPException(status_code=503, detail="AI service not configured")
+
+    result = None
+    ai_provider = None
+
+    # ============ OPENAI TEMPORARILY DISABLED (UNCOMMENT WHEN CREDITS AVAILABLE) ============
+    # # Try OpenAI first
+    # if openai_client:
+    #     try:
+    #         logger.info(f"Starting OpenAI interview questions for user {user['id']}")
+    #
+    #         # Prepare the prompt for OpenAI
+    #         prompt = f"""Generate interview questions for:
+    # Company: {company}
+    # Role: {role}
+    # Interview Type: {interview_type}
+    #
+    # Provide 4-6 realistic interview questions that {company} would ask for a {role} position in a {interview_type} interview.
+    # Also provide 4 helpful tips for answering these types of questions.
+    #
+    # Return in JSON format with:
+    # 1. questions (array of question strings)
+    # 2. tips (array of 4 tip strings)
+    #
+    # Make questions specific to {company}'s interview style and realistic for the role."""
+    #
+    #         logger.info("Calling OpenAI API...")
+    #
+    #         # Call OpenAI API
+    #         response = await openai_client.chat.completions.create(
+    #             model="gpt-4o-mini",
+    #             messages=[
+    #                 {"role": "system", "content": "You are an expert interviewer who creates realistic, company-specific interview questions. Provide questions and tips in JSON format."},
+    #                 {"role": "user", "content": prompt}
+    #             ],
+    #             response_format={"type": "json_object"},
+    #             temperature=0.8,
+    #             max_tokens=800
+    #         )
+    #
+    #         logger.info("OpenAI API call successful")
+    #
+    #         # Parse the AI response
+    #         import json
+    #         result = json.loads(response.choices[0].message.content)
+    #         ai_provider = "openai"
+    #
+    #         logger.info(f"Interview questions completed with OpenAI")
+    #
+    #     except Exception as e:
+    #         logger.error(f"OpenAI API error: {str(e)}")
+    #         logger.error(f"Error type: {type(e).__name__}")
+    #         logger.warning("OpenAI failed, attempting Groq fallback...")
+    # ============ END OPENAI SECTION ============
+
+    # Try Groq if OpenAI failed or wasn't available
+    if not result and groq_client:
+        try:
+            logger.info(f"Starting Groq interview questions for user {user['id']}")
+
+            # Prepare the prompt for Groq
+            prompt = f"""Generate interview questions for:
+Company: {company}
+Role: {role}
+Interview Type: {interview_type}
+
+Provide 4-6 realistic interview questions that {company} would ask for a {role} position in a {interview_type} interview.
+Also provide 4 helpful tips for answering these types of questions.
+
+Return in JSON format with:
+1. questions (array of question strings)
+2. tips (array of 4 tip strings)
+
+Make questions specific to {company}'s interview style and realistic for the role."""
+
+            logger.info("Calling Groq API...")
+
+            # Call Groq API
+            response = await groq_client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": "You are an expert interviewer who creates realistic, company-specific interview questions. Provide questions and tips in JSON format."},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.8,
+                max_tokens=800
+            )
+
+            logger.info("Groq API call successful")
+
+            # Parse the AI response
+            import json
+            result = json.loads(response.choices[0].message.content)
+            ai_provider = "groq"
+
+            logger.info(f"Interview questions completed with Groq")
+
+        except Exception as e:
+            logger.error(f"Groq API error: {str(e)}")
+            logger.error(f"Error type: {type(e).__name__}")
+            logger.warning("Groq also failed, using fallback mock data")
+
+    # Final fallback to mock data if both AI providers fail
+    if not result:
+        logger.warning("Using fallback mock data - both AI providers failed")
+        questions_map = {
+            "technical": [
+                "Implement a function to reverse a linked list",
+                "Design a data structure for a social media feed",
+                "How would you optimize a slow database query?",
+                "Explain the difference between SQL and NoSQL databases"
+            ],
+            "behavioral": [
+                "Tell me about a time you disagreed with your manager",
+                "Describe a project where you had to learn a new technology quickly",
+                "How do you handle competing priorities?",
+                "Give an example of when you went above and beyond"
+            ],
+            "system_design": [
+                "Design a notification system",
+                "How would you design Instagram?",
+                "Design a distributed cache",
+                "Architecture for a real-time chat application"
+            ]
+        }
+
+        result = {
+            "questions": questions_map.get(interview_type, questions_map["technical"]),
+            "tips": [
+                "Practice explaining your thought process out loud",
+                "Ask clarifying questions before starting",
+                "Consider edge cases and scalability",
+                "Be prepared to discuss trade-offs"
+            ]
+        }
+        ai_provider = "fallback"
+
+    return {**result, "ai_provider": ai_provider}
 
 # ============ COMMUNITY FEATURES ============
 

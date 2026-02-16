@@ -229,8 +229,12 @@ const MenteeInterviewPrep = () => {
               <TabsTrigger value="prep" className="data-[state=active]:bg-[#06b6d4] data-[state=active]:text-[#0f172a]">
                 Prep Guide
               </TabsTrigger>
-              <TabsTrigger value="questions" className="data-[state=active]:bg-[#06b6d4] data-[state=active]:text-[#0f172a]">
-                Practice Questions
+              <TabsTrigger 
+                value="questions" 
+                disabled={!questions}
+                className="data-[state=active]:bg-[#06b6d4] data-[state=active]:text-[#0f172a] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Practice Questions {!questions && '(Generate first)'}
               </TabsTrigger>
             </TabsList>
 
@@ -350,20 +354,70 @@ const MenteeInterviewPrep = () => {
                               <span className="text-[#06b6d4] font-bold">{week.replace('_', ' ').toUpperCase()}</span>
                             </div>
                             <div className="flex-1">
-                              <p className="text-slate-300">{plan}</p>
+                              {typeof plan === 'string' ? (
+                                <p className="text-slate-300">{plan}</p>
+                              ) : (
+                                <div className="space-y-2">
+                                  {plan.focus && (
+                                    <p className="text-white font-medium">{plan.focus}</p>
+                                  )}
+                                  {plan.tasks && Array.isArray(plan.tasks) && (
+                                    <ul className="space-y-1">
+                                      {plan.tasks.map((task, idx) => (
+                                        <li key={idx} className="text-slate-300 flex items-start gap-2">
+                                          <span className="text-[#06b6d4] mt-1">•</span>
+                                          {task}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))}
                       </div>
                     </CardContent>
                   </Card>
+
+                  {/* Prompt to generate questions */}
+                  {!questions && (
+                    <Card className="bg-[#06b6d4]/10 border-[#06b6d4]/30">
+                      <CardContent className="pt-6">
+                        <div className="text-center">
+                          <MessageSquare className="w-12 h-12 text-[#06b6d4] mx-auto mb-3" />
+                          <h3 className="text-white font-medium mb-2">Ready for Practice Questions?</h3>
+                          <p className="text-slate-300 mb-4">
+                            Click the "Get Practice Questions" button above to generate company-specific interview questions
+                          </p>
+                          <Button
+                            onClick={handleGetQuestions}
+                            disabled={questionsLoading || !company || !role || !interviewType}
+                            className="bg-[#06b6d4] hover:bg-[#06b6d4]/90 text-[#0f172a]"
+                          >
+                            {questionsLoading ? (
+                              <>
+                                <Brain className="w-4 h-4 mr-2 animate-spin" />
+                                Generating Questions...
+                              </>
+                            ) : (
+                              <>
+                                <MessageSquare className="w-4 h-4 mr-2" />
+                                Generate Practice Questions
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
                 </>
               )}
             </TabsContent>
 
             {/* Questions Tab */}
             <TabsContent value="questions" className="space-y-6">
-              {questions && (
+              {questions ? (
                 <>
                   <Card className="bg-[#1e293b] border-[#334155]">
                     <CardHeader>
@@ -407,6 +461,18 @@ const MenteeInterviewPrep = () => {
                     </CardContent>
                   </Card>
                 </>
+              ) : (
+                <Card className="bg-[#1e293b] border-[#334155]">
+                  <CardContent className="pt-6">
+                    <div className="text-center py-8">
+                      <MessageSquare className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+                      <h3 className="text-white font-medium mb-2">No Questions Generated Yet</h3>
+                      <p className="text-slate-400">
+                        Please click "Get Practice Questions" button to generate interview questions
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
             </TabsContent>
           </Tabs>
