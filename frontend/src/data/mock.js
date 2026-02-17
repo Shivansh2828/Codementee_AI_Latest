@@ -30,9 +30,9 @@ export const cohortData = {
 // Pricing Plans - One-time Launch Pricing (No Subscriptions)
 export const pricingPlans = [
   {
-    id: "starter",
-    name: "Starter",
-    description: "Perfect for testing the waters",
+    id: "foundation",
+    name: "Foundation",
+    description: "Perfect for getting started",
     duration: "One-time purchase",
     price: 2499,
     priceUSD: 30,
@@ -40,61 +40,55 @@ export const pricingPlans = [
     perSession: 2499,
     popular: false,
     features: [
-      "1 Live Mock Interview (45-60 min)",
-      "Detailed written feedback report",
-      "Email resume review",
-      "Interview recording access",
-      "Email support"
+      "1 Mock Interview",
+      "1 Resume Review (Email)",
+      "ATS Resume Tools Access",
+      "Email Support"
     ],
-    cta: "Book Your Mock",
+    cta: "Get Started",
     justification: "Direct access to experienced engineers. No subscriptions, no commitments."
   },
   {
-    id: "professional",
-    name: "Professional",
+    id: "growth",
+    name: "Growth",
     description: "Most comprehensive interview preparation",
     duration: "One-time purchase",
     price: 6999,
     priceUSD: 85,
-    originalPrice: 7497,
+    originalPrice: null,
     perSession: 2333,
     popular: true,
-    savings: "Save ₹498",
     features: [
-      "3 Live Mock Interviews (45-60 min each)",
-      "Detailed feedback after each session",
-      "Live resume review session (30 min)",
-      "Interview recordings access",
-      "Priority scheduling",
-      "WhatsApp support"
+      "3 Mock Interviews",
+      "3 Resume Reviews (Email)",
+      "1 In-Person Resume Review Session",
+      "AI Interview Prep Tools",
+      "Email Support"
     ],
-    cta: "Get Professional Prep",
-    justification: "Complete interview preparation with multiple practice rounds and live resume optimization."
+    cta: "Most Popular",
+    justification: "Complete interview preparation with multiple practice rounds and AI tools."
   },
   {
-    id: "intensive",
-    name: "Intensive",
+    id: "accelerator",
+    name: "Accelerator",
     description: "Premium preparation for serious candidates",
     duration: "One-time purchase",
-    price: 12999,
-    priceUSD: 155,
-    originalPrice: 14994,
-    perSession: 2166,
+    price: 14999,
+    priceUSD: 180,
+    originalPrice: null,
+    perSession: 2500,
     popular: false,
-    savings: "Save ₹1,995",
     limitedSeats: 10,
     features: [
-      "6 Live Mock Interviews (45-60 min each)",
-      "Comprehensive feedback reports",
-      "2 Live resume review sessions",
-      "Company-specific interview prep",
-      "Priority mentor matching",
-      "Interview recordings access",
-      "Direct mentor WhatsApp access",
-      "Post-interview strategy calls"
+      "6 Mock Interviews",
+      "1 In-Person Resume Review Session",
+      "ATS Resume Tools Access",
+      "Referral Support (Best Effort)",
+      "24/7 Mentor WhatsApp Access",
+      "WhatsApp Community Group"
     ],
-    cta: "Secure Premium Spot",
-    justification: "Intensive preparation with dedicated mentor support. Limited to 10 candidates for personalized attention."
+    cta: "Premium Access",
+    justification: "Intensive preparation with dedicated mentor support and referral assistance."
   }
 ];
 
