@@ -58,7 +58,10 @@ Mentee → Select Company → Pick 2 Slots → Submit
 - [x] Professional, clean, minimal UI
 - [x] Value proposition: "Real mock interviews with engineers who've cracked product based companies"
 - [x] Company logos of top product-based companies
-- [x] Three membership plans: Monthly (₹1,999), 3 Months (₹4,999), 6 Months (₹8,999)
+- [x] Three membership plans:
+  - **Foundation**: ₹2,499 - 1 mock, 1 resume review, ATS tools
+  - **Growth**: ₹6,999 - 3 mocks, 3 resume reviews, 1 in-person review, AI tools
+  - **Accelerator**: ₹14,999 - 6 mocks, in-person review, referrals, 24/7 WhatsApp access
 
 ### Payment Integration
 - [x] Razorpay integration for payments (LIVE keys active)

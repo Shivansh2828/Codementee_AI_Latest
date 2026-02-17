@@ -290,63 +290,70 @@ async def setup_initial_data():
         # 7. Create Default Pricing Plans with Enhanced Features
         pricing_plans = [
             {
-                "plan_id": "monthly",
-                "name": "Monthly Plan",
-                "price": 199900,  # ₹1,999 in paise
+                "plan_id": "foundation",
+                "name": "Foundation",
+                "price": 249900,  # ₹2,499 in paise
                 "duration_months": 1,
                 "features": [
-                    "1 mock interview per month",
-                    "Detailed feedback reports",
-                    "AI resume analyzer",
-                    "Interview prep AI assistant",
-                    "Community forum access",
-                    "Company-specific preparation",
-                    "Email support"
+                    "1 Mock Interview",
+                    "1 Resume Review (Email)",
+                    "ATS Resume Tools Access",
+                    "Email Support"
                 ],
+                "limits": {
+                    "mock_interviews": 1,
+                    "resume_reviews": 1,
+                    "ai_tools": False,
+                    "whatsapp_support": False,
+                    "referral_support": False
+                },
                 "is_active": True,
                 "display_order": 1
             },
             {
-                "plan_id": "quarterly",
-                "name": "3 Months Plan",
-                "price": 499900,  # ₹4,999 in paise
+                "plan_id": "growth",
+                "name": "Growth",
+                "price": 699900,  # ₹6,999 in paise
                 "duration_months": 3,
                 "features": [
-                    "3 mock interviews (1 per month)",
-                    "Detailed feedback reports",
-                    "AI resume analyzer + optimization",
-                    "Interview prep AI assistant",
-                    "Community forum access",
-                    "Priority mentor selection",
-                    "Company-specific preparation",
-                    "Behavioral interview training",
-                    "Email & chat support",
-                    "Progress tracking dashboard"
+                    "3 Mock Interviews",
+                    "3 Resume Reviews (Email)",
+                    "1 In-Person Resume Review Session",
+                    "AI Interview Prep Tools",
+                    "Email Support"
                 ],
+                "limits": {
+                    "mock_interviews": 3,
+                    "resume_reviews": 3,
+                    "in_person_reviews": 1,
+                    "ai_tools": True,
+                    "whatsapp_support": False,
+                    "referral_support": False
+                },
                 "is_active": True,
                 "display_order": 2
             },
             {
-                "plan_id": "biannual",
-                "name": "6 Months Plan",
-                "price": 899900,  # ₹8,999 in paise
+                "plan_id": "accelerator",
+                "name": "Accelerator",
+                "price": 1499900,  # ₹14,999 in paise
                 "duration_months": 6,
                 "features": [
-                    "6 mock interviews (1 per month)",
-                    "Detailed feedback reports",
-                    "AI resume analyzer + complete overhaul",
-                    "Interview prep AI assistant",
-                    "Community forum access",
-                    "Priority mentor selection",
-                    "Company-specific preparation",
-                    "System design interview training",
-                    "Behavioral interview training",
-                    "24/7 support",
-                    "Progress tracking dashboard",
-                    "Career guidance sessions",
-                    "Salary negotiation guidance",
-                    "Direct mentor WhatsApp access"
+                    "6 Mock Interviews",
+                    "1 In-Person Resume Review Session",
+                    "ATS Resume Tools Access",
+                    "Referral Support (Best Effort)",
+                    "24/7 Mentor WhatsApp Access",
+                    "WhatsApp Community Group"
                 ],
+                "limits": {
+                    "mock_interviews": 6,
+                    "in_person_reviews": 1,
+                    "ai_tools": False,
+                    "whatsapp_support": True,
+                    "referral_support": True,
+                    "community_access": True
+                },
                 "is_active": True,
                 "display_order": 3
             }
@@ -362,6 +369,7 @@ async def setup_initial_data():
                     "price": plan_data["price"],
                     "duration_months": plan_data["duration_months"],
                     "features": plan_data["features"],
+                    "limits": plan_data["limits"],
                     "is_active": plan_data["is_active"],
                     "display_order": plan_data["display_order"],
                     "created_at": datetime.now(timezone.utc).isoformat(),
@@ -369,6 +377,23 @@ async def setup_initial_data():
                 }
                 await db.pricing_plans.insert_one(plan_doc)
                 print(f"✅ Pricing plan created: {plan_data['name']} - ₹{plan_data['price']/100}")
+            else:
+                # Update existing plans with new pricing
+                update_data = {
+                    "name": plan_data["name"],
+                    "price": plan_data["price"],
+                    "duration_months": plan_data["duration_months"],
+                    "features": plan_data["features"],
+                    "limits": plan_data["limits"],
+                    "is_active": plan_data["is_active"],
+                    "display_order": plan_data["display_order"],
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+                await db.pricing_plans.update_one(
+                    {"plan_id": plan_data["plan_id"]},
+                    {"$set": update_data}
+                )
+                print(f"✅ Pricing plan updated: {plan_data['name']} - ₹{plan_data['price']/100}")
         
         # Validate pricing integrity
         print("🔍 Validating pricing plan integrity...")
