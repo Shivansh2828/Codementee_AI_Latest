@@ -42,25 +42,43 @@ const PricingSection = () => {
   const fetchPricingPlans = async () => {
     try {
       const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+      console.log('Fetching pricing from:', `${backendUrl}/api/pricing-plans`);
       const response = await axios.get(`${backendUrl}/api/pricing-plans`);
+      console.log('Pricing API response:', response.data);
       
       // Map API data to component format
       const mappedPlans = response.data
         .filter(plan => plan.is_active) // Only show active plans
         .sort((a, b) => a.display_order - b.display_order)
-        .map(plan => ({
-          id: plan.plan_id,
-          name: plan.name,
-          price: (plan.price / 100).toLocaleString('en-IN'),
-          features: plan.features || [],
-          ...planConfig[plan.plan_id] // Merge with config
-        }));
+        .map(plan => {
+          const config = planConfig[plan.plan_id] || {
+            icon: Sparkles,
+            iconColor: 'text-blue-400',
+            description: plan.name,
+            cta: 'Get Started',
+            popular: false
+          };
+          
+          return {
+            id: plan.plan_id,
+            name: plan.name,
+            price: (plan.price / 100).toLocaleString('en-IN'),
+            features: plan.features || [],
+            icon: config.icon,
+            iconColor: config.iconColor,
+            description: config.description,
+            cta: config.cta,
+            popular: config.popular,
+            badge: config.badge
+          };
+        });
       
+      console.log('Mapped plans:', mappedPlans);
       setPlans(mappedPlans);
     } catch (error) {
       console.error('Error fetching pricing plans:', error);
       // Fallback to default plans if API fails
-      setPlans([
+      const fallbackPlans = [
         {
           id: 'starter',
           name: 'Mock Starter',
@@ -72,7 +90,11 @@ const PricingSection = () => {
             'Proven Resume Templates',
             'Free AI ATS Resume Checker Access'
           ],
-          ...planConfig['starter']
+          icon: Sparkles,
+          iconColor: 'text-blue-400',
+          description: 'Best for engineers who want a structured evaluation before real interviews.',
+          cta: 'Get Evaluated',
+          popular: false
         },
         {
           id: 'pro',
@@ -86,7 +108,12 @@ const PricingSection = () => {
             'Proven Resume Templates',
             'Free AI ATS Resume Checker Access'
           ],
-          ...planConfig['pro']
+          icon: TrendingUp,
+          iconColor: 'text-[#06b6d4]',
+          description: 'Complete preparation cycle before product company interviews.',
+          cta: 'Start Full Prep',
+          popular: true,
+          badge: 'Most Popular'
         },
         {
           id: 'elite',
@@ -100,9 +127,15 @@ const PricingSection = () => {
             'Proven Resume Templates',
             'Free AI ATS Resume Checker Access'
           ],
-          ...planConfig['elite']
+          icon: Crown,
+          iconColor: 'text-amber-400',
+          description: 'High-touch preparation for Tier-1 / MAANG aspirants.',
+          cta: 'Go Elite',
+          popular: false
         }
-      ]);
+      ];
+      console.log('Using fallback plans:', fallbackPlans);
+      setPlans(fallbackPlans);
     } finally {
       setLoading(false);
     }
@@ -138,16 +171,17 @@ const PricingSection = () => {
 
         {/* Pricing Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto mb-12">
-          {plans.map((plan) => {
-            const Icon = plan.icon;
-            return (
-              <div
-                key={plan.id}
-                className={`relative rounded-2xl overflow-hidden transition-all duration-300 ${
-                  plan.popular
-                    ? `${theme.bg.card} border-2 border-[#06b6d4] shadow-2xl shadow-[#06b6d4]/20 md:scale-105 md:-mt-4 md:mb-4`
-                    : `${theme.bg.card} ${theme.border.primary} border hover:border-[#06b6d4]/50`
-                }`}
+          {plans && plans.length > 0 ? (
+            plans.map((plan) => {
+              const Icon = plan.icon;
+              return (
+                <div
+                  key={plan.id}
+                  className={`relative rounded-2xl overflow-hidden transition-all duration-300 ${
+                    plan.popular
+                      ? `${theme.bg.card} border-2 border-[#06b6d4] shadow-2xl shadow-[#06b6d4]/20 md:scale-105 md:-mt-4 md:mb-4`
+                      : `${theme.bg.card} ${theme.border.primary} border hover:border-[#06b6d4]/50`
+                  }`}
               >
                 {/* Popular Badge */}
                 {plan.popular && (
@@ -219,7 +253,12 @@ const PricingSection = () => {
                 </div>
               </div>
             );
-          })}
+          })
+          ) : (
+            <div className="col-span-3 text-center py-12">
+              <p className={theme.text.secondary}>No pricing plans available</p>
+            </div>
+          )}
         </div>
 
         {/* Bottom Note */}
