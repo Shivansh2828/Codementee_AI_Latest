@@ -984,8 +984,13 @@ async def delete_pricing_plan(plan_id: str, user=Depends(get_current_user)):
 
 # ============ PUBLIC PRICING ROUTES ============
 @api_router.get("/pricing-plans")
-async def get_public_pricing_plans():
+async def get_public_pricing_plans(response: Response):
     """Get active pricing plans for public display"""
+    # Prevent caching to ensure fresh data
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    
     print("🔍 Fetching pricing plans from database...")
     plans = await db.pricing_plans.find({"is_active": True}).sort("display_order", 1).to_list(100)
     print(f"📊 Found {len(plans)} active plans")
