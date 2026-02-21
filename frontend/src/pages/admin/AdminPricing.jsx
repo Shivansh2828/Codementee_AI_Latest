@@ -95,21 +95,20 @@ const AdminPricing = () => {
       } else {
         toast.error(error.response?.data?.detail || 'Failed to save pricing plan');
       }
-      }
     }
   };
 
   const handleEdit = (plan) => {
     setEditingPlan(plan);
     setFormData({
-      plan_id: plan.plan_id,
-      name: plan.name,
-      price: (plan.price / 100).toString(),
-      duration_months: plan.duration_months.toString(),
-      features: plan.features.join('\n'),
+      plan_id: plan.plan_id || '',
+      name: plan.name || '',
+      price: plan.price ? (plan.price / 100).toString() : '',
+      duration_months: plan.duration_months ? plan.duration_months.toString() : '1',
+      features: plan.features ? plan.features.join('\n') : '',
       limits: JSON.stringify(plan.limits || {}, null, 2),
-      is_active: plan.is_active,
-      display_order: plan.display_order.toString()
+      is_active: plan.is_active !== undefined ? plan.is_active : true,
+      display_order: plan.display_order ? plan.display_order.toString() : '1'
     });
     setIsDialogOpen(true);
   };

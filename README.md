@@ -36,7 +36,7 @@ A freemium mentorship-based interview preparation platform connecting aspiring s
 3. **[PRODUCT_REQUIREMENTS.md](PRODUCT_REQUIREMENTS.md)** - Read this for product features
 
 **Quick Access:**
-- **[CHECK_STATUS.sh](CHECK_STATUS.sh)** - Run this to check system status
+- **[CHECK_STATUS.sh](CHECK_STATUS.sh)** - Run this to check current system status
 
 ## 🏗️ Architecture
 

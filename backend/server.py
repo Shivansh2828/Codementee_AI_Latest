@@ -942,6 +942,7 @@ async def create_pricing_plan(data: PricingPlanCreate, user=Depends(get_current_
         "price": data.price,
         "duration_months": data.duration_months,
         "features": data.features,
+        "limits": data.limits,
         "is_active": data.is_active,
         "display_order": data.display_order,
         "created_at": datetime.now(timezone.utc).isoformat(),
