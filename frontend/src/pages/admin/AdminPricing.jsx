@@ -64,19 +64,25 @@ const AdminPricing = () => {
     
     try {
       const submitData = {
-        ...formData,
+        name: formData.name,
         price: parseInt(formData.price) * 100, // Convert to paise
         duration_months: parseInt(formData.duration_months),
         features: formData.features.split('\n').filter(f => f.trim()),
         limits: formData.limits ? JSON.parse(formData.limits) : {},
+        is_active: formData.is_active,
         display_order: parseInt(formData.display_order)
       };
 
       if (editingPlan) {
+        // Don't send plan_id in body for update
         await api.put(`/admin/pricing-plans/${editingPlan.plan_id}`, submitData);
         toast.success('Pricing plan updated successfully');
       } else {
-        await api.post('/admin/pricing-plans', submitData);
+        // Include plan_id only for create
+        await api.post('/admin/pricing-plans', {
+          ...submitData,
+          plan_id: formData.plan_id
+        });
         toast.success('Pricing plan created successfully');
       }
 
@@ -88,6 +94,7 @@ const AdminPricing = () => {
         toast.error('Invalid JSON format in limits field');
       } else {
         toast.error(error.response?.data?.detail || 'Failed to save pricing plan');
+      }
       }
     }
   };
