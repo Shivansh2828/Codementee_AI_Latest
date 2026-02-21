@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Pricing API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+        .plan {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .price {
+            font-size: 32px;
+            font-weight: bold;
+            color: #06b6d4;
+        }
+        button {
+            background: #06b6d4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #0891b2;
+        }
+        #status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            background: #334155;
+        }
+        .success { background: #10b981 !important; }
+        .error { background: #ef4444 !important; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Direct API Test</h1>
+    <p>This page directly calls the backend API to test if pricing updates work.</p>
+    
+    <div>
+        <button onclick="fetchPricing()">Fetch Pricing</button>
+        <button onclick="fetchPricing(true)">Fetch with Cache Bust</button>
+        <button onclick="clearAndFetch()">Clear Cache & Fetch</button>
+    </div>
+    
+    <div id="status">Ready to test...</div>
+    <div id="results"></div>
+
+    <script>
+        const BACKEND_URL = 'http://localhost:8001';
+        
+        function log(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = type;
+            console.log(message);
+        }
+        
+        async function fetchPricing(cacheBust = false) {
+            try {
+                log('Fetching pricing from API...', 'info');
+                
+                const url = cacheBust 
+                    ? `${BACKEND_URL}/api/pricing-plans?_t=${Date.now()}`
+                    : `${BACKEND_URL}/api/pricing-plans`;
+                
+                const options = cacheBust ? {
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                } : {};
+                
+                console.log('Fetching from:', url);
+                console.log('Options:', options);
+                
+                const response = await fetch(url, options);
+                const data = await response.json();
+                
+                log(`✅ Fetched ${data.length} plans successfully!`, 'success');
+                displayResults(data);
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        async function clearAndFetch() {
+            log('Clearing cache...', 'info');
+            // Clear cache using Cache API
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                await Promise.all(cacheNames.map(name => caches.delete(name)));
+                log('Cache cleared!', 'success');
+            }
+            setTimeout(() => fetchPricing(true), 500);
+        }
+        
+        function displayResults(plans) {
+            const results = document.getElementById('results');
+            results.innerHTML = '<h2>Current Pricing:</h2>';
+            
+            plans.forEach(plan => {
+                const price = (plan.price / 100).toLocaleString('en-IN');
+                const div = document.createElement('div');
+                div.className = 'plan';
+                div.innerHTML = `
+                    <h3>${plan.name}</h3>
+                    <div class="price">₹${price}</div>
+                    <p>Plan ID: ${plan.plan_id}</p>
+                    <p>Features: ${plan.features.length} items</p>
+                    <p>Last Updated: ${new Date(plan.updated_at).toLocaleString()}</p>
+                `;
+                results.appendChild(div);
+            });
+        }
+        
+        // Auto-fetch on load
+        window.onload = () => fetchPricing(true);
+    </script>
+</body>
+</html>

@@ -43,7 +43,18 @@ const PricingSection = () => {
     try {
       const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
       console.log('Fetching pricing from:', `${backendUrl}/api/pricing-plans`);
-      const response = await axios.get(`${backendUrl}/api/pricing-plans`);
+      
+      // Add cache-busting and no-cache headers to ensure fresh data
+      const response = await axios.get(`${backendUrl}/api/pricing-plans`, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
+        params: {
+          _t: new Date().getTime() // Cache buster
+        }
+      });
       console.log('Pricing API response:', response.data);
       
       if (!response.data || !Array.isArray(response.data) || response.data.length === 0) {
