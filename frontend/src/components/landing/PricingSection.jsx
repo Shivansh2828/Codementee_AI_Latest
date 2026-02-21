@@ -46,28 +46,47 @@ const PricingSection = () => {
       const response = await axios.get(`${backendUrl}/api/pricing-plans`);
       console.log('Pricing API response:', response.data);
       
-      if (!response.data || response.data.length === 0) {
+      if (!response.data || !Array.isArray(response.data) || response.data.length === 0) {
         console.warn('No pricing data received from API, using fallback');
         throw new Error('No pricing data');
       }
       
-      // Map API data to component format
+      // Map API data to component format - handle any field names
       const mappedPlans = response.data
-        .filter(plan => plan.is_active) // Only show active plans
-        .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+        .filter(plan => {
+          // Check both is_active and active fields
+          const isActive = plan.is_active !== undefined ? plan.is_active : plan.active;
+          return isActive !== false;
+        })
+        .sort((a, b) => {
+          const orderA = a.display_order || a.displayOrder || 0;
+          const orderB = b.display_order || b.displayOrder || 0;
+          return orderA - orderB;
+        })
         .map(plan => {
-          const config = planConfig[plan.plan_id] || {
+          const planId = plan.plan_id || plan.id;
+          const config = planConfig[planId] || {
             icon: Sparkles,
             iconColor: 'text-blue-400',
-            description: plan.name,
+            description: plan.description || plan.name,
             cta: 'Get Started',
             popular: false
           };
           
+          // Handle price - could be in paise or rupees
+          let priceInRupees;
+          if (plan.price > 10000) {
+            // Likely in paise
+            priceInRupees = plan.price / 100;
+          } else {
+            // Already in rupees
+            priceInRupees = plan.price;
+          }
+          
           return {
-            id: plan.plan_id,
+            id: planId,
             name: plan.name,
-            price: (plan.price / 100).toLocaleString('en-IN'),
+            price: priceInRupees.toLocaleString('en-IN'),
             features: plan.features || [],
             icon: config.icon,
             iconColor: config.iconColor,
@@ -81,7 +100,7 @@ const PricingSection = () => {
       console.log('Mapped plans:', mappedPlans);
       
       if (mappedPlans.length === 0) {
-        console.warn('No active plans found, using fallback');
+        console.warn('No active plans found after mapping, using fallback');
         throw new Error('No active plans');
       }
       
