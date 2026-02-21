@@ -59,9 +59,9 @@ Mentee → Select Company → Pick 2 Slots → Submit
 - [x] Value proposition: "Real mock interviews with engineers who've cracked product based companies"
 - [x] Company logos of top product-based companies
 - [x] Three membership plans:
-  - **Foundation**: ₹2,499 - 1 mock, 1 resume review, ATS tools
-  - **Growth**: ₹6,999 - 3 mocks, 3 resume reviews, 1 in-person review, AI tools
-  - **Accelerator**: ₹14,999 - 6 mocks, in-person review, referrals, 24/7 WhatsApp access
+  - **Mock Starter**: ₹2,999 - 1 MAANG mock, resume review, ATS tools
+  - **Interview Pro**: ₹6,999 - 3 MAANG mocks, improvement tracking, strategy call (Most Popular)
+  - **Interview Elite**: ₹14,999 - 6 MAANG mocks, live resume review, referrals, WhatsApp support
 
 ### Payment Integration
 - [x] Razorpay integration for payments (LIVE keys active)
