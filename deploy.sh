@@ -48,9 +48,18 @@ if [ "$FRONTEND_CHANGED" -gt 0 ]; then
         yarn install
     fi
     
+    # Clear cache and old build
+    echo "Clearing cache and old build..."
+    rm -rf build
+    rm -rf node_modules/.cache
+    
     # Build
     echo "Building frontend..."
     yarn build
+    
+    # Restart frontend service
+    echo "Restarting frontend service..."
+    systemctl restart codementee-frontend
     
     cd ..
     echo -e "${GREEN}✓ Frontend deployed${NC}"
