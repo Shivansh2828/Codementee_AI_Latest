@@ -1013,74 +1013,7 @@ async def delete_pricing_plan(plan_id: str, user=Depends(get_current_user)):
 async def get_public_pricing_plans():
     """Get active pricing plans for public display"""
     plans = await db.pricing_plans.find({"is_active": True}).sort("display_order", 1).to_list(100)
-    
-    # Transform backend data to frontend format
-    transformed_plans = []
-    for plan in plans:
-        # Ensure price is in paise for consistent calculation
-        price_in_paise = plan["price"]
-        price_in_rupees = price_in_paise // 100
-        
-        # Calculate per month price in rupees
-        per_month = price_in_rupees // plan["duration_months"]
-        
-        # Determine if popular (middle plan or explicitly marked)
-        popular = plan.get("popular", plan["plan_id"] == "growth")
-        
-        # Calculate original price and savings for multi-month plans
-        original_price = None
-        savings = None
-        if plan["duration_months"] > 1:
-            # Use the actual foundation price from database, not hardcoded
-            foundation_plan = await db.pricing_plans.find_one({"plan_id": "foundation", "is_active": True})
-            if not foundation_plan:
-                # Fallback to starter plan for backward compatibility
-                foundation_plan = await db.pricing_plans.find_one({"plan_id": "starter", "is_active": True})
-            
-            if foundation_plan:
-                foundation_price = foundation_plan["price"] // 100  # Convert to rupees
-                original_price = foundation_price * plan["duration_months"]
-                savings_amount = original_price - price_in_rupees
-                if savings_amount > 0:
-                    savings = f"Save ₹{savings_amount:,}"
-        
-        # Map duration
-        duration_map = {
-            1: "1 Month",
-            3: "3 Months", 
-            6: "6 Months",
-            12: "12 Months"
-        }
-        
-        # Map CTA text
-        cta_map = {
-            "foundation": "Start Basic",
-            "growth": "Best Value",
-            "accelerator": "Maximum Prep",
-            # Legacy support for old plan IDs
-            "starter": "Start Basic",
-            "professional": "Best Value", 
-            "premium": "Maximum Prep",
-            "monthly": "Start Monthly",
-            "quarterly": "Best Value",
-            "biannual": "Maximum Prep"
-        }
-        
-        transformed_plan = {
-            "id": plan["plan_id"],
-            "name": plan["name"],
-            "duration": duration_map.get(plan["duration_months"], f"{plan['duration_months']} Months"),
-            "price": price_in_rupees,  # Always return price in rupees for frontend
-            "originalPrice": original_price,
-            "perMonth": per_month,
-            "popular": popular,
-            "savings": savings,
-            "features": plan.get("features", []),
-            "cta": cta_map.get(plan["plan_id"], "Choose Plan")
-        }
-        transformed_plans.append(transformed_plan)
-    
-    return transformed_plans
+    return [serialize_doc(dict(p)) for p in plans]
 
 # ============ MEET LINKS MANAGEMENT ============
 @api_router.get("/admin/meet-links")
