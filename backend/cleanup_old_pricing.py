@@ -21,7 +21,7 @@ async def cleanup_pricing():
     print("🧹 Cleaning up old pricing plans...")
     
     # Delete old plans
-    old_plan_ids = ["monthly", "quarterly", "biannual", "foundation", "growth", "accelerator"]
+    old_plan_ids = ["monthly", "quarterly", "biannual", "foundation", "growth", "accelerator", "professional", "intensive"]
     
     for plan_id in old_plan_ids:
         result = await db.pricing_plans.delete_one({"plan_id": plan_id})
