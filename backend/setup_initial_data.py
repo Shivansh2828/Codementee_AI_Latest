@@ -290,20 +290,21 @@ async def setup_initial_data():
         # 7. Create Default Pricing Plans with Enhanced Features
         pricing_plans = [
             {
-                "plan_id": "foundation",
-                "name": "Foundation",
-                "price": 249900,  # ₹2,499 in paise
+                "plan_id": "starter",
+                "name": "Mock Starter",
+                "price": 299900,  # ₹2,999 in paise
                 "duration_months": 1,
                 "features": [
-                    "1 Mock Interview",
-                    "1 Resume Review (Email)",
-                    "ATS Resume Tools Access",
-                    "Email Support"
+                    "1 MAANG-Level Mock Interview",
+                    "Detailed Feedback Report",
+                    "Resume Review (Email-based)",
+                    "Proven Resume Templates",
+                    "Free AI ATS Resume Checker Access"
                 ],
                 "limits": {
                     "mock_interviews": 1,
                     "resume_reviews": 1,
-                    "ai_tools": False,
+                    "ai_tools": True,
                     "whatsapp_support": False,
                     "referral_support": False
                 },
@@ -311,21 +312,22 @@ async def setup_initial_data():
                 "display_order": 1
             },
             {
-                "plan_id": "growth",
-                "name": "Growth",
+                "plan_id": "pro",
+                "name": "Interview Pro",
                 "price": 699900,  # ₹6,999 in paise
                 "duration_months": 3,
                 "features": [
-                    "3 Mock Interviews",
-                    "3 Resume Reviews (Email)",
-                    "1 In-Person Resume Review Session",
-                    "AI Interview Prep Tools",
-                    "Email Support"
+                    "3 MAANG-Level Mock Interviews",
+                    "Improvement Tracking Between Mocks",
+                    "Resume Review by MAANG Engineer",
+                    "1 Strategy Call",
+                    "Proven Resume Templates",
+                    "Free AI ATS Resume Checker Access"
                 ],
                 "limits": {
                     "mock_interviews": 3,
-                    "resume_reviews": 3,
-                    "in_person_reviews": 1,
+                    "resume_reviews": 1,
+                    "strategy_calls": 1,
                     "ai_tools": True,
                     "whatsapp_support": False,
                     "referral_support": False
@@ -334,25 +336,24 @@ async def setup_initial_data():
                 "display_order": 2
             },
             {
-                "plan_id": "accelerator",
-                "name": "Accelerator",
+                "plan_id": "elite",
+                "name": "Interview Elite",
                 "price": 1499900,  # ₹14,999 in paise
                 "duration_months": 6,
                 "features": [
-                    "6 Mock Interviews",
-                    "1 In-Person Resume Review Session",
-                    "ATS Resume Tools Access",
-                    "Referral Support (Best Effort)",
-                    "24/7 Mentor WhatsApp Access",
-                    "WhatsApp Community Group"
+                    "6 MAANG-Level Mock Interviews",
+                    "Live Resume Review Session",
+                    "Referral Guidance (Best Effort)",
+                    "Priority WhatsApp Support",
+                    "Proven Resume Templates",
+                    "Free AI ATS Resume Checker Access"
                 ],
                 "limits": {
                     "mock_interviews": 6,
-                    "in_person_reviews": 1,
-                    "ai_tools": False,
+                    "live_resume_review": 1,
+                    "ai_tools": True,
                     "whatsapp_support": True,
-                    "referral_support": True,
-                    "community_access": True
+                    "referral_support": True
                 },
                 "is_active": True,
                 "display_order": 3
