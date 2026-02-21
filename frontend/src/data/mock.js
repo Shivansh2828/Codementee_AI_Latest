@@ -27,52 +27,54 @@ export const cohortData = {
   launchPhase: "Limited Launch - 25 Spots Only"
 };
 
-// Pricing Plans - One-time Launch Pricing (No Subscriptions)
+// Pricing Plans - One-time Payment (No Subscriptions)
 export const pricingPlans = [
   {
-    id: "foundation",
-    name: "Foundation",
-    description: "Perfect for getting started",
-    duration: "One-time purchase",
-    price: 2499,
-    priceUSD: 30,
+    id: "starter",
+    name: "Mock Starter",
+    description: "Best for engineers who want a structured evaluation before real interviews",
+    duration: "One-time payment",
+    price: 2999,
+    priceUSD: 36,
     originalPrice: null,
-    perSession: 2499,
+    perSession: 2999,
     popular: false,
     features: [
-      "1 Mock Interview",
-      "1 Resume Review (Email)",
-      "ATS Resume Tools Access",
-      "Email Support"
+      "1 MAANG-Level Mock Interview",
+      "Detailed Feedback Report",
+      "Resume Review (Email-based)",
+      "Proven Resume Templates",
+      "Free AI ATS Resume Checker Access"
     ],
-    cta: "Get Started",
-    justification: "Direct access to experienced engineers. No subscriptions, no commitments."
+    cta: "Get Evaluated",
+    justification: "Perfect for engineers who want a structured evaluation before real interviews."
   },
   {
-    id: "growth",
-    name: "Growth",
-    description: "Most comprehensive interview preparation",
-    duration: "One-time purchase",
+    id: "pro",
+    name: "Interview Pro",
+    description: "Complete preparation cycle before product company interviews",
+    duration: "One-time payment",
     price: 6999,
-    priceUSD: 85,
+    priceUSD: 84,
     originalPrice: null,
     perSession: 2333,
     popular: true,
     features: [
-      "3 Mock Interviews",
-      "3 Resume Reviews (Email)",
-      "1 In-Person Resume Review Session",
-      "AI Interview Prep Tools",
-      "Email Support"
+      "3 MAANG-Level Mock Interviews",
+      "Improvement Tracking Between Mocks",
+      "Resume Review by MAANG Engineer",
+      "1 Strategy Call",
+      "Proven Resume Templates",
+      "Free AI ATS Resume Checker Access"
     ],
-    cta: "Most Popular",
-    justification: "Complete interview preparation with multiple practice rounds and AI tools."
+    cta: "Start Full Prep",
+    justification: "Complete preparation cycle with improvement tracking and strategy guidance."
   },
   {
-    id: "accelerator",
-    name: "Accelerator",
-    description: "Premium preparation for serious candidates",
-    duration: "One-time purchase",
+    id: "elite",
+    name: "Interview Elite",
+    description: "High-touch preparation for Tier-1 / MAANG aspirants",
+    duration: "One-time payment",
     price: 14999,
     priceUSD: 180,
     originalPrice: null,
@@ -80,15 +82,15 @@ export const pricingPlans = [
     popular: false,
     limitedSeats: 10,
     features: [
-      "6 Mock Interviews",
-      "1 In-Person Resume Review Session",
-      "ATS Resume Tools Access",
-      "Referral Support (Best Effort)",
-      "24/7 Mentor WhatsApp Access",
-      "WhatsApp Community Group"
+      "6 MAANG-Level Mock Interviews",
+      "Live Resume Review Session",
+      "Referral Guidance (Best Effort)",
+      "Priority WhatsApp Support",
+      "Proven Resume Templates",
+      "Free AI ATS Resume Checker Access"
     ],
-    cta: "Premium Access",
-    justification: "Intensive preparation with dedicated mentor support and referral assistance."
+    cta: "Go Elite",
+    justification: "High-touch preparation with dedicated support and referral guidance."
   }
 ];
 
