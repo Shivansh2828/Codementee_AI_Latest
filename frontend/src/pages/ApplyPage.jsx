@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { ArrowRight, ArrowLeft, Loader2, Shield, CreditCard } from 'lucide-react';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
-import { cohortData, pricingPlans } from '../data/mock';
+import { cohortData } from '../data/mock';
 import { toast } from 'sonner';
 import api from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,6 +13,7 @@ const ApplyPage = () => {
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  const [pricingPlans, setPricingPlans] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -21,8 +22,28 @@ const ApplyPage = () => {
     targetRole: '',
     timeline: '',
     struggle: '',
-    selectedPlan: 'growth'
+    selectedPlan: 'pro'
   });
+
+  // Fetch pricing plans
+  useEffect(() => {
+    const fetchPricing = async () => {
+      try {
+        const response = await api.get('/pricing-plans');
+        setPricingPlans(response.data.filter(p => p.is_active));
+        // Set default to pro plan if available
+        if (response.data.length > 0) {
+          const proPlan = response.data.find(p => p.plan_id === 'pro');
+          if (proPlan) {
+            setFormData(prev => ({ ...prev, selectedPlan: proPlan.plan_id }));
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching pricing:', error);
+      }
+    };
+    fetchPricing();
+  }, []);
 
   // Load Razorpay script
   useEffect(() => {

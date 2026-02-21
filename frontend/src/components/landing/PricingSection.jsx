@@ -1,67 +1,124 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, Sparkles, TrendingUp, Crown } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import axios from 'axios';
 
 const PricingSection = () => {
   const { theme } = useTheme();
+  const [plans, setPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const plans = [
-    {
-      id: 'starter',
-      name: 'Mock Starter',
-      price: '2,999',
-      description: 'Best for engineers who want a structured evaluation before real interviews.',
+  // Icon and color mapping for plan IDs
+  const planConfig = {
+    'starter': {
       icon: Sparkles,
       iconColor: 'text-blue-400',
-      features: [
-        '1 MAANG-Level Mock Interview',
-        'Detailed Feedback Report',
-        'Resume Review (Email-based)',
-        'Proven Resume Templates',
-        'Free AI ATS Resume Checker Access'
-      ],
+      description: 'Best for engineers who want a structured evaluation before real interviews.',
       cta: 'Get Evaluated',
       popular: false
     },
-    {
-      id: 'pro',
-      name: 'Interview Pro',
-      price: '6,999',
-      description: 'Complete preparation cycle before product company interviews.',
+    'pro': {
       icon: TrendingUp,
       iconColor: 'text-[#06b6d4]',
-      badge: 'Most Popular',
-      features: [
-        '3 MAANG-Level Mock Interviews',
-        'Improvement Tracking Between Mocks',
-        'Resume Review by MAANG Engineer',
-        '1 Strategy Call',
-        'Proven Resume Templates',
-        'Free AI ATS Resume Checker Access'
-      ],
+      description: 'Complete preparation cycle before product company interviews.',
       cta: 'Start Full Prep',
-      popular: true
+      popular: true,
+      badge: 'Most Popular'
     },
-    {
-      id: 'elite',
-      name: 'Interview Elite',
-      price: '14,999',
-      description: 'High-touch preparation for Tier-1 / MAANG aspirants.',
+    'elite': {
       icon: Crown,
       iconColor: 'text-amber-400',
-      features: [
-        '6 MAANG-Level Mock Interviews',
-        'Live Resume Review Session',
-        'Referral Guidance (Best Effort)',
-        'Priority WhatsApp Support',
-        'Proven Resume Templates',
-        'Free AI ATS Resume Checker Access'
-      ],
+      description: 'High-touch preparation for Tier-1 / MAANG aspirants.',
       cta: 'Go Elite',
       popular: false
     }
-  ];
+  };
+
+  useEffect(() => {
+    fetchPricingPlans();
+  }, []);
+
+  const fetchPricingPlans = async () => {
+    try {
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+      const response = await axios.get(`${backendUrl}/api/pricing-plans`);
+      
+      // Map API data to component format
+      const mappedPlans = response.data
+        .filter(plan => plan.is_active) // Only show active plans
+        .sort((a, b) => a.display_order - b.display_order)
+        .map(plan => ({
+          id: plan.plan_id,
+          name: plan.name,
+          price: (plan.price / 100).toLocaleString('en-IN'),
+          features: plan.features || [],
+          ...planConfig[plan.plan_id] // Merge with config
+        }));
+      
+      setPlans(mappedPlans);
+    } catch (error) {
+      console.error('Error fetching pricing plans:', error);
+      // Fallback to default plans if API fails
+      setPlans([
+        {
+          id: 'starter',
+          name: 'Mock Starter',
+          price: '2,999',
+          features: [
+            '1 MAANG-Level Mock Interview',
+            'Detailed Feedback Report',
+            'Resume Review (Email-based)',
+            'Proven Resume Templates',
+            'Free AI ATS Resume Checker Access'
+          ],
+          ...planConfig['starter']
+        },
+        {
+          id: 'pro',
+          name: 'Interview Pro',
+          price: '6,999',
+          features: [
+            '3 MAANG-Level Mock Interviews',
+            'Improvement Tracking Between Mocks',
+            'Resume Review by MAANG Engineer',
+            '1 Strategy Call',
+            'Proven Resume Templates',
+            'Free AI ATS Resume Checker Access'
+          ],
+          ...planConfig['pro']
+        },
+        {
+          id: 'elite',
+          name: 'Interview Elite',
+          price: '14,999',
+          features: [
+            '6 MAANG-Level Mock Interviews',
+            'Live Resume Review Session',
+            'Referral Guidance (Best Effort)',
+            'Priority WhatsApp Support',
+            'Proven Resume Templates',
+            'Free AI ATS Resume Checker Access'
+          ],
+          ...planConfig['elite']
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <section id="pricing" className={`py-20 md:py-28 ${theme.bg.secondary}`}>
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center h-64">
+            <div className={`text-lg ${theme.text.primary}`}>Loading pricing...</div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section id="pricing" className={`py-20 md:py-28 ${theme.bg.secondary}`}>

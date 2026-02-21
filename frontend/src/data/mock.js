@@ -31,6 +31,7 @@ export const cohortData = {
 export const pricingPlans = [
   {
     id: "starter",
+    plan_id: "starter",
     name: "Mock Starter",
     description: "Best for engineers who want a structured evaluation before real interviews",
     duration: "One-time payment",
@@ -39,6 +40,8 @@ export const pricingPlans = [
     originalPrice: null,
     perSession: 2999,
     popular: false,
+    is_active: true,
+    display_order: 1,
     features: [
       "1 MAANG-Level Mock Interview",
       "Detailed Feedback Report",
@@ -51,6 +54,7 @@ export const pricingPlans = [
   },
   {
     id: "pro",
+    plan_id: "pro",
     name: "Interview Pro",
     description: "Complete preparation cycle before product company interviews",
     duration: "One-time payment",
@@ -59,6 +63,8 @@ export const pricingPlans = [
     originalPrice: null,
     perSession: 2333,
     popular: true,
+    is_active: true,
+    display_order: 2,
     features: [
       "3 MAANG-Level Mock Interviews",
       "Improvement Tracking Between Mocks",
@@ -72,6 +78,7 @@ export const pricingPlans = [
   },
   {
     id: "elite",
+    plan_id: "elite",
     name: "Interview Elite",
     description: "High-touch preparation for Tier-1 / MAANG aspirants",
     duration: "One-time payment",
@@ -80,6 +87,8 @@ export const pricingPlans = [
     originalPrice: null,
     perSession: 2500,
     popular: false,
+    is_active: true,
+    display_order: 3,
     limitedSeats: 10,
     features: [
       "6 MAANG-Level Mock Interviews",
