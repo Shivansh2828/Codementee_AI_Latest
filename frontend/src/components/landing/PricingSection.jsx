@@ -46,10 +46,15 @@ const PricingSection = () => {
       const response = await axios.get(`${backendUrl}/api/pricing-plans`);
       console.log('Pricing API response:', response.data);
       
+      if (!response.data || response.data.length === 0) {
+        console.warn('No pricing data received from API, using fallback');
+        throw new Error('No pricing data');
+      }
+      
       // Map API data to component format
       const mappedPlans = response.data
         .filter(plan => plan.is_active) // Only show active plans
-        .sort((a, b) => a.display_order - b.display_order)
+        .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
         .map(plan => {
           const config = planConfig[plan.plan_id] || {
             icon: Sparkles,
@@ -74,7 +79,14 @@ const PricingSection = () => {
         });
       
       console.log('Mapped plans:', mappedPlans);
+      
+      if (mappedPlans.length === 0) {
+        console.warn('No active plans found, using fallback');
+        throw new Error('No active plans');
+      }
+      
       setPlans(mappedPlans);
+      setLoading(false);
     } catch (error) {
       console.error('Error fetching pricing plans:', error);
       // Fallback to default plans if API fails
@@ -136,7 +148,6 @@ const PricingSection = () => {
       ];
       console.log('Using fallback plans:', fallbackPlans);
       setPlans(fallbackPlans);
-    } finally {
       setLoading(false);
     }
   };
@@ -171,8 +182,12 @@ const PricingSection = () => {
 
         {/* Pricing Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto mb-12">
-          {plans && plans.length > 0 ? (
+          {Array.isArray(plans) && plans.length > 0 ? (
             plans.map((plan) => {
+              if (!plan || !plan.icon) {
+                console.error('Invalid plan data:', plan);
+                return null;
+              }
               const Icon = plan.icon;
               return (
                 <div
