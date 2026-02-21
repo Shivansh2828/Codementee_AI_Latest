@@ -11,9 +11,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, DollarSign, CheckCircle, XCircle, Sparkles, TrendingUp, Crown } from "lucide-react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
+import { useTheme } from "../../contexts/ThemeContext";
 import api from "../../utils/api";
 
 const AdminPricing = () => {
+  const { theme } = useTheme();
   const [pricingPlans, setPricingPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingPlan, setEditingPlan] = useState(null);
@@ -146,7 +148,7 @@ const AdminPricing = () => {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Loading pricing plans...</div>
+          <div className={`text-lg ${theme.text.primary}`}>Loading pricing plans...</div>
         </div>
       </DashboardLayout>
     );
@@ -157,8 +159,8 @@ const AdminPricing = () => {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-white">Pricing Management</h1>
-            <p className="text-gray-400">Manage interview preparation plans</p>
+            <h1 className={`text-3xl font-bold ${theme.text.primary}`}>Pricing Management</h1>
+            <p className={theme.text.secondary}>Manage interview preparation plans</p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
@@ -167,18 +169,18 @@ const AdminPricing = () => {
                 Add New Plan
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-[#1e293b] border-[#334155]">
+            <DialogContent className={`max-w-2xl max-h-[90vh] overflow-y-auto ${theme.bg.card} ${theme.border.primary} border`}>
               <DialogHeader>
-                <DialogTitle className="text-white">
+                <DialogTitle className={theme.text.primary}>
                   {editingPlan ? 'Edit Pricing Plan' : 'Create New Pricing Plan'}
                 </DialogTitle>
-                <DialogDescription className="text-gray-400">
+                <DialogDescription className={theme.text.secondary}>
                   {editingPlan ? 'Update the pricing plan details' : 'Add a new interview preparation plan'}
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="plan_id" className="text-white">Plan ID</Label>
+                  <Label htmlFor="plan_id" className={theme.text.primary}>Plan ID</Label>
                   <Input
                     id="plan_id"
                     value={formData.plan_id}
@@ -186,23 +188,23 @@ const AdminPricing = () => {
                     placeholder="e.g., starter, pro, elite"
                     disabled={editingPlan}
                     required
-                    className="bg-[#0f172a] border-[#334155] text-white"
+                    className={`${theme.bg.secondary} ${theme.border.primary} ${theme.text.primary}`}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-white">Plan Name</Label>
+                  <Label htmlFor="name" className={theme.text.primary}>Plan Name</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
                     placeholder="e.g., Mock Starter, Interview Pro"
                     required
-                    className="bg-[#0f172a] border-[#334155] text-white"
+                    className={`${theme.bg.secondary} ${theme.border.primary} ${theme.text.primary}`}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="price" className="text-white">Price (₹)</Label>
+                    <Label htmlFor="price" className={theme.text.primary}>Price (₹)</Label>
                     <Input
                       id="price"
                       type="number"
@@ -210,11 +212,11 @@ const AdminPricing = () => {
                       onChange={(e) => setFormData({...formData, price: e.target.value})}
                       placeholder="2999"
                       required
-                      className="bg-[#0f172a] border-[#334155] text-white"
+                      className={`${theme.bg.secondary} ${theme.border.primary} ${theme.text.primary}`}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="display_order" className="text-white">Display Order</Label>
+                    <Label htmlFor="display_order" className={theme.text.primary}>Display Order</Label>
                     <Input
                       id="display_order"
                       type="number"
@@ -222,32 +224,32 @@ const AdminPricing = () => {
                       onChange={(e) => setFormData({...formData, display_order: e.target.value})}
                       placeholder="1"
                       required
-                      className="bg-[#0f172a] border-[#334155] text-white"
+                      className={`${theme.bg.secondary} ${theme.border.primary} ${theme.text.primary}`}
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="features" className="text-white">Features (one per line)</Label>
+                  <Label htmlFor="features" className={theme.text.primary}>Features (one per line)</Label>
                   <Textarea
                     id="features"
                     value={formData.features}
                     onChange={(e) => setFormData({...formData, features: e.target.value})}
                     placeholder="1 MAANG-Level Mock Interview&#10;Detailed Feedback Report&#10;Resume Review (Email-based)"
                     rows={6}
-                    className="bg-[#0f172a] border-[#334155] text-white"
+                    className={`${theme.bg.secondary} ${theme.border.primary} ${theme.text.primary}`}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="limits" className="text-white">Usage Limits (JSON format)</Label>
+                  <Label htmlFor="limits" className={theme.text.primary}>Usage Limits (JSON format)</Label>
                   <Textarea
                     id="limits"
                     value={formData.limits}
                     onChange={(e) => setFormData({...formData, limits: e.target.value})}
                     placeholder='{"mock_interviews": 1, "resume_reviews": 1, "ai_tools": true}'
                     rows={4}
-                    className="bg-[#0f172a] border-[#334155] text-white font-mono text-sm"
+                    className={`${theme.bg.secondary} ${theme.border.primary} ${theme.text.primary} font-mono text-sm`}
                   />
-                  <p className="text-xs text-gray-400">
+                  <p className={`text-xs ${theme.text.muted}`}>
                     Define usage limits in JSON format. Leave empty for no limits.
                   </p>
                 </div>
@@ -257,13 +259,13 @@ const AdminPricing = () => {
                     checked={formData.is_active}
                     onCheckedChange={(checked) => setFormData({...formData, is_active: checked})}
                   />
-                  <Label htmlFor="is_active" className="text-white">Active</Label>
+                  <Label htmlFor="is_active" className={theme.text.primary}>Active</Label>
                 </div>
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="border-[#334155] text-white hover:bg-[#334155]">
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" className="bg-[#06b6d4] hover:bg-[#0891b2]">
+                  <Button type="submit">
                     {editingPlan ? 'Update Plan' : 'Create Plan'}
                   </Button>
                 </DialogFooter>
@@ -279,7 +281,7 @@ const AdminPricing = () => {
             const isPopular = plan.plan_id === 'pro';
             
             return (
-              <Card key={plan.id} className={`relative bg-[#1e293b] border-[#334155] ${isPopular ? 'ring-2 ring-[#06b6d4]' : ''}`}>
+              <Card key={plan.id} className={`relative ${theme.bg.card} ${theme.border.primary} border ${isPopular ? 'ring-2 ring-[#06b6d4]' : ''}`}>
                 {isPopular && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                     <Badge className="bg-[#06b6d4] text-white px-3 py-1">Most Popular</Badge>
@@ -288,10 +290,10 @@ const AdminPricing = () => {
                 <CardHeader>
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-[#0f172a] flex items-center justify-center">
+                      <div className={`w-10 h-10 rounded-lg ${theme.bg.secondary} flex items-center justify-center`}>
                         <Icon className={`w-5 h-5 ${iconColor}`} />
                       </div>
-                      <CardTitle className="text-white">{plan.name}</CardTitle>
+                      <CardTitle className={theme.text.primary}>{plan.name}</CardTitle>
                     </div>
                     {plan.is_active ? (
                       <Badge variant="default" className="bg-green-500/20 text-green-400 border-green-500/30">
@@ -305,27 +307,27 @@ const AdminPricing = () => {
                       </Badge>
                     )}
                   </div>
-                  <CardDescription className="text-gray-400">
+                  <CardDescription className={theme.text.secondary}>
                     Plan ID: {plan.plan_id} • Order: {plan.display_order}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex items-baseline gap-1">
-                      <span className="text-gray-400 text-lg">₹</span>
-                      <span className="text-4xl font-bold text-white">
+                      <span className={`${theme.text.secondary} text-lg`}>₹</span>
+                      <span className={`text-4xl font-bold ${theme.text.primary}`}>
                         {(plan.price / 100).toLocaleString()}
                       </span>
                     </div>
                     
                     {plan.features && plan.features.length > 0 && (
                       <div className="space-y-2">
-                        <h4 className="font-medium text-white text-sm">Features:</h4>
+                        <h4 className={`font-medium ${theme.text.primary} text-sm`}>Features:</h4>
                         <ul className="text-sm space-y-2">
                           {plan.features.map((feature, index) => (
                             <li key={index} className="flex items-start gap-2">
                               <CheckCircle className="w-4 h-4 text-[#06b6d4] mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-300">{feature}</span>
+                              <span className={theme.text.secondary}>{feature}</span>
                             </li>
                           ))}
                         </ul>
@@ -333,11 +335,11 @@ const AdminPricing = () => {
                     )}
                     
                     {plan.limits && Object.keys(plan.limits).length > 0 && (
-                      <div className="space-y-2 pt-2 border-t border-[#334155]">
-                        <h4 className="font-medium text-white text-sm">Usage Limits:</h4>
+                      <div className={`space-y-2 pt-2 border-t ${theme.border.primary}`}>
+                        <h4 className={`font-medium ${theme.text.primary} text-sm`}>Usage Limits:</h4>
                         <div className="text-sm space-y-1">
                           {Object.entries(plan.limits).map(([key, value]) => (
-                            <div key={key} className="flex justify-between text-gray-300">
+                            <div key={key} className={`flex justify-between ${theme.text.secondary}`}>
                               <span className="capitalize">{key.replace(/_/g, ' ')}:</span>
                               <span className="font-medium text-[#06b6d4]">
                                 {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value}
@@ -353,26 +355,26 @@ const AdminPricing = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => handleEdit(plan)}
-                        className="flex-1 border-[#334155] text-white hover:bg-[#334155]"
+                        className="flex-1"
                       >
                         <Edit className="w-4 h-4 mr-2" />
                         Edit
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="border-red-500/30 text-red-400 hover:bg-red-500/20">
+                          <Button variant="destructive" size="sm">
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent className="bg-[#1e293b] border-[#334155]">
+                        <AlertDialogContent className={`${theme.bg.card} ${theme.border.primary} border`}>
                           <AlertDialogHeader>
-                            <AlertDialogTitle className="text-white">Delete Pricing Plan</AlertDialogTitle>
-                            <AlertDialogDescription className="text-gray-400">
+                            <AlertDialogTitle className={theme.text.primary}>Delete Pricing Plan</AlertDialogTitle>
+                            <AlertDialogDescription className={theme.text.secondary}>
                               Are you sure you want to delete "{plan.name}"? This action cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel className="border-[#334155] text-white hover:bg-[#334155]">Cancel</AlertDialogCancel>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction
                               onClick={() => handleDelete(plan.plan_id)}
                               className="bg-red-600 hover:bg-red-700"
@@ -391,14 +393,14 @@ const AdminPricing = () => {
         </div>
 
         {pricingPlans.length === 0 && (
-          <Card className="bg-[#1e293b] border-[#334155]">
+          <Card className={`${theme.bg.card} ${theme.border.primary} border`}>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <DollarSign className="w-12 h-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium mb-2 text-white">No pricing plans found</h3>
-              <p className="text-gray-400 text-center mb-4">
+              <DollarSign className={`w-12 h-12 ${theme.text.muted} mb-4`} />
+              <h3 className={`text-lg font-medium mb-2 ${theme.text.primary}`}>No pricing plans found</h3>
+              <p className={`${theme.text.secondary} text-center mb-4`}>
                 Create your first pricing plan to get started.
               </p>
-              <Button onClick={handleNewPlan} className="bg-[#06b6d4] hover:bg-[#0891b2]">
+              <Button onClick={handleNewPlan}>
                 <Plus className="w-4 h-4 mr-2" />
                 Create First Plan
               </Button>
