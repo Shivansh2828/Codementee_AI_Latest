@@ -62,16 +62,44 @@ uvicorn server:app --host 0.0.0.0 --port 8001  # Production
 ```
 
 ### Production Deployment
+
+**Always use `deploy.sh` for production deployments.**
+
 ```bash
-# Deploy to production VPS
-./deploy-codementee.sh
+# On VPS
+ssh root@62.72.13.129
+cd /var/www/codementee
+./deploy.sh
+```
 
-# Check deployment status
-docker-compose -f docker-compose.prod.yml ps
+The script automatically:
+- Pulls latest code from GitHub
+- Detects frontend/backend changes
+- Rebuilds frontend with `NODE_ENV=production`
+- Clears build cache
+- Restarts services
+- Verifies deployment
 
-# View logs
-docker logs codementee-backend
-docker logs codementee-frontend
+**Manual deployment (if script fails):**
+```bash
+# Backend
+systemctl restart codementee-backend
+
+# Frontend
+cd frontend
+rm -rf build node_modules/.cache
+NODE_ENV=production yarn build
+systemctl restart codementee-frontend
+
+# Nginx
+nginx -t && systemctl reload nginx
+```
+
+**Check status:**
+```bash
+systemctl status codementee-backend
+systemctl status codementee-frontend
+journalctl -u codementee-backend -n 50
 ```
 
 ## Environment Configuration
@@ -117,6 +145,17 @@ BCC_EMAIL=admin@yourdomain.com
   - Access: Full platform features, mock interviews, AI tools
   - Plan tracking: Foundation/Growth/Accelerator with usage limits
   - Upgrade: Integrated payment flow within booking process
+
+## Pricing Management
+- **Admin Control**: Prices managed via `/admin/pricing` dashboard
+- **Database-Driven**: All pricing stored in MongoDB `pricing_plans` collection
+- **Dynamic Updates**: Changes reflect on website within 30 seconds (auto-refresh)
+- **Backend URL Detection**: Frontend uses hostname to determine backend URL
+  - Production (`codementee.io`): Uses `https://codementee.io/api`
+  - Development (`localhost`): Uses `http://localhost:8001/api`
+- **No Environment Variables**: Backend URL determined at runtime, not build time
+- **Cache-Busting**: API calls include timestamp parameter to prevent caching
+- **Fallback Pricing**: Hardcoded fallback if API fails (for reliability)
 
 ## Production Architecture
 - **Frontend**: React app served via Nginx in Docker container
