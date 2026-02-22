@@ -57,7 +57,6 @@ const AdminPricing = () => {
       setPricingPlans(sorted);
     } catch (error) {
       toast.error('Failed to fetch pricing plans');
-      console.error('Error fetching pricing plans:', error);
     } finally {
       setLoading(false);
     }

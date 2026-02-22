@@ -992,12 +992,9 @@ async def update_pricing_plan(plan_id: str, data: PricingPlanUpdate, user=Depend
     update_data = {k: v for k, v in data.dict().items() if v is not None}
     if update_data:
         update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
-        print(f"🔄 Updating plan {plan_id} with data: {update_data}")
         await db.pricing_plans.update_one({"plan_id": plan_id}, {"$set": update_data})
-        print(f"✅ Plan {plan_id} updated successfully")
     
     updated_plan = await db.pricing_plans.find_one({"plan_id": plan_id})
-    print(f"📊 Updated plan from DB: {updated_plan}")
     return serialize_doc(dict(updated_plan))
 
 @api_router.delete("/admin/pricing-plans/{plan_id}")
@@ -1020,13 +1017,8 @@ async def get_public_pricing_plans(response: Response):
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     
-    print("🔍 Fetching pricing plans from database...")
     plans = await db.pricing_plans.find({"is_active": True}).sort("display_order", 1).to_list(100)
-    print(f"📊 Found {len(plans)} active plans")
-    for plan in plans:
-        print(f"  - {plan['name']}: ₹{plan['price']/100}")
     result = [serialize_doc(dict(p)) for p in plans]
-    print(f"✅ Returning {len(result)} plans to frontend")
     return result
 
 # ============ MEET LINKS MANAGEMENT ============

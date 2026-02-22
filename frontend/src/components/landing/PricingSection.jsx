@@ -52,8 +52,6 @@ const PricingSection = () => {
       const isProduction = window.location.hostname === 'codementee.io' || window.location.hostname === 'www.codementee.io';
       const backendUrl = isProduction ? 'https://codementee.io' : (process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001');
       
-      console.log('Fetching pricing from:', `${backendUrl}/api/pricing-plans`);
-      
       // Add cache-busting and no-cache headers to ensure fresh data
       const response = await axios.get(`${backendUrl}/api/pricing-plans`, {
         headers: {
@@ -65,10 +63,8 @@ const PricingSection = () => {
           _t: new Date().getTime() // Cache buster
         }
       });
-      console.log('Pricing API response:', response.data);
       
       if (!response.data || !Array.isArray(response.data) || response.data.length === 0) {
-        console.warn('No pricing data received from API, using fallback');
         throw new Error('No pricing data');
       }
       
@@ -118,17 +114,13 @@ const PricingSection = () => {
           };
         });
       
-      console.log('Mapped plans:', mappedPlans);
-      
       if (mappedPlans.length === 0) {
-        console.warn('No active plans found after mapping, using fallback');
         throw new Error('No active plans');
       }
       
       setPlans(mappedPlans);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching pricing plans:', error);
       // Fallback to default plans if API fails
       const fallbackPlans = [
         {
@@ -186,7 +178,6 @@ const PricingSection = () => {
           popular: false
         }
       ];
-      console.log('Using fallback plans:', fallbackPlans);
       setPlans(fallbackPlans);
       setLoading(false);
     }
