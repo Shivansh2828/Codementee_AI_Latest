@@ -37,6 +37,13 @@ const PricingSection = () => {
 
   useEffect(() => {
     fetchPricingPlans();
+    
+    // Poll for updates every 30 seconds
+    const interval = setInterval(() => {
+      fetchPricingPlans();
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(interval);
   }, []);
 
   const fetchPricingPlans = async () => {
