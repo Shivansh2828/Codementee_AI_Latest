@@ -48,7 +48,10 @@ const PricingSection = () => {
 
   const fetchPricingPlans = async () => {
     try {
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+      // Use production URL if on production domain, otherwise localhost
+      const isProduction = window.location.hostname === 'codementee.io' || window.location.hostname === 'www.codementee.io';
+      const backendUrl = isProduction ? 'https://codementee.io' : (process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001');
+      
       console.log('Fetching pricing from:', `${backendUrl}/api/pricing-plans`);
       
       // Add cache-busting and no-cache headers to ensure fresh data
