@@ -53,9 +53,9 @@ if [ "$FRONTEND_CHANGED" -gt 0 ]; then
     rm -rf build
     rm -rf node_modules/.cache
     
-    # Build
-    echo "Building frontend..."
-    yarn build
+    # Build with production environment
+    echo "Building frontend with production environment..."
+    NODE_ENV=production yarn build
     
     # Restart frontend service
     echo "Restarting frontend service..."
