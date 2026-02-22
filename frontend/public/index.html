@@ -82,30 +82,27 @@
         Visual editing scripts - development only
         -->
         <script>
-            // Log immediately to verify HTML is loading
-            console.log('🔥 HTML LOADED - index.html is executing');
-            console.log('🔥 Timestamp:', new Date().toISOString());
-            console.log('🔥 User Agent:', navigator.userAgent);
+            // Disable console in production
+            if (window.location.hostname === 'codementee.io' || window.location.hostname === 'www.codementee.io') {
+                console.log = function() {};
+                console.warn = function() {};
+                console.error = function() {};
+                console.info = function() {};
+                console.debug = function() {};
+                console.trace = function() {};
+            }
             
             // Unregister any service workers that might be caching
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                    if (registrations.length > 0) {
-                        console.log('🔥 Found service workers, unregistering...');
-                        for(let registration of registrations) {
-                            registration.unregister();
-                            console.log('🔥 Service worker unregistered');
-                        }
-                    } else {
-                        console.log('🔥 No service workers found');
+                    for(let registration of registrations) {
+                        registration.unregister();
                     }
                 });
             }
             
             // Only load visual edit scripts when inside an iframe (development mode)
             if (window.self !== window.top && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-                console.log('Development iframe mode detected');
-
                 // Configure Tailwind
                 window.tailwind = window.tailwind || {};
                 tailwind.config = {
