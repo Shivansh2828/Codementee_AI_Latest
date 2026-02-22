@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
+import { useTheme } from '../../contexts/ThemeContext';
 import api from '../../utils/api';
 import { Users, Calendar, MessageSquare, UserCheck, IndianRupee, TrendingUp, ShoppingCart } from 'lucide-react';
 
 const AdminDashboard = () => {
+  const { theme } = useTheme();
   const [stats, setStats] = useState({ mentees: 0, mentors: 0, mocks: 0, feedbacks: 0 });
   const [revenue, setRevenue] = useState({ total_revenue: 0, total_orders: 0, plan_revenue: {}, plan_counts: {}, recent_orders: [] });
   const [loading, setLoading] = useState(true);
@@ -53,11 +55,11 @@ const AdminDashboard = () => {
         {statCards.map((stat) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.label} className="bg-[#1e293b] rounded-xl border border-[#334155] p-6">
+            <div key={stat.label} className={`${theme.bg.cardAlt} rounded-xl ${theme.border.cardAlt} border p-6 ${theme.shadowMd}`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-slate-400 text-sm">{stat.label}</p>
-                  <p className="text-2xl font-bold text-white mt-1">{loading ? '...' : stat.value}</p>
+                  <p className={`${theme.text.muted} text-sm`}>{stat.label}</p>
+                  <p className={`text-2xl font-bold ${theme.text.primary} mt-1`}>{loading ? '...' : stat.value}</p>
                 </div>
                 <div className={`${stat.color} p-3 rounded-lg`}>
                   <Icon size={24} className="text-white" />
@@ -70,20 +72,20 @@ const AdminDashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue by Plan */}
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+        <div className={`${theme.bg.cardAlt} rounded-xl ${theme.border.cardAlt} border p-6 ${theme.shadowMd}`}>
+          <h3 className={`text-lg font-semibold ${theme.text.primary} mb-4 flex items-center gap-2`}>
             <TrendingUp size={20} className="text-[#06b6d4]" />
             Revenue by Plan
           </h3>
           {Object.keys(revenue.plan_revenue).length === 0 ? (
-            <p className="text-slate-400 text-sm">No revenue data yet</p>
+            <p className={`${theme.text.muted} text-sm`}>No revenue data yet</p>
           ) : (
             <div className="space-y-4">
               {Object.entries(revenue.plan_revenue).map(([plan, amount]) => (
                 <div key={plan} className="flex items-center justify-between">
                   <div>
-                    <p className="text-white font-medium">{planNames[plan] || plan}</p>
-                    <p className="text-slate-400 text-sm">{revenue.plan_counts[plan] || 0} orders</p>
+                    <p className={`${theme.text.primary} font-medium`}>{planNames[plan] || plan}</p>
+                    <p className={`${theme.text.muted} text-sm`}>{revenue.plan_counts[plan] || 0} orders</p>
                   </div>
                   <p className="text-xl font-bold text-[#06b6d4]">₹{amount.toLocaleString()}</p>
                 </div>
@@ -93,24 +95,24 @@ const AdminDashboard = () => {
         </div>
 
         {/* Recent Orders */}
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+        <div className={`${theme.bg.cardAlt} rounded-xl ${theme.border.cardAlt} border p-6 ${theme.shadowMd}`}>
+          <h3 className={`text-lg font-semibold ${theme.text.primary} mb-4 flex items-center gap-2`}>
             <ShoppingCart size={20} className="text-[#06b6d4]" />
             Recent Orders
           </h3>
           {revenue.recent_orders.length === 0 ? (
-            <p className="text-slate-400 text-sm">No orders yet</p>
+            <p className={`${theme.text.muted} text-sm`}>No orders yet</p>
           ) : (
             <div className="space-y-3">
               {revenue.recent_orders.slice(0, 5).map((order) => (
-                <div key={order.id} className="flex items-center justify-between py-2 border-b border-[#334155] last:border-0">
+                <div key={order.id} className={`flex items-center justify-between py-2 ${theme.border.cardAlt} border-b last:border-0`}>
                   <div>
-                    <p className="text-white font-medium">{order.name}</p>
-                    <p className="text-slate-400 text-xs">{order.email}</p>
+                    <p className={`${theme.text.primary} font-medium`}>{order.name}</p>
+                    <p className={`${theme.text.muted} text-xs`}>{order.email}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-[#06b6d4] font-semibold">₹{(order.amount / 100).toLocaleString()}</p>
-                    <p className="text-slate-400 text-xs">{planNames[order.plan_id] || order.plan_id}</p>
+                    <p className={`${theme.text.muted} text-xs`}>{planNames[order.plan_id] || order.plan_id}</p>
                   </div>
                 </div>
               ))}
