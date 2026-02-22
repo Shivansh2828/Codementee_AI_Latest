@@ -42,7 +42,9 @@ export const ThemeProvider = ({ children }) => {
     bg: {
       primary: isDark ? 'bg-gray-900' : 'bg-white',
       secondary: isDark ? 'bg-gray-800' : 'bg-gray-50',
+      tertiary: isDark ? 'bg-gray-700' : 'bg-gray-100',
       card: isDark ? 'bg-gray-800' : 'bg-white',
+      cardAlt: isDark ? 'bg-[#1e293b]' : 'bg-white',
       hover: isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100',
       gradient: isDark 
         ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'
@@ -61,6 +63,7 @@ export const ThemeProvider = ({ children }) => {
     border: {
       primary: isDark ? 'border-gray-700' : 'border-gray-200',
       secondary: isDark ? 'border-gray-600' : 'border-gray-300',
+      cardAlt: isDark ? 'border-[#334155]' : 'border-gray-200',
       accent: 'border-[#06b6d4]',
     },
     
@@ -91,6 +94,12 @@ export const ThemeProvider = ({ children }) => {
     shadow: isDark 
       ? 'shadow-xl shadow-black/30'
       : 'shadow-xl shadow-gray-900/10',
+    shadowMd: isDark
+      ? 'shadow-md shadow-black/20'
+      : 'shadow-md shadow-gray-900/5',
+    shadowLg: isDark
+      ? 'shadow-lg shadow-black/25'
+      : 'shadow-lg shadow-gray-900/8',
   };
 
   const value = {

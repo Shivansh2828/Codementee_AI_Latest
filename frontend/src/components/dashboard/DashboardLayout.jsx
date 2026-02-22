@@ -99,12 +99,12 @@ const DashboardLayout = ({ children, title }) => {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 ${theme.glass} ${theme.border.primary} border-r ${theme.shadow} transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 transition-transform duration-300 ease-in-out`}>
-          <div className={`p-6 ${theme.border.primary} border-b hidden lg:flex items-center justify-between`}>
+        <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 ${theme.glass} ${theme.border.primary} border-r ${theme.shadow} transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col`}>
+          <div className={`p-6 ${theme.border.primary} border-b hidden lg:flex items-center justify-between flex-shrink-0`}>
             <Link to="/" className="text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">Codementee</Link>
             <ThemeToggle />
           </div>
-          <nav className="p-4 space-y-1">
+          <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
             {navItems.map((item, index) => {
               if (item.isSection) {
                 return (
@@ -157,7 +157,7 @@ const DashboardLayout = ({ children, title }) => {
               }
             })}
           </nav>
-          <div className={`absolute bottom-0 left-0 right-0 p-4 ${theme.border.primary} border-t ${theme.bg.secondary}`}>
+          <div className={`p-4 ${theme.border.primary} border-t ${theme.bg.secondary} flex-shrink-0`}>
             <div className="px-4 py-2 mb-2">
               <p className={`${theme.text.primary} ui-medium truncate`}>{user?.name}</p>
               <p className={`${theme.text.muted} body-small capitalize`}>{user?.role}</p>

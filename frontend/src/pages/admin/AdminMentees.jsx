@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
+import { useTheme } from '../../contexts/ThemeContext';
 import api from '../../utils/api';
 import { toast } from 'sonner';
 
@@ -13,6 +14,7 @@ const statusColors = {
 };
 
 const AdminMentees = () => {
+  const { theme } = useTheme();
   const [mentees, setMentees] = useState([]);
   const [mentors, setMentors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,32 +55,32 @@ const AdminMentees = () => {
 
   return (
     <DashboardLayout title="Mentees">
-      <div className="bg-[#1e293b] rounded-xl border border-[#334155] overflow-hidden">
+      <div className={`${theme.bg.cardAlt} rounded-xl ${theme.border.cardAlt} border overflow-hidden ${theme.shadowMd}`}>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-[#0f172a]">
+            <thead className={theme.bg.secondary}>
               <tr>
-                <th className="text-left p-4 text-slate-400 font-medium">Name</th>
-                <th className="text-left p-4 text-slate-400 font-medium">Email</th>
-                <th className="text-left p-4 text-slate-400 font-medium">Status</th>
-                <th className="text-left p-4 text-slate-400 font-medium">Mentor</th>
-                <th className="text-left p-4 text-slate-400 font-medium">Actions</th>
+                <th className={`text-left p-4 ${theme.text.muted} font-medium`}>Name</th>
+                <th className={`text-left p-4 ${theme.text.muted} font-medium`}>Email</th>
+                <th className={`text-left p-4 ${theme.text.muted} font-medium`}>Status</th>
+                <th className={`text-left p-4 ${theme.text.muted} font-medium`}>Mentor</th>
+                <th className={`text-left p-4 ${theme.text.muted} font-medium`}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="p-4 text-center text-slate-400">Loading...</td></tr>
+                <tr><td colSpan={5} className={`p-4 text-center ${theme.text.muted}`}>Loading...</td></tr>
               ) : mentees.length === 0 ? (
-                <tr><td colSpan={5} className="p-4 text-center text-slate-400">No mentees yet</td></tr>
+                <tr><td colSpan={5} className={`p-4 text-center ${theme.text.muted}`}>No mentees yet</td></tr>
               ) : mentees.map((mentee) => (
-                <tr key={mentee.id} className="border-t border-[#334155]">
-                  <td className="p-4 text-white">{mentee.name}</td>
-                  <td className="p-4 text-slate-300">{mentee.email}</td>
+                <tr key={mentee.id} className={`${theme.border.cardAlt} border-t`}>
+                  <td className={`p-4 ${theme.text.primary}`}>{mentee.name}</td>
+                  <td className={`p-4 ${theme.text.secondary}`}>{mentee.email}</td>
                   <td className="p-4">
                     <select
                       value={mentee.status || 'active'}
                       onChange={(e) => updateStatus(mentee.id, e.target.value)}
-                      className="bg-[#0f172a] border border-[#334155] rounded px-2 py-1 text-white text-sm"
+                      className={`${theme.input.base} rounded px-2 py-1 text-sm`}
                     >
                       {['Applied', 'Active', 'Interviewed', 'Upgraded', 'Paused'].map(s => (
                         <option key={s} value={s}>{s}</option>
@@ -89,13 +91,13 @@ const AdminMentees = () => {
                     <select
                       value={mentee.mentor_id || ''}
                       onChange={(e) => assignMentor(mentee.id, e.target.value)}
-                      className="bg-[#0f172a] border border-[#334155] rounded px-2 py-1 text-white text-sm"
+                      className={`${theme.input.base} rounded px-2 py-1 text-sm`}
                     >
                       <option value="">Assign Mentor</option>
                       {mentors.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                     </select>
                   </td>
-                  <td className="p-4 text-slate-400 text-sm">{getMentorName(mentee.mentor_id)}</td>
+                  <td className={`p-4 ${theme.text.muted} text-sm`}>{getMentorName(mentee.mentor_id)}</td>
                 </tr>
               ))}
             </tbody>
