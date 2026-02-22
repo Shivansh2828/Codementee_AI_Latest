@@ -9,7 +9,7 @@ import { Badge } from "../../components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../../components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, DollarSign, CheckCircle, XCircle, Sparkles, TrendingUp, Crown } from "lucide-react";
+import { Plus, Edit, Trash2, DollarSign, CheckCircle, XCircle, Sparkles, TrendingUp, Crown, RefreshCw } from "lucide-react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
 import { useTheme } from "../../contexts/ThemeContext";
 import api from "../../utils/api";
@@ -20,6 +20,8 @@ const AdminPricing = () => {
   const [loading, setLoading] = useState(true);
   const [editingPlan, setEditingPlan] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState(null);
   const [formData, setFormData] = useState({
     plan_id: '',
     name: '',
@@ -91,6 +93,11 @@ const AdminPricing = () => {
       setIsDialogOpen(false);
       resetForm();
       fetchPricingPlans();
+      
+      // Auto-sync to website after update
+      setTimeout(() => {
+        handleSyncToWebsite();
+      }, 500);
     } catch (error) {
       if (error.message.includes('JSON')) {
         toast.error('Invalid JSON format in limits field');
@@ -144,6 +151,24 @@ const AdminPricing = () => {
     setIsDialogOpen(true);
   };
 
+  const handleSyncToWebsite = async () => {
+    setSyncing(true);
+    try {
+      // Force refresh by calling the public API endpoint
+      // This ensures the main website will get fresh data
+      await api.get('/pricing-plans', {
+        params: { _t: new Date().getTime() }
+      });
+      
+      setLastSyncTime(new Date());
+      toast.success('✅ Pricing synced! Users will see updates on next page refresh.');
+    } catch (error) {
+      toast.error('Failed to sync pricing');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -160,16 +185,33 @@ const AdminPricing = () => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className={`text-3xl font-bold ${theme.text.primary}`}>Pricing Management</h1>
-            <p className={theme.text.secondary}>Manage interview preparation plans</p>
+            <p className={theme.text.secondary}>
+              Manage interview preparation plans
+              {lastSyncTime && (
+                <span className="ml-3 text-xs text-green-400">
+                  • Last synced: {lastSyncTime.toLocaleTimeString()}
+                </span>
+              )}
+            </p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={handleNewPlan} className="bg-[#06b6d4] hover:bg-[#0891b2]">
-                <Plus className="w-4 h-4 mr-2" />
-                Add New Plan
-              </Button>
-            </DialogTrigger>
-            <DialogContent className={`max-w-2xl max-h-[90vh] overflow-y-auto ${theme.bg.card} ${theme.border.primary} border`}>
+          <div className="flex gap-3">
+            <Button 
+              onClick={handleSyncToWebsite} 
+              disabled={syncing}
+              variant="outline"
+              className="border-[#06b6d4] text-[#06b6d4] hover:bg-[#06b6d4] hover:text-white"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Syncing...' : 'Sync to Website'}
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={handleNewPlan} className="bg-[#06b6d4] hover:bg-[#0891b2]">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add New Plan
+                </Button>
+              </DialogTrigger>
+              <DialogContent className={`max-w-2xl max-h-[90vh] overflow-y-auto ${theme.bg.card} ${theme.border.primary} border`}>
               <DialogHeader>
                 <DialogTitle className={theme.text.primary}>
                   {editingPlan ? 'Edit Pricing Plan' : 'Create New Pricing Plan'}
@@ -272,6 +314,7 @@ const AdminPricing = () => {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
