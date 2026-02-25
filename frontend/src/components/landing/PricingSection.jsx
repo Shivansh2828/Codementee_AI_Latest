@@ -65,6 +65,7 @@ const PricingSection = () => {
       });
       
       if (!response.data || !Array.isArray(response.data) || response.data.length === 0) {
+        console.warn('No pricing data received from API, using fallback');
         throw new Error('No pricing data');
       }
       
@@ -115,6 +116,7 @@ const PricingSection = () => {
         });
       
       if (mappedPlans.length === 0) {
+        console.warn('No active plans found after mapping, using fallback');
         throw new Error('No active plans');
       }
       

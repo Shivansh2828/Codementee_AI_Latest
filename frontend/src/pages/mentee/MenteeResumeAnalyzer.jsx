@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -7,16 +7,137 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Badge } from "../../components/ui/badge";
 import { Progress } from "../../components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { toast } from "sonner";
-import { FileText, Brain, Target, TrendingUp, AlertCircle, CheckCircle, Upload } from "lucide-react";
+import { FileText, Brain, Target, TrendingUp, AlertCircle, CheckCircle, Upload, X, FileUp } from "lucide-react";
 import api from "../../utils/api";
 
 const MenteeResumeAnalyzer = () => {
   const [resumeText, setResumeText] = useState('');
   const [targetRole, setTargetRole] = useState('');
   const [targetCompanies, setTargetCompanies] = useState('');
+  const [yearsOfExperience, setYearsOfExperience] = useState('');
+  const [industry, setIndustry] = useState('');
+  const [keySkills, setKeySkills] = useState('');
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const industries = [
+    'Technology/Software',
+    'Finance/Banking',
+    'Healthcare',
+    'E-commerce/Retail',
+    'Consulting',
+    'Education/EdTech',
+    'Manufacturing',
+    'Telecommunications',
+    'Media/Entertainment',
+    'Other'
+  ];
+
+  const experienceLevels = [
+    { value: '0-1', label: 'Entry Level (0-1 years)' },
+    { value: '1-3', label: 'Junior (1-3 years)' },
+    { value: '3-5', label: 'Mid-level (3-5 years)' },
+    { value: '5-8', label: 'Senior (5-8 years)' },
+    { value: '8+', label: 'Lead/Staff (8+ years)' }
+  ];
+
+  const handleFileUpload = async (file) => {
+    if (!file) return;
+
+    // Check file type by extension (more reliable than MIME type)
+    const fileName = file.name.toLowerCase();
+    const isTxt = fileName.endsWith('.txt');
+    const isPdf = fileName.endsWith('.pdf');
+    const isDocx = fileName.endsWith('.docx');
+
+    if (!isTxt && !isPdf && !isDocx) {
+      toast.error('Please upload a TXT, PDF, or DOCX file');
+      return;
+    }
+
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File size must be less than 5MB');
+      return;
+    }
+
+    setUploadedFile(file);
+
+    // For text files, read content directly in browser
+    if (isTxt) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target.result;
+        setResumeText(content);
+        toast.success('Resume uploaded successfully!');
+      };
+      reader.onerror = () => {
+        toast.error('Failed to read file');
+        setUploadedFile(null);
+      };
+      reader.readAsText(file);
+    } else {
+      // For PDF/DOCX, send to backend for processing
+      toast.info('Processing document... This may take a moment');
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await api.post('/ai-tools/extract-resume-text', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        
+        setResumeText(response.data.text);
+        toast.success(`Resume extracted successfully! (${response.data.length} characters)`);
+      } catch (error) {
+        toast.error('Failed to process document. Please try TXT format or paste text manually.');
+        console.error('File processing error:', error);
+        setUploadedFile(null);
+      }
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  };
+
+  const handleFileInputChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  };
+
+  const removeFile = () => {
+    setUploadedFile(null);
+    setResumeText('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const handleAnalyze = async () => {
     if (!resumeText.trim() || !targetRole.trim()) {
@@ -26,11 +147,24 @@ const MenteeResumeAnalyzer = () => {
 
     setLoading(true);
     try {
-      const response = await api.post('/ai-tools/resume-analysis', {
+      const requestData = {
         resume_text: resumeText,
         target_role: targetRole,
         target_companies: targetCompanies.split(',').map(c => c.trim()).filter(c => c)
-      });
+      };
+
+      // Add optional fields if provided
+      if (yearsOfExperience) {
+        requestData.years_of_experience = yearsOfExperience;
+      }
+      if (industry) {
+        requestData.industry = industry;
+      }
+      if (keySkills) {
+        requestData.key_skills = keySkills.split(',').map(s => s.trim()).filter(s => s);
+      }
+
+      const response = await api.post('/ai-tools/resume-analysis', requestData);
       setAnalysis(response.data);
       toast.success('Resume analysis completed!');
     } catch (error) {
@@ -69,12 +203,83 @@ const MenteeResumeAnalyzer = () => {
                 Resume Analysis
               </CardTitle>
               <CardDescription>
-                Paste your resume content and specify your target role for personalized analysis
+                Upload your resume or paste the content, then provide details for personalized AI analysis
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* File Upload Section */}
               <div className="space-y-2">
-                <Label htmlFor="resume-text" className="text-white">Resume Content *</Label>
+                <Label className="text-white">Upload Resume</Label>
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                    isDragging
+                      ? 'border-[#06b6d4] bg-[#06b6d4]/10'
+                      : 'border-[#334155] hover:border-[#06b6d4]/50'
+                  }`}
+                >
+                  {uploadedFile ? (
+                    <div className="flex items-center justify-center gap-4">
+                      <FileText className="w-8 h-8 text-[#06b6d4]" />
+                      <div className="flex-1 text-left">
+                        <p className="text-white font-medium">{uploadedFile.name}</p>
+                        <p className="text-slate-400 text-sm">
+                          {(uploadedFile.size / 1024).toFixed(2)} KB
+                        </p>
+                      </div>
+                      <Button
+                        onClick={removeFile}
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <FileUp className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                      <p className="text-white mb-2">
+                        Drag and drop your resume here, or click to browse
+                      </p>
+                      <p className="text-slate-400 text-sm mb-4">
+                        Supports TXT, PDF, DOCX (max 5MB)
+                      </p>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".txt,.pdf,.docx"
+                        onChange={handleFileInputChange}
+                        className="hidden"
+                      />
+                      <Button
+                        onClick={() => fileInputRef.current?.click()}
+                        variant="outline"
+                        className="border-[#334155] text-white hover:bg-[#334155]"
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Choose File
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-[#334155]"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-[#1e293b] text-slate-400">OR</span>
+                </div>
+              </div>
+
+              {/* Manual Text Input */}
+              <div className="space-y-2">
+                <Label htmlFor="resume-text" className="text-white">Paste Resume Content</Label>
                 <Textarea
                   id="resume-text"
                   placeholder="Paste your complete resume text here..."
@@ -83,10 +288,11 @@ const MenteeResumeAnalyzer = () => {
                   className="min-h-[200px] bg-[#0f172a] border-[#334155] text-white placeholder-slate-400"
                 />
                 <p className="text-xs text-slate-400">
-                  Copy and paste your entire resume content including work experience, education, skills, and projects
+                  Include work experience, education, skills, and projects for comprehensive analysis
                 </p>
               </div>
 
+              {/* Target Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="target-role" className="text-white">Target Role *</Label>
@@ -99,7 +305,7 @@ const MenteeResumeAnalyzer = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="target-companies" className="text-white">Target Companies (Optional)</Label>
+                  <Label htmlFor="target-companies" className="text-white">Target Companies</Label>
                   <Input
                     id="target-companies"
                     placeholder="e.g., Google, Amazon, Microsoft"
@@ -107,7 +313,62 @@ const MenteeResumeAnalyzer = () => {
                     onChange={(e) => setTargetCompanies(e.target.value)}
                     className="bg-[#0f172a] border-[#334155] text-white placeholder-slate-400"
                   />
-                  <p className="text-xs text-slate-400">Separate multiple companies with commas</p>
+                  <p className="text-xs text-slate-400">Separate with commas</p>
+                </div>
+              </div>
+
+              {/* Additional Options */}
+              <div className="border-t border-[#334155] pt-4">
+                <h3 className="text-white font-medium mb-4 flex items-center gap-2">
+                  <Target className="w-4 h-4 text-[#06b6d4]" />
+                  Additional Details (Optional - for better results)
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="experience" className="text-white">Years of Experience</Label>
+                    <Select value={yearsOfExperience} onValueChange={setYearsOfExperience}>
+                      <SelectTrigger className="bg-[#0f172a] border-[#334155] text-white">
+                        <SelectValue placeholder="Select experience level" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#1e293b] border-[#334155]">
+                        {experienceLevels.map((level) => (
+                          <SelectItem key={level.value} value={level.value} className="text-white hover:bg-[#334155]">
+                            {level.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="industry" className="text-white">Industry/Domain</Label>
+                    <Select value={industry} onValueChange={setIndustry}>
+                      <SelectTrigger className="bg-[#0f172a] border-[#334155] text-white">
+                        <SelectValue placeholder="Select industry" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#1e293b] border-[#334155]">
+                        {industries.map((ind) => (
+                          <SelectItem key={ind} value={ind} className="text-white hover:bg-[#334155]">
+                            {ind}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="key-skills" className="text-white">Key Skills to Highlight</Label>
+                    <Input
+                      id="key-skills"
+                      placeholder="e.g., React, Python, AWS, System Design"
+                      value={keySkills}
+                      onChange={(e) => setKeySkills(e.target.value)}
+                      className="bg-[#0f172a] border-[#334155] text-white placeholder-slate-400"
+                    />
+                    <p className="text-xs text-slate-400">
+                      List skills you want the AI to focus on (separate with commas)
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -119,12 +380,12 @@ const MenteeResumeAnalyzer = () => {
                 {loading ? (
                   <>
                     <Brain className="w-4 h-4 mr-2 animate-spin" />
-                    Analyzing Resume...
+                    Analyzing Resume with AI...
                   </>
                 ) : (
                   <>
                     <Brain className="w-4 h-4 mr-2" />
-                    Analyze Resume
+                    Analyze Resume with AI
                   </>
                 )}
               </Button>
@@ -304,6 +565,13 @@ const MenteeResumeAnalyzer = () => {
                   setResumeText('');
                   setTargetRole('');
                   setTargetCompanies('');
+                  setYearsOfExperience('');
+                  setIndustry('');
+                  setKeySkills('');
+                  setUploadedFile(null);
+                  if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                  }
                 }}
                 variant="outline"
                 className="border-[#334155] text-white hover:bg-[#334155]"
