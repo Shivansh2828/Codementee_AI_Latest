@@ -26,7 +26,19 @@ const MenteeDashboard = () => {
     const fetchPricing = async () => {
       try {
         const response = await api.get('/pricing-plans');
-        setPricingPlans(response.data);
+        // Transform API data to match component expectations
+        const transformedPlans = response.data.map(plan => {
+          const priceInRupees = plan.price > 10000 ? plan.price / 100 : plan.price;
+          const perMonth = Math.round(priceInRupees / (plan.duration_months || 1));
+          return {
+            ...plan,
+            price: priceInRupees,
+            perMonth: perMonth,
+            duration: plan.duration_months === 1 ? '1 Month' : `${plan.duration_months} Months`,
+            popular: plan.plan_id === 'pro' // Mark pro as popular
+          };
+        });
+        setPricingPlans(transformedPlans);
       } catch (e) { console.error(e); }
     };
 
@@ -149,12 +161,12 @@ const MenteeDashboard = () => {
                   <div className="mb-4">
                     <div className="flex items-baseline gap-1">
                       <span className={`${theme.text.secondary}`}>₹</span>
-                      <span className={`text-3xl font-bold ${theme.text.primary}`}>{plan.price.toLocaleString()}</span>
+                      <span className={`text-3xl font-bold ${theme.text.primary}`}>{plan.price ? plan.price.toLocaleString() : '0'}</span>
                     </div>
                     {plan.savings && (
                       <p className="text-[#06b6d4] text-sm mt-1 font-medium">{plan.savings}</p>
                     )}
-                    <p className={`${theme.text.secondary} text-sm mt-1`}>₹{plan.perMonth.toLocaleString()}/month</p>
+                    <p className={`${theme.text.secondary} text-sm mt-1`}>₹{plan.perMonth ? plan.perMonth.toLocaleString() : '0'}/month</p>
                   </div>
 
                   <ul className="space-y-2 mb-6">
