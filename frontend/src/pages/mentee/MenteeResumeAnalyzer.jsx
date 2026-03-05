@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
+import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
@@ -8,15 +9,44 @@ import { Label } from "../../components/ui/label";
 import { Badge } from "../../components/ui/badge";
 import { Progress } from "../../components/ui/progress";
 import { toast } from "sonner";
-import { FileText, Brain, Target, TrendingUp, AlertCircle, CheckCircle, Upload } from "lucide-react";
+import { FileText, Brain, Target, TrendingUp, AlertCircle, CheckCircle, Upload, Crown, Lock } from "lucide-react";
+import { Link } from 'react-router-dom';
 import api from "../../utils/api";
 
 const MenteeResumeAnalyzer = () => {
+  const { user } = useAuth();
+  const isFreeUser = user?.status === 'Free' || !user?.plan_id;
+  
   const [resumeText, setResumeText] = useState('');
   const [targetRole, setTargetRole] = useState('');
   const [targetCompanies, setTargetCompanies] = useState('');
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // Show upgrade prompt for free users
+  if (isFreeUser) {
+    return (
+      <DashboardLayout title="Resume Analyzer">
+        <div className="text-center py-12">
+          <div className="w-20 h-20 bg-gradient-to-br from-[#06b6d4] to-[#0891b2] rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Lock className="w-10 h-10 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-4">
+            Upgrade to Access Resume Analyzer
+          </h2>
+          <p className="text-gray-500 mb-8 max-w-2xl mx-auto">
+            Get AI-powered feedback on your resume with ATS optimization, keyword analysis, and personalized recommendations. Available with all paid plans.
+          </p>
+          <Link to="/mentee/book">
+            <Button className="bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white px-8 py-3">
+              <Crown className="w-5 h-5 mr-2" />
+              View Plans & Upgrade
+            </Button>
+          </Link>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const handleAnalyze = async () => {
     if (!resumeText.trim() || !targetRole.trim()) {
@@ -58,11 +88,11 @@ const MenteeResumeAnalyzer = () => {
       <div className="space-y-6">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-white mb-2">AI Resume Analyzer</h1>
-          <p className="text-slate-400">Get AI-powered insights to optimize your resume for your target role</p>
+          <p className="text-gray-500">Get AI-powered insights to optimize your resume for your target role</p>
         </div>
 
         {!analysis ? (
-          <Card className="bg-[#1e293b] border-[#334155]">
+          <Card className="bg-[#171717] border-[#404040]">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-white">
                 <Brain className="w-5 h-5 text-[#06b6d4]" />
@@ -80,9 +110,9 @@ const MenteeResumeAnalyzer = () => {
                   placeholder="Paste your complete resume text here..."
                   value={resumeText}
                   onChange={(e) => setResumeText(e.target.value)}
-                  className="min-h-[200px] bg-[#0f172a] border-[#334155] text-white placeholder-slate-400"
+                  className="min-h-[200px] bg-[#0d0d0d] border-[#404040] text-white placeholder-gray-400"
                 />
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-gray-500">
                   Copy and paste your entire resume content including work experience, education, skills, and projects
                 </p>
               </div>
@@ -95,7 +125,7 @@ const MenteeResumeAnalyzer = () => {
                     placeholder="e.g., Senior Software Engineer"
                     value={targetRole}
                     onChange={(e) => setTargetRole(e.target.value)}
-                    className="bg-[#0f172a] border-[#334155] text-white placeholder-slate-400"
+                    className="bg-[#0d0d0d] border-[#404040] text-white placeholder-gray-400"
                   />
                 </div>
                 <div className="space-y-2">
@@ -105,9 +135,9 @@ const MenteeResumeAnalyzer = () => {
                     placeholder="e.g., Google, Amazon, Microsoft"
                     value={targetCompanies}
                     onChange={(e) => setTargetCompanies(e.target.value)}
-                    className="bg-[#0f172a] border-[#334155] text-white placeholder-slate-400"
+                    className="bg-[#0d0d0d] border-[#404040] text-white placeholder-gray-400"
                   />
-                  <p className="text-xs text-slate-400">Separate multiple companies with commas</p>
+                  <p className="text-xs text-gray-500">Separate multiple companies with commas</p>
                 </div>
               </div>
 
@@ -134,7 +164,7 @@ const MenteeResumeAnalyzer = () => {
           <div className="space-y-6">
             {/* Overall Scores */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="bg-[#1e293b] border-[#334155]">
+              <Card className="bg-[#171717] border-[#404040]">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg text-white">Overall Score</CardTitle>
                 </CardHeader>
@@ -158,7 +188,7 @@ const MenteeResumeAnalyzer = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-[#1e293b] border-[#334155]">
+              <Card className="bg-[#171717] border-[#404040]">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg text-white">ATS Score</CardTitle>
                 </CardHeader>
@@ -183,7 +213,7 @@ const MenteeResumeAnalyzer = () => {
             </div>
 
             {/* Strengths */}
-            <Card className="bg-[#1e293b] border-[#334155]">
+            <Card className="bg-[#171717] border-[#404040]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white">
                   <CheckCircle className="w-5 h-5 text-green-400" />
@@ -195,7 +225,7 @@ const MenteeResumeAnalyzer = () => {
                   {analysis.strengths.map((strength, index) => (
                     <li key={index} className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span className="text-slate-300">{strength}</span>
+                      <span className="text-gray-400">{strength}</span>
                     </li>
                   ))}
                 </ul>
@@ -203,7 +233,7 @@ const MenteeResumeAnalyzer = () => {
             </Card>
 
             {/* Weaknesses */}
-            <Card className="bg-[#1e293b] border-[#334155]">
+            <Card className="bg-[#171717] border-[#404040]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white">
                   <AlertCircle className="w-5 h-5 text-red-400" />
@@ -215,7 +245,7 @@ const MenteeResumeAnalyzer = () => {
                   {analysis.weaknesses.map((weakness, index) => (
                     <li key={index} className="flex items-start gap-2">
                       <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
-                      <span className="text-slate-300">{weakness}</span>
+                      <span className="text-gray-400">{weakness}</span>
                     </li>
                   ))}
                 </ul>
@@ -223,7 +253,7 @@ const MenteeResumeAnalyzer = () => {
             </Card>
 
             {/* Suggestions */}
-            <Card className="bg-[#1e293b] border-[#334155]">
+            <Card className="bg-[#171717] border-[#404040]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white">
                   <TrendingUp className="w-5 h-5 text-[#06b6d4]" />
@@ -237,7 +267,7 @@ const MenteeResumeAnalyzer = () => {
                       <div className="w-6 h-6 bg-[#06b6d4]/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                         <span className="text-[#06b6d4] text-xs font-bold">{index + 1}</span>
                       </div>
-                      <span className="text-slate-300">{suggestion}</span>
+                      <span className="text-gray-400">{suggestion}</span>
                     </li>
                   ))}
                 </ul>
@@ -245,7 +275,7 @@ const MenteeResumeAnalyzer = () => {
             </Card>
 
             {/* Keyword Analysis */}
-            <Card className="bg-[#1e293b] border-[#334155]">
+            <Card className="bg-[#171717] border-[#404040]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white">
                   <Target className="w-5 h-5 text-purple-400" />
@@ -277,7 +307,7 @@ const MenteeResumeAnalyzer = () => {
             </Card>
 
             {/* Section Feedback */}
-            <Card className="bg-[#1e293b] border-[#334155]">
+            <Card className="bg-[#171717] border-[#404040]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white">
                   <FileText className="w-5 h-5 text-orange-400" />
@@ -287,9 +317,9 @@ const MenteeResumeAnalyzer = () => {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {Object.entries(analysis.section_feedback).map(([section, feedback]) => (
-                    <div key={section} className="p-3 bg-[#0f172a] rounded-lg">
+                    <div key={section} className="p-3 bg-[#0d0d0d] rounded-lg">
                       <h4 className="text-white font-medium capitalize mb-1">{section}</h4>
-                      <p className="text-slate-400 text-sm">{feedback}</p>
+                      <p className="text-gray-500 text-sm">{feedback}</p>
                     </div>
                   ))}
                 </div>
@@ -306,7 +336,7 @@ const MenteeResumeAnalyzer = () => {
                   setTargetCompanies('');
                 }}
                 variant="outline"
-                className="border-[#334155] text-white hover:bg-[#334155]"
+                className="border-[#404040] text-white hover:bg-[#334155]"
               >
                 Analyze Another Resume
               </Button>

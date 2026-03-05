@@ -38,32 +38,32 @@ export const ThemeProvider = ({ children }) => {
 
   // Theme-aware CSS classes
   const theme = {
-    // Backgrounds
+    // Backgrounds - Using softer dark grays for better readability
     bg: {
-      primary: isDark ? 'bg-gray-900' : 'bg-white',
-      secondary: isDark ? 'bg-gray-800' : 'bg-gray-50',
-      tertiary: isDark ? 'bg-gray-700' : 'bg-gray-100',
-      card: isDark ? 'bg-gray-800' : 'bg-white',
-      cardAlt: isDark ? 'bg-[#1e293b]' : 'bg-white',
-      hover: isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100',
+      primary: isDark ? 'bg-[#0d0d0d]' : 'bg-white',
+      secondary: isDark ? 'bg-[#171717]' : 'bg-gray-50',
+      tertiary: isDark ? 'bg-[#262626]' : 'bg-gray-100',
+      card: isDark ? 'bg-[#171717]' : 'bg-white',
+      cardAlt: isDark ? 'bg-[#171717]' : 'bg-white',
+      hover: isDark ? 'hover:bg-[#262626]' : 'hover:bg-gray-100',
       gradient: isDark 
-        ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'
+        ? 'bg-gradient-to-br from-[#0d0d0d] via-[#171717] to-[#0d0d0d]'
         : 'bg-gradient-to-br from-white via-blue-50 to-cyan-50',
     },
     
-    // Text colors
+    // Text colors - Enhanced contrast for readability
     text: {
-      primary: isDark ? 'text-white' : 'text-gray-900',
-      secondary: isDark ? 'text-gray-300' : 'text-gray-600',
-      muted: isDark ? 'text-gray-400' : 'text-gray-500',
+      primary: isDark ? 'text-gray-100' : 'text-gray-900',
+      secondary: isDark ? 'text-gray-400' : 'text-gray-600',
+      muted: isDark ? 'text-gray-500' : 'text-gray-500',
       accent: 'text-[#06b6d4]',
     },
     
-    // Borders
+    // Borders - Visible but subtle
     border: {
-      primary: isDark ? 'border-gray-700' : 'border-gray-200',
-      secondary: isDark ? 'border-gray-600' : 'border-gray-300',
-      cardAlt: isDark ? 'border-[#334155]' : 'border-gray-200',
+      primary: isDark ? 'border-[#404040]' : 'border-gray-200',
+      secondary: isDark ? 'border-[#525252]' : 'border-gray-300',
+      cardAlt: isDark ? 'border-[#404040]' : 'border-gray-200',
       accent: 'border-[#06b6d4]',
     },
     
@@ -71,34 +71,34 @@ export const ThemeProvider = ({ children }) => {
     button: {
       primary: 'bg-gradient-to-r from-[#06b6d4] to-[#0891b2] hover:from-[#0891b2] hover:to-[#0e7490] text-white',
       secondary: isDark 
-        ? 'bg-gray-700 hover:bg-gray-600 text-white border border-gray-600'
+        ? 'bg-[#262626] hover:bg-[#404040] text-gray-100 border border-[#525252]'
         : 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-300',
       ghost: isDark 
-        ? 'hover:bg-gray-700 text-gray-300 hover:text-white'
+        ? 'hover:bg-[#262626] text-gray-400 hover:text-gray-100'
         : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900',
     },
     
     // Form elements
     input: {
       base: isDark 
-        ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-[#06b6d4]'
+        ? 'bg-[#171717] border-[#525252] text-gray-100 placeholder-gray-500 focus:border-[#06b6d4]'
         : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-[#06b6d4]',
     },
     
     // Special effects
     glass: isDark
-      ? 'bg-gray-800/90 backdrop-blur-sm border-gray-700/50'
+      ? 'bg-[#171717]/90 backdrop-blur-sm border-[#404040]/50'
       : 'bg-white/80 backdrop-blur-sm border-gray-200/50',
     
-    // Shadows
+    // Shadows - More visible in dark mode
     shadow: isDark 
-      ? 'shadow-xl shadow-black/30'
+      ? 'shadow-xl shadow-black/60'
       : 'shadow-xl shadow-gray-900/10',
     shadowMd: isDark
-      ? 'shadow-md shadow-black/20'
+      ? 'shadow-md shadow-black/40'
       : 'shadow-md shadow-gray-900/5',
     shadowLg: isDark
-      ? 'shadow-lg shadow-black/25'
+      ? 'shadow-lg shadow-black/50'
       : 'shadow-lg shadow-gray-900/8',
   };
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
+import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -8,10 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Badge } from "../../components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { toast } from "sonner";
-import { Brain, Building2, Code, Users, MessageSquare, Calendar, Target, Lightbulb, BookOpen, Clock } from "lucide-react";
+import { Brain, Building2, Code, Users, MessageSquare, Calendar, Target, Lightbulb, BookOpen, Clock, Crown, Lock } from "lucide-react";
+import { Link } from 'react-router-dom';
 import api from "../../utils/api";
 
 const MenteeInterviewPrep = () => {
+  const { user } = useAuth();
+  const isFreeUser = user?.status === 'Free' || !user?.plan_id;
+  
   const [company, setCompany] = useState('');
   const [role, setRole] = useState('');
   const [interviewType, setInterviewType] = useState('');
@@ -20,6 +25,31 @@ const MenteeInterviewPrep = () => {
   const [questions, setQuestions] = useState(null);
   const [loading, setLoading] = useState(false);
   const [questionsLoading, setQuestionsLoading] = useState(false);
+
+  // Show upgrade prompt for free users
+  if (isFreeUser) {
+    return (
+      <DashboardLayout title="Interview Prep">
+        <div className="text-center py-12">
+          <div className="w-20 h-20 bg-gradient-to-br from-[#06b6d4] to-[#0891b2] rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Lock className="w-10 h-10 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-4">
+            Upgrade to Access Interview Prep Tools
+          </h2>
+          <p className="text-gray-500 mb-8 max-w-2xl mx-auto">
+            Get AI-powered interview preparation with company insights, technical topics, behavioral frameworks, and practice problems. Available with all paid plans.
+          </p>
+          <Link to="/mentee/book">
+            <Button className="bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white px-8 py-3">
+              <Crown className="w-5 h-5 mr-2" />
+              View Plans & Upgrade
+            </Button>
+          </Link>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const companies = [
     'Amazon', 'Google', 'Microsoft', 'Meta', 'Apple', 'Netflix', 'Uber', 'Airbnb', 
@@ -98,11 +128,11 @@ const MenteeInterviewPrep = () => {
       <div className="space-y-6">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-white mb-2">AI Interview Prep Assistant</h1>
-          <p className="text-slate-400">Get personalized interview preparation based on your target company and role</p>
+          <p className="text-gray-500">Get personalized interview preparation based on your target company and role</p>
         </div>
 
         {/* Input Form */}
-        <Card className="bg-[#1e293b] border-[#334155]">
+        <Card className="bg-[#171717] border-[#404040]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-white">
               <Target className="w-5 h-5 text-[#06b6d4]" />
@@ -117,10 +147,10 @@ const MenteeInterviewPrep = () => {
               <div className="space-y-2">
                 <Label className="text-white">Target Company</Label>
                 <Select value={company} onValueChange={setCompany}>
-                  <SelectTrigger className="bg-[#0f172a] border-[#334155] text-white">
+                  <SelectTrigger className="bg-[#0d0d0d] border-[#404040] text-white">
                     <SelectValue placeholder="Select company" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1e293b] border-[#334155]">
+                  <SelectContent className="bg-[#171717] border-[#404040]">
                     {companies.map((comp) => (
                       <SelectItem key={comp} value={comp} className="text-white hover:bg-[#334155]">
                         {comp}
@@ -133,10 +163,10 @@ const MenteeInterviewPrep = () => {
               <div className="space-y-2">
                 <Label className="text-white">Target Role</Label>
                 <Select value={role} onValueChange={setRole}>
-                  <SelectTrigger className="bg-[#0f172a] border-[#334155] text-white">
+                  <SelectTrigger className="bg-[#0d0d0d] border-[#404040] text-white">
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1e293b] border-[#334155]">
+                  <SelectContent className="bg-[#171717] border-[#404040]">
                     {roles.map((r) => (
                       <SelectItem key={r} value={r} className="text-white hover:bg-[#334155]">
                         {r}
@@ -151,10 +181,10 @@ const MenteeInterviewPrep = () => {
               <div className="space-y-2">
                 <Label className="text-white">Interview Type</Label>
                 <Select value={interviewType} onValueChange={setInterviewType}>
-                  <SelectTrigger className="bg-[#0f172a] border-[#334155] text-white">
+                  <SelectTrigger className="bg-[#0d0d0d] border-[#404040] text-white">
                     <SelectValue placeholder="Select interview type" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1e293b] border-[#334155]">
+                  <SelectContent className="bg-[#171717] border-[#404040]">
                     {interviewTypes.map((type) => (
                       <SelectItem key={type.id} value={type.id} className="text-white hover:bg-[#334155]">
                         {type.name}
@@ -167,10 +197,10 @@ const MenteeInterviewPrep = () => {
               <div className="space-y-2">
                 <Label className="text-white">Experience Level</Label>
                 <Select value={experienceLevel} onValueChange={setExperienceLevel}>
-                  <SelectTrigger className="bg-[#0f172a] border-[#334155] text-white">
+                  <SelectTrigger className="bg-[#0d0d0d] border-[#404040] text-white">
                     <SelectValue placeholder="Select experience level" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1e293b] border-[#334155]">
+                  <SelectContent className="bg-[#171717] border-[#404040]">
                     {experienceLevels.map((level) => (
                       <SelectItem key={level.id} value={level.id} className="text-white hover:bg-[#334155]">
                         {level.name}
@@ -204,7 +234,7 @@ const MenteeInterviewPrep = () => {
                 onClick={handleGetQuestions}
                 disabled={questionsLoading}
                 variant="outline"
-                className="border-[#334155] text-white hover:bg-[#334155]"
+                className="border-[#404040] text-white hover:bg-[#334155]"
               >
                 {questionsLoading ? (
                   <>
@@ -225,7 +255,7 @@ const MenteeInterviewPrep = () => {
         {/* Results */}
         {(prepData || questions) && (
           <Tabs defaultValue="prep" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-[#1e293b] border border-[#334155]">
+            <TabsList className="grid w-full grid-cols-2 bg-[#171717] border border-[#404040]">
               <TabsTrigger value="prep" className="data-[state=active]:bg-[#06b6d4] data-[state=active]:text-[#0f172a]">
                 Prep Guide
               </TabsTrigger>
@@ -239,7 +269,7 @@ const MenteeInterviewPrep = () => {
               {prepData && (
                 <>
                   {/* Company Insights */}
-                  <Card className="bg-[#1e293b] border-[#334155]">
+                  <Card className="bg-[#171717] border-[#404040]">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-white">
                         <Building2 className="w-5 h-5 text-blue-400" />
@@ -249,17 +279,17 @@ const MenteeInterviewPrep = () => {
                     <CardContent className="space-y-4">
                       <div>
                         <h4 className="text-white font-medium mb-2">Culture & Values</h4>
-                        <p className="text-slate-300">{prepData.company_insights.culture}</p>
+                        <p className="text-gray-400">{prepData.company_insights.culture}</p>
                       </div>
                       <div>
                         <h4 className="text-white font-medium mb-2">Interview Process</h4>
-                        <p className="text-slate-300">{prepData.company_insights.interview_process}</p>
+                        <p className="text-gray-400">{prepData.company_insights.interview_process}</p>
                       </div>
                       <div>
                         <h4 className="text-white font-medium mb-2">Common Questions</h4>
                         <ul className="space-y-1">
                           {prepData.company_insights.common_questions.map((question, index) => (
-                            <li key={index} className="text-slate-300 flex items-start gap-2">
+                            <li key={index} className="text-gray-400 flex items-start gap-2">
                               <span className="text-[#06b6d4] mt-1">•</span>
                               {question}
                             </li>
@@ -270,7 +300,7 @@ const MenteeInterviewPrep = () => {
                   </Card>
 
                   {/* Technical Topics */}
-                  <Card className="bg-[#1e293b] border-[#334155]">
+                  <Card className="bg-[#171717] border-[#404040]">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-white">
                         <Code className="w-5 h-5 text-green-400" />
@@ -289,7 +319,7 @@ const MenteeInterviewPrep = () => {
                   </Card>
 
                   {/* Behavioral Framework */}
-                  <Card className="bg-[#1e293b] border-[#334155]">
+                  <Card className="bg-[#171717] border-[#404040]">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-white">
                         <Users className="w-5 h-5 text-purple-400" />
@@ -299,7 +329,7 @@ const MenteeInterviewPrep = () => {
                     <CardContent className="space-y-4">
                       <div>
                         <h4 className="text-white font-medium mb-2">Recommended Method</h4>
-                        <p className="text-slate-300">{prepData.behavioral_framework.method}</p>
+                        <p className="text-gray-400">{prepData.behavioral_framework.method}</p>
                       </div>
                       <div>
                         <h4 className="text-white font-medium mb-2">Key Areas to Prepare</h4>
@@ -315,7 +345,7 @@ const MenteeInterviewPrep = () => {
                   </Card>
 
                   {/* Practice Problems */}
-                  <Card className="bg-[#1e293b] border-[#334155]">
+                  <Card className="bg-[#171717] border-[#404040]">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-white">
                         <Lightbulb className="w-5 h-5 text-yellow-400" />
@@ -325,7 +355,7 @@ const MenteeInterviewPrep = () => {
                     <CardContent>
                       <ul className="space-y-2">
                         {prepData.practice_problems.map((problem, index) => (
-                          <li key={index} className="text-slate-300 flex items-start gap-2">
+                          <li key={index} className="text-gray-400 flex items-start gap-2">
                             <span className="text-[#06b6d4] mt-1">•</span>
                             {problem}
                           </li>
@@ -335,7 +365,7 @@ const MenteeInterviewPrep = () => {
                   </Card>
 
                   {/* Timeline */}
-                  <Card className="bg-[#1e293b] border-[#334155]">
+                  <Card className="bg-[#171717] border-[#404040]">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-white">
                         <Calendar className="w-5 h-5 text-orange-400" />
@@ -350,7 +380,7 @@ const MenteeInterviewPrep = () => {
                               <span className="text-[#06b6d4] font-bold">{week.replace('_', ' ').toUpperCase()}</span>
                             </div>
                             <div className="flex-1">
-                              <p className="text-slate-300">{plan}</p>
+                              <p className="text-gray-400">{plan}</p>
                             </div>
                           </div>
                         ))}
@@ -365,7 +395,7 @@ const MenteeInterviewPrep = () => {
             <TabsContent value="questions" className="space-y-6">
               {questions && (
                 <>
-                  <Card className="bg-[#1e293b] border-[#334155]">
+                  <Card className="bg-[#171717] border-[#404040]">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-white">
                         <MessageSquare className="w-5 h-5 text-[#06b6d4]" />
@@ -375,7 +405,7 @@ const MenteeInterviewPrep = () => {
                     <CardContent className="space-y-4">
                       <div className="space-y-3">
                         {questions.questions.map((question, index) => (
-                          <div key={index} className="p-4 bg-[#0f172a] rounded-lg">
+                          <div key={index} className="p-4 bg-[#0d0d0d] rounded-lg">
                             <div className="flex items-start gap-3">
                               <div className="w-8 h-8 bg-[#06b6d4]/20 rounded-full flex items-center justify-center flex-shrink-0">
                                 <span className="text-[#06b6d4] text-sm font-bold">{index + 1}</span>
@@ -388,7 +418,7 @@ const MenteeInterviewPrep = () => {
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-[#1e293b] border-[#334155]">
+                  <Card className="bg-[#171717] border-[#404040]">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-white">
                         <Lightbulb className="w-5 h-5 text-yellow-400" />
@@ -398,7 +428,7 @@ const MenteeInterviewPrep = () => {
                     <CardContent>
                       <ul className="space-y-2">
                         {questions.tips.map((tip, index) => (
-                          <li key={index} className="text-slate-300 flex items-start gap-2">
+                          <li key={index} className="text-gray-400 flex items-start gap-2">
                             <span className="text-yellow-400 mt-1">💡</span>
                             {tip}
                           </li>

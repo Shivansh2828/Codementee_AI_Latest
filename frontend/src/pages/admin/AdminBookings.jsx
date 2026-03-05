@@ -83,7 +83,7 @@ const AdminBookings = () => {
       case 'cancelled':
         return <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-red-500/20 text-red-400"><XCircle size={12} /> Cancelled</span>;
       default:
-        return <span className="text-slate-400 text-xs">{status}</span>;
+        return <span className="text-gray-500 text-xs">{status}</span>;
     }
   };
 
@@ -104,16 +104,16 @@ const AdminBookings = () => {
     <DashboardLayout title="Booking Requests">
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-5">
-          <p className="text-slate-400 text-sm">Total Requests</p>
+        <div className="bg-[#171717] rounded-xl border border-[#404040] p-5">
+          <p className="text-gray-500 text-sm">Total Requests</p>
           <p className="text-2xl font-bold text-white">{bookings.length}</p>
         </div>
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-5">
-          <p className="text-slate-400 text-sm">Pending</p>
+        <div className="bg-[#171717] rounded-xl border border-[#404040] p-5">
+          <p className="text-gray-500 text-sm">Pending</p>
           <p className="text-2xl font-bold text-amber-400">{pendingCount}</p>
         </div>
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-5">
-          <p className="text-slate-400 text-sm">Confirmed</p>
+        <div className="bg-[#171717] rounded-xl border border-[#404040] p-5">
+          <p className="text-gray-500 text-sm">Confirmed</p>
           <p className="text-2xl font-bold text-emerald-400">{confirmedCount}</p>
         </div>
       </div>
@@ -125,7 +125,7 @@ const AdminBookings = () => {
             key={f}
             onClick={() => setFilter(f)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === f ? 'bg-[#06b6d4] text-[#0f172a]' : 'bg-[#1e293b] text-slate-300 hover:bg-[#334155]'
+              filter === f ? 'bg-[#06b6d4] text-[#0f172a]' : 'bg-[#171717] text-gray-400 hover:bg-[#334155]'
             }`}
           >
             {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -135,16 +135,16 @@ const AdminBookings = () => {
 
       {/* Bookings List */}
       {loading ? (
-        <p className="text-slate-400 text-center py-8">Loading...</p>
+        <p className="text-gray-500 text-center py-8">Loading...</p>
       ) : filteredBookings.length === 0 ? (
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-8 text-center">
-          <ClipboardList size={48} className="mx-auto text-slate-500 mb-4" />
-          <p className="text-slate-400">No booking requests yet</p>
+        <div className="bg-[#171717] rounded-xl border border-[#404040] p-8 text-center">
+          <ClipboardList size={48} className="mx-auto text-gray-600 mb-4" />
+          <p className="text-gray-500">No booking requests yet</p>
         </div>
       ) : (
         <div className="space-y-4">
           {filteredBookings.map((booking) => (
-            <Card key={booking.id} className="bg-[#1e293b] border-[#334155]">
+            <Card key={booking.id} className="bg-[#171717] border-[#404040]">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-white text-lg flex items-center gap-2">
@@ -165,10 +165,10 @@ const AdminBookings = () => {
                             Assign Mentor
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="bg-[#1e293b] border-[#334155] text-white">
+                        <DialogContent className="bg-[#171717] border-[#404040] text-white">
                           <DialogHeader>
                             <DialogTitle>Assign Mentor & Confirm Booking</DialogTitle>
-                            <DialogDescription className="text-slate-400">
+                            <DialogDescription className="text-gray-500">
                               Select a mentor and confirm the time slot for {booking.mentee_name}'s interview with {booking.company_name}.
                             </DialogDescription>
                           </DialogHeader>
@@ -176,14 +176,14 @@ const AdminBookings = () => {
                           <div className="space-y-4">
                             {/* Mentor Selection */}
                             <div>
-                              <label className="text-sm font-medium text-slate-300 mb-2 block">
+                              <label className="text-sm font-medium text-gray-400 mb-2 block">
                                 Select Mentor
                               </label>
                               <Select value={selectedMentor} onValueChange={setSelectedMentor}>
-                                <SelectTrigger className="bg-[#0f172a] border-[#334155] text-white">
+                                <SelectTrigger className="bg-[#0d0d0d] border-[#404040] text-white">
                                   <SelectValue placeholder="Choose a mentor" />
                                 </SelectTrigger>
-                                <SelectContent className="bg-[#1e293b] border-[#334155]">
+                                <SelectContent className="bg-[#171717] border-[#404040]">
                                   {mentors.map((mentor) => (
                                     <SelectItem key={mentor.id} value={mentor.id} className="text-white hover:bg-[#334155]">
                                       {mentor.name} ({mentor.email})
@@ -195,14 +195,14 @@ const AdminBookings = () => {
 
                             {/* Slot Selection */}
                             <div>
-                              <label className="text-sm font-medium text-slate-300 mb-2 block">
+                              <label className="text-sm font-medium text-gray-400 mb-2 block">
                                 Confirm Time Slot
                               </label>
                               <Select value={selectedSlot} onValueChange={setSelectedSlot}>
-                                <SelectTrigger className="bg-[#0f172a] border-[#334155] text-white">
+                                <SelectTrigger className="bg-[#0d0d0d] border-[#404040] text-white">
                                   <SelectValue placeholder="Choose preferred slot" />
                                 </SelectTrigger>
-                                <SelectContent className="bg-[#1e293b] border-[#334155]">
+                                <SelectContent className="bg-[#171717] border-[#404040]">
                                   {booking.preferred_slots?.map((slot) => (
                                     <SelectItem key={slot.id} value={slot.id} className="text-white hover:bg-[#334155]">
                                       {slot.date} at {slot.start_time} - {slot.end_time}
@@ -213,16 +213,16 @@ const AdminBookings = () => {
                             </div>
 
                             {/* Interview Details */}
-                            <div className="bg-[#0f172a] rounded-lg p-3">
-                              <h4 className="text-sm font-medium text-slate-300 mb-2">Interview Details</h4>
-                              <div className="space-y-1 text-sm text-slate-400">
-                                <p><span className="text-slate-300">Type:</span> {booking.interview_type?.replace('_', ' ')}</p>
-                                <p><span className="text-slate-300">Level:</span> {booking.experience_level}</p>
+                            <div className="bg-[#0d0d0d] rounded-lg p-3">
+                              <h4 className="text-sm font-medium text-gray-400 mb-2">Interview Details</h4>
+                              <div className="space-y-1 text-sm text-gray-500">
+                                <p><span className="text-gray-400">Type:</span> {booking.interview_type?.replace('_', ' ')}</p>
+                                <p><span className="text-gray-400">Level:</span> {booking.experience_level}</p>
                                 {booking.interview_track && booking.interview_track !== 'general' && (
-                                  <p><span className="text-slate-300">Track:</span> {booking.interview_track}</p>
+                                  <p><span className="text-gray-400">Track:</span> {booking.interview_track}</p>
                                 )}
                                 {booking.specific_topics && booking.specific_topics.length > 0 && (
-                                  <p><span className="text-slate-300">Focus:</span> {booking.specific_topics.join(', ')}</p>
+                                  <p><span className="text-gray-400">Focus:</span> {booking.specific_topics.join(', ')}</p>
                                 )}
                               </div>
                             </div>
@@ -252,11 +252,11 @@ const AdminBookings = () => {
                       Mentee Details
                     </h4>
                     <div className="space-y-1">
-                      <p className="text-slate-300 text-sm">
-                        <span className="text-slate-400">Name:</span> {booking.mentee_name}
+                      <p className="text-gray-400 text-sm">
+                        <span className="text-gray-500">Name:</span> {booking.mentee_name}
                       </p>
-                      <p className="text-slate-300 text-sm">
-                        <span className="text-slate-400">Email:</span> {booking.mentee_email}
+                      <p className="text-gray-400 text-sm">
+                        <span className="text-gray-500">Email:</span> {booking.mentee_email}
                       </p>
                     </div>
                   </div>
@@ -267,15 +267,15 @@ const AdminBookings = () => {
                       Interview Details
                     </h4>
                     <div className="space-y-1">
-                      <p className="text-slate-300 text-sm">
-                        <span className="text-slate-400">Type:</span> {booking.interview_type?.replace('_', ' ')}
+                      <p className="text-gray-400 text-sm">
+                        <span className="text-gray-500">Type:</span> {booking.interview_type?.replace('_', ' ')}
                       </p>
-                      <p className="text-slate-300 text-sm">
-                        <span className="text-slate-400">Level:</span> {booking.experience_level}
+                      <p className="text-gray-400 text-sm">
+                        <span className="text-gray-500">Level:</span> {booking.experience_level}
                       </p>
                       {booking.interview_track && booking.interview_track !== 'general' && (
-                        <p className="text-slate-300 text-sm">
-                          <span className="text-slate-400">Track:</span> {booking.interview_track}
+                        <p className="text-gray-400 text-sm">
+                          <span className="text-gray-500">Track:</span> {booking.interview_track}
                         </p>
                       )}
                     </div>
@@ -289,7 +289,7 @@ const AdminBookings = () => {
                       <User className="w-4 h-4 text-blue-400" />
                       Assigned Mentor
                     </h4>
-                    <p className="text-slate-300 text-sm">
+                    <p className="text-gray-400 text-sm">
                       {booking.mentor_name} ({booking.mentor_email})
                     </p>
                   </div>
@@ -308,7 +308,7 @@ const AdminBookings = () => {
                       </Badge>
                     ) : (
                       booking.preferred_slots?.map((slot, i) => (
-                        <Badge key={i} className="bg-[#0f172a] text-slate-300 border-slate-600">
+                        <Badge key={i} className="bg-[#0d0d0d] text-gray-400 border-gray-600">
                           {slot.date} at {slot.start_time} - {slot.end_time}
                         </Badge>
                       ))
@@ -334,7 +334,7 @@ const AdminBookings = () => {
                 {booking.additional_notes && (
                   <div>
                     <h4 className="text-white font-medium text-sm mb-2">Additional Notes</h4>
-                    <p className="text-slate-300 text-sm bg-[#0f172a] rounded p-2">
+                    <p className="text-gray-400 text-sm bg-[#0d0d0d] rounded p-2">
                       {booking.additional_notes}
                     </p>
                   </div>
@@ -342,7 +342,7 @@ const AdminBookings = () => {
 
                 {/* Meeting Link (for confirmed bookings) */}
                 {booking.meeting_link && (
-                  <div className="pt-2 border-t border-[#334155]">
+                  <div className="pt-2 border-t border-[#404040]">
                     <a 
                       href={booking.meeting_link} 
                       target="_blank" 
@@ -355,8 +355,8 @@ const AdminBookings = () => {
                   </div>
                 )}
 
-                <div className="pt-2 border-t border-[#334155] text-right">
-                  <p className="text-slate-400 text-xs">
+                <div className="pt-2 border-t border-[#404040] text-right">
+                  <p className="text-gray-500 text-xs">
                     Requested: {formatDate(booking.created_at)}
                   </p>
                 </div>

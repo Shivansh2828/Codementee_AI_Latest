@@ -7,7 +7,7 @@ import { siteConfig } from '../data/mock';
 
 const ConfirmationPage = () => {
   return (
-    <div className="min-h-screen bg-[#0f172a] flex flex-col">
+    <div className="min-h-screen bg-[#0d0d0d] flex flex-col">
       <Header />
       <main className="flex-1 flex items-center justify-center pt-24 pb-16">
         <div className="container">
@@ -26,12 +26,12 @@ const ConfirmationPage = () => {
             </p>
 
             {/* What's Next */}
-            <div className="p-6 rounded-xl border border-[#334155] bg-[#1e293b]/50 mb-8 text-left">
+            <div className="p-6 rounded-xl border border-[#404040] bg-[#171717]/50 mb-8 text-left">
               <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                 <Mail size={20} className="text-[#06b6d4]" />
                 What happens next?
               </h3>
-              <ul className="space-y-3 text-slate-400">
+              <ul className="space-y-3 text-gray-500">
                 <li className="flex items-start gap-2">
                   <span className="text-[#06b6d4]">1.</span>
                   We'll review your application within 24 hours
@@ -48,7 +48,7 @@ const ConfirmationPage = () => {
             </div>
 
             {/* Contact */}
-            <p className="text-sm text-slate-400 mb-8">
+            <p className="text-sm text-gray-500 mb-8">
               Questions? Reach out at{' '}
               <a href={`mailto:${siteConfig.contactEmail}`} className="text-[#06b6d4] hover:underline">
                 {siteConfig.contactEmail}

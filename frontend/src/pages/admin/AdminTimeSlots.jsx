@@ -85,7 +85,7 @@ const AdminTimeSlots = () => {
   return (
     <DashboardLayout title="Manage Time Slots">
       <div className="flex justify-between items-center mb-6">
-        <p className="text-slate-400">Available slots for mentees to book mock interviews</p>
+        <p className="text-gray-500">Available slots for mentees to book mock interviews</p>
         <button
           onClick={() => setShowModal(true)}
           className="flex items-center gap-2 bg-[#06b6d4] text-[#0f172a] px-4 py-2 rounded-lg font-medium hover:bg-[#06b6d4]/90 transition-colors"
@@ -96,21 +96,21 @@ const AdminTimeSlots = () => {
       </div>
 
       {loading ? (
-        <p className="text-slate-400 text-center py-8">Loading...</p>
+        <p className="text-gray-500 text-center py-8">Loading...</p>
       ) : Object.keys(groupedSlots).length === 0 ? (
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-8 text-center">
-          <Clock size={48} className="mx-auto text-slate-500 mb-4" />
-          <p className="text-slate-400">No time slots created yet</p>
-          <p className="text-slate-500 text-sm mt-1">Add slots for mentees to book their mock interviews</p>
+        <div className="bg-[#171717] rounded-xl border border-[#404040] p-8 text-center">
+          <Clock size={48} className="mx-auto text-gray-600 mb-4" />
+          <p className="text-gray-500">No time slots created yet</p>
+          <p className="text-gray-600 text-sm mt-1">Add slots for mentees to book their mock interviews</p>
         </div>
       ) : (
         <div className="space-y-6">
           {Object.entries(groupedSlots).sort(([a], [b]) => new Date(a) - new Date(b)).map(([date, dateSlots]) => (
-            <div key={date} className="bg-[#1e293b] rounded-xl border border-[#334155] overflow-hidden">
-              <div className="bg-[#0f172a] px-5 py-3 border-b border-[#334155] flex items-center gap-2">
+            <div key={date} className="bg-[#171717] rounded-xl border border-[#404040] overflow-hidden">
+              <div className="bg-[#0d0d0d] px-5 py-3 border-b border-[#404040] flex items-center gap-2">
                 <Calendar size={18} className="text-[#06b6d4]" />
                 <span className="text-white font-medium">{formatDate(date)}</span>
-                <span className="text-slate-400 text-sm">({dateSlots.length} slots)</span>
+                <span className="text-gray-500 text-sm">({dateSlots.length} slots)</span>
               </div>
               <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {dateSlots.map((slot) => (
@@ -119,7 +119,7 @@ const AdminTimeSlots = () => {
                     className={`flex items-center justify-between p-3 rounded-lg border ${
                       slot.status === 'booked'
                         ? 'bg-amber-500/10 border-amber-500/30'
-                        : 'bg-[#0f172a] border-[#334155]'
+                        : 'bg-[#0d0d0d] border-[#404040]'
                     }`}
                     data-testid={`slot-${slot.id}`}
                   >
@@ -130,7 +130,7 @@ const AdminTimeSlots = () => {
                           {slot.start_time} - {slot.end_time}
                         </span>
                       </div>
-                      <p className="text-slate-400 text-xs mt-1">{getMentorName(slot.mentor_id)}</p>
+                      <p className="text-gray-500 text-xs mt-1">{getMentorName(slot.mentor_id)}</p>
                       {slot.status === 'booked' && (
                         <span className="inline-block mt-1 text-xs text-amber-400">Booked</span>
                       )}
@@ -138,7 +138,7 @@ const AdminTimeSlots = () => {
                     {slot.status !== 'booked' && (
                       <button
                         onClick={() => handleDelete(slot.id)}
-                        className="text-slate-400 hover:text-red-400 transition-colors p-1"
+                        className="text-gray-500 hover:text-red-400 transition-colors p-1"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -154,56 +154,56 @@ const AdminTimeSlots = () => {
       {/* Add Slot Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1e293b] rounded-xl border border-[#334155] w-full max-w-md">
-            <div className="flex items-center justify-between p-4 border-b border-[#334155]">
+          <div className="bg-[#171717] rounded-xl border border-[#404040] w-full max-w-md">
+            <div className="flex items-center justify-between p-4 border-b border-[#404040]">
               <h3 className="text-lg font-semibold text-white">Add Time Slot</h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-white">
                 <X size={20} />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Date *</label>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Date *</label>
                 <input
                   type="date"
                   required
                   value={formData.date}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                   min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-2.5 bg-[#0f172a] border border-[#334155] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#06b6d4]"
+                  className="w-full px-4 py-2.5 bg-[#0d0d0d] border border-[#404040] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#06b6d4]"
                   data-testid="slot-date-input"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Start Time *</label>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Start Time *</label>
                   <input
                     type="time"
                     required
                     value={formData.start_time}
                     onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-[#0f172a] border border-[#334155] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#06b6d4]"
+                    className="w-full px-4 py-2.5 bg-[#0d0d0d] border border-[#404040] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#06b6d4]"
                     data-testid="slot-start-input"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">End Time *</label>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">End Time *</label>
                   <input
                     type="time"
                     required
                     value={formData.end_time}
                     onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-[#0f172a] border border-[#334155] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#06b6d4]"
+                    className="w-full px-4 py-2.5 bg-[#0d0d0d] border border-[#404040] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#06b6d4]"
                     data-testid="slot-end-input"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Assign Mentor (optional)</label>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Assign Mentor (optional)</label>
                 <select
                   value={formData.mentor_id}
                   onChange={(e) => setFormData({ ...formData, mentor_id: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-[#0f172a] border border-[#334155] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#06b6d4]"
+                  className="w-full px-4 py-2.5 bg-[#0d0d0d] border border-[#404040] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#06b6d4]"
                 >
                   <option value="">Any available mentor</option>
                   {mentors.map((mentor) => (

@@ -23,21 +23,21 @@ const ContactUs = () => {
   const whatsappLink = `https://wa.me/${whatsappNumber}?text=Hi%20Codementee%2C%20I%20have%20a%20question%20about%20your%20mentorship%20program.`;
 
   return (
-    <div className="min-h-screen bg-[#0f172a]">
+    <div className="min-h-screen bg-[#0d0d0d]">
       <Header />
       <main className="pt-24 pb-16">
         <div className="container max-w-4xl">
-          <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-[#06b6d4] transition-colors mb-8">
+          <Link to="/" className="flex items-center gap-2 text-gray-500 hover:text-[#06b6d4] transition-colors mb-8">
             <ArrowLeft size={18} /> Back to Home
           </Link>
 
           <h1 className="text-3xl font-bold text-white mb-4">Contact Us</h1>
-          <p className="text-slate-400 mb-8">Have questions? We're here to help.</p>
+          <p className="text-gray-500 mb-8">Have questions? We're here to help.</p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Contact Info */}
             <div className="space-y-6">
-              <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-6">
+              <div className="bg-[#171717] rounded-xl border border-[#404040] p-6">
                 <div className="flex items-start gap-4">
                   <div className="bg-[#06b6d4] p-3 rounded-lg">
                     <Mail size={24} className="text-[#0f172a]" />
@@ -45,13 +45,13 @@ const ContactUs = () => {
                   <div>
                     <h3 className="text-white font-semibold mb-1">Email Us</h3>
                     <a href={`mailto:${siteConfig.contactEmail}`} className="text-[#06b6d4] hover:underline">{siteConfig.contactEmail}</a>
-                    <p className="text-slate-400 text-sm mt-1">For general inquiries and support</p>
+                    <p className="text-gray-500 text-sm mt-1">For general inquiries and support</p>
                   </div>
                 </div>
               </div>
 
               {/* WhatsApp */}
-              <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-6">
+              <div className="bg-[#171717] rounded-xl border border-[#404040] p-6">
                 <div className="flex items-start gap-4">
                   <div className="bg-[#25D366] p-3 rounded-lg">
                     <Phone size={24} className="text-white" />
@@ -59,7 +59,7 @@ const ContactUs = () => {
                   <div>
                     <h3 className="text-white font-semibold mb-1">WhatsApp</h3>
                     <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="text-[#25D366] hover:underline">{siteConfig.whatsapp}</a>
-                    <p className="text-slate-400 text-sm mt-1">Quick responses on WhatsApp</p>
+                    <p className="text-gray-500 text-sm mt-1">Quick responses on WhatsApp</p>
                     <a 
                       href={whatsappLink}
                       target="_blank"
@@ -75,27 +75,27 @@ const ContactUs = () => {
                 </div>
               </div>
 
-              <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-6">
+              <div className="bg-[#171717] rounded-xl border border-[#404040] p-6">
                 <div className="flex items-start gap-4">
                   <div className="bg-[#06b6d4] p-3 rounded-lg">
                     <Clock size={24} className="text-[#0f172a]" />
                   </div>
                   <div>
                     <h3 className="text-white font-semibold mb-1">Response Time</h3>
-                    <p className="text-slate-300">Within 24-48 hours</p>
-                    <p className="text-slate-400 text-sm mt-1">Monday to Saturday, 10 AM - 7 PM IST</p>
+                    <p className="text-gray-400">Within 24-48 hours</p>
+                    <p className="text-gray-500 text-sm mt-1">Monday to Saturday, 10 AM - 7 PM IST</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-6">
+              <div className="bg-[#171717] rounded-xl border border-[#404040] p-6">
                 <div className="flex items-start gap-4">
                   <div className="bg-[#06b6d4] p-3 rounded-lg">
                     <MessageSquare size={24} className="text-[#0f172a]" />
                   </div>
                   <div>
                     <h3 className="text-white font-semibold mb-1">Common Topics</h3>
-                    <ul className="text-slate-400 text-sm space-y-1 mt-1">
+                    <ul className="text-gray-500 text-sm space-y-1 mt-1">
                       <li>• Payment & billing questions</li>
                       <li>• Mock interview scheduling</li>
                       <li>• Technical issues</li>
@@ -107,7 +107,7 @@ const ContactUs = () => {
             </div>
 
             {/* Contact Form */}
-            <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-6">
+            <div className="bg-[#171717] rounded-xl border border-[#404040] p-6">
               <h2 className="text-xl font-semibold text-white mb-6">Send us a message</h2>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -117,7 +117,7 @@ const ContactUs = () => {
                     value={form.name}
                     onChange={e => setForm({...form, name: e.target.value})}
                     required
-                    className="w-full px-4 py-3 rounded-lg bg-[#0f172a] border border-[#334155] text-white placeholder-slate-500 focus:outline-none focus:border-[#06b6d4]"
+                    className="w-full px-4 py-3 rounded-lg bg-[#0d0d0d] border border-[#404040] text-white placeholder-gray-500 focus:outline-none focus:border-[#06b6d4]"
                     placeholder="Your name"
                   />
                 </div>
@@ -128,7 +128,7 @@ const ContactUs = () => {
                     value={form.email}
                     onChange={e => setForm({...form, email: e.target.value})}
                     required
-                    className="w-full px-4 py-3 rounded-lg bg-[#0f172a] border border-[#334155] text-white placeholder-slate-500 focus:outline-none focus:border-[#06b6d4]"
+                    className="w-full px-4 py-3 rounded-lg bg-[#0d0d0d] border border-[#404040] text-white placeholder-gray-500 focus:outline-none focus:border-[#06b6d4]"
                     placeholder="you@example.com"
                   />
                 </div>
@@ -138,7 +138,7 @@ const ContactUs = () => {
                     value={form.subject}
                     onChange={e => setForm({...form, subject: e.target.value})}
                     required
-                    className="w-full px-4 py-3 rounded-lg bg-[#0f172a] border border-[#334155] text-white focus:outline-none focus:border-[#06b6d4]"
+                    className="w-full px-4 py-3 rounded-lg bg-[#0d0d0d] border border-[#404040] text-white focus:outline-none focus:border-[#06b6d4]"
                   >
                     <option value="">Select a topic</option>
                     <option value="general">General Inquiry</option>
@@ -156,7 +156,7 @@ const ContactUs = () => {
                     onChange={e => setForm({...form, message: e.target.value})}
                     required
                     rows={4}
-                    className="w-full px-4 py-3 rounded-lg bg-[#0f172a] border border-[#334155] text-white placeholder-slate-500 focus:outline-none focus:border-[#06b6d4] resize-none"
+                    className="w-full px-4 py-3 rounded-lg bg-[#0d0d0d] border border-[#404040] text-white placeholder-gray-500 focus:outline-none focus:border-[#06b6d4] resize-none"
                     placeholder="How can we help you?"
                   />
                 </div>

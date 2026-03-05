@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Response
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Response, File, UploadFile, Form
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -17,6 +17,8 @@ import hmac
 import hashlib
 import resend
 import asyncio
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -211,6 +213,157 @@ class ConfirmBookingRequest(BaseModel):
     booking_request_id: str
     confirmed_slot_id: str
     # meeting_link is now auto-assigned from pool
+
+# ============ MENTOR-CONTROLLED SLOT MANAGEMENT MODELS ============
+
+# Mentor Slot Models
+class MentorSlotCreate(BaseModel):
+    date: str  # YYYY-MM-DD
+    start_time: str  # HH:MM
+    end_time: str  # HH:MM
+    meeting_link: str
+    interview_types: List[str]  # ["coding", "system_design", "behavioral", "hr_round"]
+    experience_levels: List[str]  # ["junior", "mid", "senior", "staff_plus"]
+    company_specializations: List[str]  # Company IDs
+    preparation_notes: Optional[str] = None
+
+class MentorSlotUpdate(BaseModel):
+    date: Optional[str] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    meeting_link: Optional[str] = None
+    interview_types: Optional[List[str]] = None
+    experience_levels: Optional[List[str]] = None
+    company_specializations: Optional[List[str]] = None
+    preparation_notes: Optional[str] = None
+
+class MentorSlotResponse(BaseModel):
+    id: str
+    mentor_id: str
+    mentor_name: str
+    mentor_email: str
+    date: str
+    start_time: str
+    end_time: str
+    meeting_link: str
+    status: str  # available, booked, unavailable, completed
+    interview_types: List[str]
+    experience_levels: List[str]
+    company_specializations: List[str]
+    preparation_notes: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
+# Mentee Booking Models
+class SlotFilters(BaseModel):
+    interview_type: Optional[str] = None
+    experience_level: Optional[str] = None
+    date_from: Optional[str] = None
+    date_to: Optional[str] = None
+    company_id: Optional[str] = None
+
+class AnonymizedSlot(BaseModel):
+    id: str
+    date: str
+    start_time: str
+    end_time: str
+    interview_types: List[str]
+    experience_levels: List[str]
+    company_specializations: List[str]
+    preparation_notes: Optional[str]
+    # Note: mentor_id and mentor_name are excluded
+
+class BookingCreate(BaseModel):
+    slot_id: str
+    company_id: str
+    interview_track: str
+    specific_topics: Optional[List[str]] = []
+    additional_notes: Optional[str] = ""
+
+class BookingResponse(BaseModel):
+    id: str
+    slot_id: str
+    mentee_id: str
+    mentee_name: str
+    mentee_email: str
+    mentor_id: str
+    mentor_name: str
+    mentor_email: str
+    company_id: str
+    company_name: str
+    interview_type: str
+    experience_level: str
+    interview_track: str
+    specific_topics: List[str]
+    additional_notes: str
+    date: str
+    start_time: str
+    end_time: str
+    meeting_link: str
+    status: str  # confirmed, completed, cancelled
+    feedback_submitted: bool
+    feedback_id: Optional[str]
+    created_at: datetime
+    confirmed_at: datetime
+    completed_at: Optional[datetime]
+    cancelled_at: Optional[datetime]
+    cancelled_by: Optional[str]
+    cancellation_reason: Optional[str]
+
+# Admin Analytics Models
+class MentorMetrics(BaseModel):
+    mentor_id: str
+    mentor_name: str
+    total_slots_created: int
+    total_slots_booked: int
+    utilization_rate: float  # booked/created
+    average_rating: float
+    total_sessions_completed: int
+
+class BookingAnalytics(BaseModel):
+    popular_time_slots: dict  # {"Monday 10:00": count}
+    interview_type_counts: dict
+    company_counts: dict
+    booking_trends: List[dict]  # Time series data
+    avg_time_to_booking: float  # Hours
+    cancellation_rate: float
+
+class RevenueMetrics(BaseModel):
+    total_revenue: float
+    total_payouts_owed: float
+    net_profit: float
+    revenue_by_plan: dict
+    mentor_payouts: List[dict]  # Per-mentor breakdown
+
+class SessionFilters(BaseModel):
+    status: Optional[str] = None  # upcoming, completed, cancelled
+    mentor_id: Optional[str] = None
+    mentee_id: Optional[str] = None
+    date_from: Optional[str] = None
+    date_to: Optional[str] = None
+    interview_type: Optional[str] = None
+
+class DateRange(BaseModel):
+    start_date: str  # YYYY-MM-DD
+    end_date: str  # YYYY-MM-DD
+
+# ============ RESUME REVIEW MODELS ============
+class ResumeReviewRequest(BaseModel):
+    target_role: str
+    target_companies: Optional[str] = ""
+    specific_focus: Optional[str] = ""
+    additional_notes: Optional[str] = ""
+
+# ============ BUG REPORT MODELS ============
+class BugReportCreate(BaseModel):
+    title: str
+    description: str
+    severity: str  # low, medium, high, critical
+    page: str
+    user_id: Optional[str] = None
+    user_name: Optional[str] = None
+    user_email: Optional[str] = None
+    user_role: Optional[str] = None
 
 # ============ HELPERS ============
 def hash_password(password: str) -> str:
@@ -558,6 +711,1519 @@ async def send_booking_confirmed_email(recipient_name: str, recipient_email: str
         logger.error(f"Failed to send booking confirmed email: {str(e)}")
         return None
 
+async def send_bug_report_email(bug_report: dict):
+    """Send email notification to admin when a bug is reported"""
+    try:
+        severity_colors = {
+            "low": "#10b981",
+            "medium": "#f59e0b",
+            "high": "#ef4444",
+            "critical": "#dc2626"
+        }
+        severity_color = severity_colors.get(bug_report["severity"], "#6b7280")
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                .content {{ background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }}
+                .bug-card {{ background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid {severity_color}; }}
+                .severity-badge {{ display: inline-block; padding: 5px 15px; border-radius: 20px; background: {severity_color}; color: white; font-weight: bold; text-transform: uppercase; font-size: 12px; }}
+                .info-row {{ margin: 10px 0; padding: 10px; background: #f3f4f6; border-radius: 5px; }}
+                .label {{ font-weight: bold; color: #4b5563; }}
+                .footer {{ text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🐛 New Bug Report</h1>
+                    <p>A user has reported an issue on the platform</p>
+                </div>
+                <div class="content">
+                    <div class="bug-card">
+                        <div style="margin-bottom: 15px;">
+                            <span class="severity-badge">{bug_report["severity"]} Priority</span>
+                        </div>
+                        
+                        <h2 style="color: #1f2937; margin: 15px 0;">{bug_report["title"]}</h2>
+                        
+                        <div class="info-row">
+                            <span class="label">Page:</span> {bug_report["page"]}
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="label">Description:</span><br/>
+                            <div style="margin-top: 10px; white-space: pre-wrap;">{bug_report["description"]}</div>
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="label">Reporter:</span> {bug_report.get("user_name", "Anonymous")} ({bug_report.get("user_role", "Unknown")})<br/>
+                            <span class="label">Email:</span> {bug_report.get("user_email", "Not provided")}
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="label">Reported At:</span> {bug_report["created_at"].strftime("%Y-%m-%d %H:%M:%S UTC")}
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="label">Bug ID:</span> {bug_report["id"]}
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                        <p style="color: #6b7280;">Please review and address this issue in the admin dashboard.</p>
+                    </div>
+                </div>
+                <div class="footer">
+                    <p>Codementee Bug Tracking System</p>
+                    <p>This is an automated notification</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        params = {
+            "from": SENDER_EMAIL,
+            "to": [BCC_EMAIL],  # Send to admin email
+            "subject": f"🐛 [{bug_report['severity'].upper()}] Bug Report: {bug_report['title']}",
+            "html": html_content
+        }
+        
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Bug report email sent to admin")
+        return result
+    except Exception as e:
+        logger.error(f"Failed to send bug report email: {str(e)}")
+        return None
+
+async def send_resume_request_email(request: dict):
+    """Send email notification to admin when a resume review is requested"""
+    try:
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                .content {{ background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }}
+                .request-card {{ background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #8b5cf6; }}
+                .info-row {{ margin: 10px 0; padding: 10px; background: #f3f4f6; border-radius: 5px; }}
+                .label {{ font-weight: bold; color: #4b5563; }}
+                .footer {{ text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>📄 New Resume Review Request</h1>
+                    <p>A mentee has submitted their resume for review</p>
+                </div>
+                <div class="content">
+                    <div class="request-card">
+                        <h2 style="color: #1f2937; margin: 15px 0;">Resume Review Request</h2>
+                        
+                        <div class="info-row">
+                            <span class="label">Mentee:</span> {request["mentee_name"]}<br/>
+                            <span class="label">Email:</span> {request["mentee_email"]}<br/>
+                            <span class="label">Plan:</span> {request.get("plan_id", "N/A").upper()}
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="label">Target Role:</span> {request["target_role"]}
+                        </div>
+                        
+                        {f'<div class="info-row"><span class="label">Target Companies:</span> {request["target_companies"]}</div>' if request.get("target_companies") else ''}
+                        
+                        {f'<div class="info-row"><span class="label">Specific Focus:</span> {request["specific_focus"]}</div>' if request.get("specific_focus") else ''}
+                        
+                        {f'<div class="info-row"><span class="label">Additional Notes:</span><br/><div style="margin-top: 10px; white-space: pre-wrap;">{request["additional_notes"]}</div></div>' if request.get("additional_notes") else ''}
+                        
+                        <div class="info-row">
+                            <span class="label">Resume File:</span> {request["resume_filename"]}<br/>
+                            <span class="label">File Type:</span> {request["resume_content_type"]}
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="label">Submitted At:</span> {request["created_at"]}
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="label">Request ID:</span> {request["id"]}
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                        <p style="color: #6b7280;">Please review the resume and provide feedback within 2-3 business days.</p>
+                        <p style="color: #6b7280;">Access the admin dashboard to download the resume and submit feedback.</p>
+                    </div>
+                </div>
+                <div class="footer">
+                    <p>Codementee Resume Review System</p>
+                    <p>This is an automated notification</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        params = {
+            "from": SENDER_EMAIL,
+            "to": [BCC_EMAIL],  # Send to admin email
+            "subject": f"📄 New Resume Review Request - {request['mentee_name']}",
+            "html": html_content
+        }
+        
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Resume request email sent to admin")
+        return result
+    except Exception as e:
+        logger.error(f"Failed to send resume request email: {str(e)}")
+        return None
+
+async def send_resume_feedback_email(request: dict, feedback: str, is_update: bool = False):
+    """Send email notification to mentee when resume feedback is ready"""
+    try:
+        title = "🔄 Your Resume Feedback Has Been Updated!" if is_update else "✅ Your Resume Review is Ready!"
+        greeting = "We've updated your resume feedback with additional insights!" if is_update else "Great news! Our expert has reviewed your resume"
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                .content {{ background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }}
+                .feedback-card {{ background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }}
+                .info-row {{ margin: 10px 0; padding: 10px; background: #f3f4f6; border-radius: 5px; }}
+                .label {{ font-weight: bold; color: #4b5563; }}
+                .feedback-text {{ background: #ecfdf5; padding: 15px; border-radius: 8px; margin: 15px 0; white-space: pre-wrap; }}
+                .footer {{ text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px; }}
+                .update-badge {{ background: #06b6d4; color: white; padding: 5px 10px; border-radius: 5px; font-size: 12px; display: inline-block; margin-bottom: 10px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>{title}</h1>
+                    <p>Expert feedback on your resume</p>
+                </div>
+                <div class="content">
+                    <div class="feedback-card">
+                        {f'<span class="update-badge">UPDATED FEEDBACK</span>' if is_update else ''}
+                        <h2 style="color: #1f2937; margin: 15px 0;">Hi {request["mentee_name"]},</h2>
+                        
+                        <p style="color: #4b5563; margin: 15px 0;">
+                            {greeting} for the <strong>{request["target_role"]}</strong> position.
+                        </p>
+                        
+                        <div class="feedback-text">
+                            <strong style="color: #059669;">Expert Feedback:</strong><br/><br/>
+                            {feedback}
+                        </div>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="https://codementee.io/mentee/feedbacks" 
+                               style="display: inline-block; padding: 12px 30px; background: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                                View Full Feedback
+                            </a>
+                        </div>
+                        
+                        <div class="info-row">
+                            <p style="color: #6b7280; margin: 0;">
+                                <strong>Next Steps:</strong><br/>
+                                1. Review the feedback carefully<br/>
+                                2. Update your resume based on suggestions<br/>
+                                3. Apply the improvements to your job applications
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                        <p style="color: #6b7280;">Need more help? Book a mock interview to practice your skills!</p>
+                    </div>
+                </div>
+                <div class="footer">
+                    <p>Codementee - Your Interview Prep Partner</p>
+                    <p>Questions? Reply to this email or contact support@codementee.com</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        subject_prefix = "🔄 Updated" if is_update else "✅"
+        
+        params = {
+            "from": SENDER_EMAIL,
+            "to": [request["mentee_email"]],
+            "bcc": [BCC_EMAIL],
+            "subject": f"{subject_prefix} Resume Feedback - {request['target_role']}",
+            "html": html_content
+        }
+        
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Resume feedback email {'update' if is_update else 'submission'} sent to {request['mentee_email']}")
+        return result
+    except Exception as e:
+        logger.error(f"Failed to send resume feedback email: {str(e)}")
+        return None
+
+# ============ NEW MENTOR-CONTROLLED SLOT EMAIL FUNCTIONS ============
+
+async def send_new_booking_confirmation_emails(booking: dict):
+    """
+    Send booking confirmation emails to both mentor and mentee.
+    Includes appropriate details for each recipient, preparation instructions if provided,
+    and calendar invite attachment.
+    Requirements: 6.10, 13.1, 13.2, 13.3, 13.4, 13.5
+    """
+    try:
+        # Format date and time for display
+        slot_datetime = f"{booking['date']} at {booking['start_time']} - {booking['end_time']}"
+        
+        # Generate calendar invite (iCal format)
+        start_datetime = datetime.fromisoformat(f"{booking['date']}T{booking['start_time']}:00")
+        end_datetime = datetime.fromisoformat(f"{booking['date']}T{booking['end_time']}:00")
+        
+        # Create iCal content
+        ical_content = f"""BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Codementee//Mock Interview//EN
+BEGIN:VEVENT
+UID:{booking['id']}@codementee.com
+DTSTAMP:{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}
+DTSTART:{start_datetime.strftime('%Y%m%dT%H%M%S')}
+DTEND:{end_datetime.strftime('%Y%m%dT%H%M%S')}
+SUMMARY:Mock Interview - {booking['company_name']}
+DESCRIPTION:Mock Interview for {booking['company_name']}\\nInterview Type: {booking['interview_type']}\\nMeeting Link: {booking['meeting_link']}
+LOCATION:{booking['meeting_link']}
+STATUS:CONFIRMED
+SEQUENCE:0
+END:VEVENT
+END:VCALENDAR"""
+        
+        # Prepare preparation notes section if available
+        prep_notes_section = ""
+        if booking.get('preparation_notes'):
+            prep_notes_section = f"""
+                    <div style="background-color: #0f172a; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #06b6d4;">
+                        <h3 style="color: #06b6d4; margin: 0 0 12px 0; font-size: 16px;">📝 Preparation Instructions</h3>
+                        <p style="color: #e2e8f0; font-size: 14px; line-height: 1.6; margin: 0;">{booking['preparation_notes']}</p>
+                    </div>
+            """
+        
+        # Send email to mentee
+        mentee_topics_section = ""
+        if booking.get('specific_topics'):
+            topics_list = ", ".join(booking['specific_topics'])
+            mentee_topics_section = f"""
+                            <tr>
+                                <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Focus Topics</td>
+                                <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{topics_list}</td>
+                            </tr>
+            """
+        
+        mentee_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 40px 20px;">
+                <tr>
+                    <td align="center">
+                        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #1e293b; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
+                            <!-- Header with Logo -->
+                            <tr>
+                                <td style="padding: 30px 40px; text-align: center; border-bottom: 1px solid #334155;">
+                                    <img src="{LOGO_URL}" alt="Codementee" style="height: 50px; width: auto;" />
+                                </td>
+                            </tr>
+                            
+                            <!-- Confirmation Message -->
+                            <tr>
+                                <td style="padding: 40px;">
+                                    <h1 style="color: #10b981; margin: 0 0 20px 0; font-size: 28px; font-weight: 600;">Mock Interview Confirmed! ✅</h1>
+                                    <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        Hi <strong>{booking['mentee_name']}</strong>,
+                                    </p>
+                                    <p style="color: #94a3b8; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        Great news! Your mock interview has been confirmed. Your mentor <strong style="color: #06b6d4;">{booking['mentor_name']}</strong> is ready to help you prepare for <strong>{booking['company_name']}</strong>.
+                                    </p>
+                                    
+                                    <!-- Session Details -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; border-radius: 12px; margin: 30px 0;">
+                                        <tr>
+                                            <td style="padding: 24px;">
+                                                <h3 style="color: #06b6d4; margin: 0 0 16px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Session Details</h3>
+                                                <table width="100%" cellpadding="0" cellspacing="0">
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Date & Time</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{slot_datetime}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Company</td>
+                                                        <td style="color: #06b6d4; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['company_name']}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Interview Type</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['interview_type'].replace('_', ' ').title()}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Experience Level</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['experience_level'].replace('_', ' ').title()}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Mentor</td>
+                                                        <td style="color: #10b981; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['mentor_name']}</td>
+                                                    </tr>
+                                                    {mentee_topics_section}
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    {prep_notes_section}
+                                    
+                                    <!-- CTA Button -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                                        <tr>
+                                            <td align="center">
+                                                <a href="{booking['meeting_link']}" style="display: inline-block; background-color: #10b981; color: white; padding: 16px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
+                                                    Join Meeting
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <p style="color: #64748b; font-size: 12px; text-align: center; margin: 20px 0 0 0;">
+                                        📅 A calendar invite is attached to this email<br>
+                                        ⏰ Please join 5 minutes early to test your setup
+                                    </p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td style="padding: 24px 40px; background-color: #0f172a; border-top: 1px solid #334155;">
+                                    <p style="color: #64748b; font-size: 12px; margin: 0; text-align: center;">
+                                        © 2025 Codementee. All rights reserved.<br>
+                                        Questions? Reply to this email or contact us at support@codementee.com
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        
+        mentee_params = {
+            "from": SENDER_EMAIL,
+            "to": [booking['mentee_email']],
+            "subject": f"Mock Interview Confirmed - {booking['company_name']} with {booking['mentor_name']}",
+            "html": mentee_html,
+            "attachments": [{
+                "filename": "interview.ics",
+                "content": ical_content
+            }]
+        }
+        
+        if BCC_EMAIL:
+            mentee_params["bcc"] = [BCC_EMAIL]
+        
+        # Send email to mentor
+        mentor_notes_section = ""
+        if booking.get('additional_notes'):
+            mentor_notes_section = f"""
+                    <div style="background-color: #0f172a; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+                        <h3 style="color: #f59e0b; margin: 0 0 12px 0; font-size: 16px;">💬 Mentee's Additional Notes</h3>
+                        <p style="color: #e2e8f0; font-size: 14px; line-height: 1.6; margin: 0;">{booking['additional_notes']}</p>
+                    </div>
+            """
+        
+        mentor_topics_section = ""
+        if booking.get('specific_topics'):
+            topics_html = "".join([f"<li style='color: #e2e8f0; padding: 4px 0;'>{topic}</li>" for topic in booking['specific_topics']])
+            mentor_topics_section = f"""
+                    <div style="background-color: #0f172a; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #06b6d4;">
+                        <h3 style="color: #06b6d4; margin: 0 0 12px 0; font-size: 16px;">🎯 Mentee's Focus Topics</h3>
+                        <ul style="margin: 0; padding-left: 20px;">{topics_html}</ul>
+                    </div>
+            """
+        
+        mentor_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 40px 20px;">
+                <tr>
+                    <td align="center">
+                        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #1e293b; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
+                            <!-- Header with Logo -->
+                            <tr>
+                                <td style="padding: 30px 40px; text-align: center; border-bottom: 1px solid #334155;">
+                                    <img src="{LOGO_URL}" alt="Codementee" style="height: 50px; width: auto;" />
+                                </td>
+                            </tr>
+                            
+                            <!-- Confirmation Message -->
+                            <tr>
+                                <td style="padding: 40px;">
+                                    <h1 style="color: #06b6d4; margin: 0 0 20px 0; font-size: 28px; font-weight: 600;">New Mock Interview Scheduled 📅</h1>
+                                    <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        Hi <strong>{booking['mentor_name']}</strong>,
+                                    </p>
+                                    <p style="color: #94a3b8; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        You have a new mock interview scheduled with <strong style="color: #06b6d4;">{booking['mentee_name']}</strong> for <strong>{booking['company_name']}</strong>.
+                                    </p>
+                                    
+                                    <!-- Session Details -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; border-radius: 12px; margin: 30px 0;">
+                                        <tr>
+                                            <td style="padding: 24px;">
+                                                <h3 style="color: #06b6d4; margin: 0 0 16px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Session Details</h3>
+                                                <table width="100%" cellpadding="0" cellspacing="0">
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Date & Time</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{slot_datetime}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Mentee</td>
+                                                        <td style="color: #10b981; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['mentee_name']}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Company</td>
+                                                        <td style="color: #06b6d4; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['company_name']}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Interview Type</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['interview_type'].replace('_', ' ').title()}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Experience Level</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['experience_level'].replace('_', ' ').title()}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Interview Track</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['interview_track']}</td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    {mentor_topics_section}
+                                    {mentor_notes_section}
+                                    
+                                    <!-- CTA Button -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                                        <tr>
+                                            <td align="center">
+                                                <a href="{booking['meeting_link']}" style="display: inline-block; background-color: #06b6d4; color: #0f172a; padding: 16px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 6px rgba(6, 182, 212, 0.3);">
+                                                    Join Meeting
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <p style="color: #64748b; font-size: 12px; text-align: center; margin: 20px 0 0 0;">
+                                        📅 A calendar invite is attached to this email<br>
+                                        ⏰ Please join 5 minutes early to prepare
+                                    </p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td style="padding: 24px 40px; background-color: #0f172a; border-top: 1px solid #334155;">
+                                    <p style="color: #64748b; font-size: 12px; margin: 0; text-align: center;">
+                                        © 2025 Codementee. All rights reserved.<br>
+                                        Questions? Reply to this email or contact us at support@codementee.com
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        
+        mentor_params = {
+            "from": SENDER_EMAIL,
+            "to": [booking['mentor_email']],
+            "subject": f"New Mock Interview - {booking['company_name']} with {booking['mentee_name']}",
+            "html": mentor_html,
+            "attachments": [{
+                "filename": "interview.ics",
+                "content": ical_content
+            }]
+        }
+        
+        if BCC_EMAIL:
+            mentor_params["bcc"] = [BCC_EMAIL]
+        
+        # Send both emails
+        mentee_result = await asyncio.to_thread(resend.Emails.send, mentee_params)
+        mentor_result = await asyncio.to_thread(resend.Emails.send, mentor_params)
+        
+        logger.info(f"Booking confirmation emails sent - Mentee: {mentee_result.get('id')}, Mentor: {mentor_result.get('id')}")
+        return {"mentee": mentee_result, "mentor": mentor_result}
+        
+    except Exception as e:
+        logger.error(f"Failed to send booking confirmation emails: {str(e)}")
+        return None
+
+async def send_cancellation_notification_emails(booking: dict, cancelled_by_role: str = "mentee", cancellation_reason: str = None):
+    """
+    Send cancellation notification emails to both mentor and mentee.
+    Includes cancellation reason if provided and session details.
+    Requirements: 8.5
+    """
+    try:
+        # Format date and time for display
+        slot_datetime = f"{booking['date']} at {booking['start_time']} - {booking['end_time']}"
+        
+        # Prepare cancellation reason section if available
+        reason_section = ""
+        if cancellation_reason:
+            reason_section = f"""
+                    <div style="background-color: #0f172a; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+                        <h3 style="color: #f59e0b; margin: 0 0 12px 0; font-size: 16px;">📝 Cancellation Reason</h3>
+                        <p style="color: #e2e8f0; font-size: 14px; line-height: 1.6; margin: 0;">{cancellation_reason}</p>
+                    </div>
+            """
+        
+        # Determine who cancelled
+        cancelled_by_text = "the mentee" if cancelled_by_role == "mentee" else "the mentor"
+        
+        # Send email to mentee
+        mentee_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 40px 20px;">
+                <tr>
+                    <td align="center">
+                        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #1e293b; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
+                            <!-- Header with Logo -->
+                            <tr>
+                                <td style="padding: 30px 40px; text-align: center; border-bottom: 1px solid #334155;">
+                                    <img src="{LOGO_URL}" alt="Codementee" style="height: 50px; width: auto;" />
+                                </td>
+                            </tr>
+                            
+                            <!-- Cancellation Message -->
+                            <tr>
+                                <td style="padding: 40px;">
+                                    <h1 style="color: #ef4444; margin: 0 0 20px 0; font-size: 28px; font-weight: 600;">Mock Interview Cancelled ❌</h1>
+                                    <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        Hi <strong>{booking['mentee_name']}</strong>,
+                                    </p>
+                                    <p style="color: #94a3b8; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        Your mock interview for <strong style="color: #06b6d4;">{booking['company_name']}</strong> has been cancelled by {cancelled_by_text}.
+                                    </p>
+                                    
+                                    <!-- Session Details -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; border-radius: 12px; margin: 30px 0;">
+                                        <tr>
+                                            <td style="padding: 24px;">
+                                                <h3 style="color: #ef4444; margin: 0 0 16px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Cancelled Session Details</h3>
+                                                <table width="100%" cellpadding="0" cellspacing="0">
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Date & Time</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{slot_datetime}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Company</td>
+                                                        <td style="color: #06b6d4; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['company_name']}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Interview Type</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['interview_type'].replace('_', ' ').title()}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Mentor</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['mentor_name']}</td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    {reason_section}
+                                    
+                                    <!-- CTA Button -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                                        <tr>
+                                            <td align="center">
+                                                <a href="https://codementee.com/mentee/book" style="display: inline-block; background-color: #06b6d4; color: #0f172a; padding: 16px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 6px rgba(6, 182, 212, 0.3);">
+                                                    Book Another Interview
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <p style="color: #64748b; font-size: 12px; text-align: center; margin: 20px 0 0 0;">
+                                        Your interview quota has been restored. You can book another session anytime.
+                                    </p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td style="padding: 24px 40px; background-color: #0f172a; border-top: 1px solid #334155;">
+                                    <p style="color: #64748b; font-size: 12px; margin: 0; text-align: center;">
+                                        © 2025 Codementee. All rights reserved.<br>
+                                        Questions? Reply to this email or contact us at support@codementee.com
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        
+        # Send email to mentor
+        mentor_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 40px 20px;">
+                <tr>
+                    <td align="center">
+                        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #1e293b; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
+                            <!-- Header with Logo -->
+                            <tr>
+                                <td style="padding: 30px 40px; text-align: center; border-bottom: 1px solid #334155;">
+                                    <img src="{LOGO_URL}" alt="Codementee" style="height: 50px; width: auto;" />
+                                </td>
+                            </tr>
+                            
+                            <!-- Cancellation Message -->
+                            <tr>
+                                <td style="padding: 40px;">
+                                    <h1 style="color: #ef4444; margin: 0 0 20px 0; font-size: 28px; font-weight: 600;">Mock Interview Cancelled ❌</h1>
+                                    <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        Hi <strong>{booking['mentor_name']}</strong>,
+                                    </p>
+                                    <p style="color: #94a3b8; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        The mock interview with <strong style="color: #06b6d4;">{booking['mentee_name']}</strong> for <strong>{booking['company_name']}</strong> has been cancelled by {cancelled_by_text}.
+                                    </p>
+                                    
+                                    <!-- Session Details -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; border-radius: 12px; margin: 30px 0;">
+                                        <tr>
+                                            <td style="padding: 24px;">
+                                                <h3 style="color: #ef4444; margin: 0 0 16px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Cancelled Session Details</h3>
+                                                <table width="100%" cellpadding="0" cellspacing="0">
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Date & Time</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{slot_datetime}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Mentee</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['mentee_name']}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Company</td>
+                                                        <td style="color: #06b6d4; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['company_name']}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Interview Type</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['interview_type'].replace('_', ' ').title()}</td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    {reason_section}
+                                    
+                                    <p style="color: #64748b; font-size: 12px; text-align: center; margin: 20px 0 0 0;">
+                                        Your slot has been made available again for other mentees to book.
+                                    </p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td style="padding: 24px 40px; background-color: #0f172a; border-top: 1px solid #334155;">
+                                    <p style="color: #64748b; font-size: 12px; margin: 0; text-align: center;">
+                                        © 2025 Codementee. All rights reserved.<br>
+                                        Questions? Reply to this email or contact us at support@codementee.com
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        
+        mentee_params = {
+            "from": SENDER_EMAIL,
+            "to": [booking['mentee_email']],
+            "subject": f"Mock Interview Cancelled - {booking['company_name']}",
+            "html": mentee_html
+        }
+        
+        if BCC_EMAIL:
+            mentee_params["bcc"] = [BCC_EMAIL]
+        
+        mentor_params = {
+            "from": SENDER_EMAIL,
+            "to": [booking['mentor_email']],
+            "subject": f"Mock Interview Cancelled - {booking['company_name']} with {booking['mentee_name']}",
+            "html": mentor_html
+        }
+        
+        if BCC_EMAIL:
+            mentor_params["bcc"] = [BCC_EMAIL]
+        
+        # Send both emails
+        mentee_result = await asyncio.to_thread(resend.Emails.send, mentee_params)
+        mentor_result = await asyncio.to_thread(resend.Emails.send, mentor_params)
+        
+        logger.info(f"Cancellation notification emails sent - Mentee: {mentee_result.get('id')}, Mentor: {mentor_result.get('id')}")
+        return {"mentee": mentee_result, "mentor": mentor_result}
+        
+    except Exception as e:
+        logger.error(f"Failed to send cancellation notification emails: {str(e)}")
+        return None
+
+async def send_reminder_emails(booking: dict):
+    """
+    Send reminder emails 24 hours before session.
+    Includes session details, preparation tips for mentee, and mentee's topics/notes for mentor.
+    Skip if session is cancelled.
+    Requirements: 14.1, 14.2, 14.3, 14.4, 14.5
+    """
+    try:
+        # Check if booking is cancelled
+        if booking.get('status') == 'cancelled':
+            logger.info(f"Skipping reminder emails for cancelled booking {booking['id']}")
+            return None
+        
+        # Format date and time for display
+        slot_datetime = f"{booking['date']} at {booking['start_time']} - {booking['end_time']}"
+        
+        # Send email to mentee with preparation tips
+        mentee_prep_tips = """
+                    <div style="background-color: #0f172a; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #10b981;">
+                        <h3 style="color: #10b981; margin: 0 0 12px 0; font-size: 16px;">💡 Preparation Tips</h3>
+                        <ul style="margin: 0; padding-left: 20px; color: #e2e8f0; font-size: 14px; line-height: 1.8;">
+                            <li>Review the company's recent projects and tech stack</li>
+                            <li>Practice explaining your thought process out loud</li>
+                            <li>Prepare questions to ask your mentor</li>
+                            <li>Test your microphone and camera before the session</li>
+                            <li>Have a pen and paper ready for notes</li>
+                            <li>Join 5 minutes early to ensure everything works</li>
+                        </ul>
+                    </div>
+        """
+        
+        mentee_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 40px 20px;">
+                <tr>
+                    <td align="center">
+                        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #1e293b; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
+                            <!-- Header with Logo -->
+                            <tr>
+                                <td style="padding: 30px 40px; text-align: center; border-bottom: 1px solid #334155;">
+                                    <img src="{LOGO_URL}" alt="Codementee" style="height: 50px; width: auto;" />
+                                </td>
+                            </tr>
+                            
+                            <!-- Reminder Message -->
+                            <tr>
+                                <td style="padding: 40px;">
+                                    <h1 style="color: #f59e0b; margin: 0 0 20px 0; font-size: 28px; font-weight: 600;">Mock Interview Tomorrow! ⏰</h1>
+                                    <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        Hi <strong>{booking['mentee_name']}</strong>,
+                                    </p>
+                                    <p style="color: #94a3b8; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        This is a friendly reminder that your mock interview with <strong style="color: #06b6d4;">{booking['mentor_name']}</strong> for <strong>{booking['company_name']}</strong> is scheduled for tomorrow!
+                                    </p>
+                                    
+                                    <!-- Session Details -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; border-radius: 12px; margin: 30px 0;">
+                                        <tr>
+                                            <td style="padding: 24px;">
+                                                <h3 style="color: #f59e0b; margin: 0 0 16px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Session Details</h3>
+                                                <table width="100%" cellpadding="0" cellspacing="0">
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Date & Time</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{slot_datetime}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Company</td>
+                                                        <td style="color: #06b6d4; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['company_name']}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Interview Type</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['interview_type'].replace('_', ' ').title()}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Mentor</td>
+                                                        <td style="color: #10b981; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['mentor_name']}</td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    {mentee_prep_tips}
+                                    
+                                    <!-- CTA Button -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                                        <tr>
+                                            <td align="center">
+                                                <a href="{booking['meeting_link']}" style="display: inline-block; background-color: #10b981; color: white; padding: 16px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
+                                                    Join Meeting
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <p style="color: #64748b; font-size: 12px; text-align: center; margin: 20px 0 0 0;">
+                                        Good luck! You've got this! 💪
+                                    </p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td style="padding: 24px 40px; background-color: #0f172a; border-top: 1px solid #334155;">
+                                    <p style="color: #64748b; font-size: 12px; margin: 0; text-align: center;">
+                                        © 2025 Codementee. All rights reserved.<br>
+                                        Questions? Reply to this email or contact us at support@codementee.com
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        
+        # Send email to mentor with mentee's topics and notes
+        mentor_topics_section = ""
+        if booking.get('specific_topics'):
+            topics_html = "".join([f"<li style='color: #e2e8f0; padding: 4px 0;'>{topic}</li>" for topic in booking['specific_topics']])
+            mentor_topics_section = f"""
+                    <div style="background-color: #0f172a; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #06b6d4;">
+                        <h3 style="color: #06b6d4; margin: 0 0 12px 0; font-size: 16px;">🎯 Mentee's Focus Topics</h3>
+                        <ul style="margin: 0; padding-left: 20px;">{topics_html}</ul>
+                    </div>
+            """
+        
+        mentor_notes_section = ""
+        if booking.get('additional_notes'):
+            mentor_notes_section = f"""
+                    <div style="background-color: #0f172a; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+                        <h3 style="color: #f59e0b; margin: 0 0 12px 0; font-size: 16px;">💬 Mentee's Additional Notes</h3>
+                        <p style="color: #e2e8f0; font-size: 14px; line-height: 1.6; margin: 0;">{booking['additional_notes']}</p>
+                    </div>
+            """
+        
+        mentor_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 40px 20px;">
+                <tr>
+                    <td align="center">
+                        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #1e293b; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
+                            <!-- Header with Logo -->
+                            <tr>
+                                <td style="padding: 30px 40px; text-align: center; border-bottom: 1px solid #334155;">
+                                    <img src="{LOGO_URL}" alt="Codementee" style="height: 50px; width: auto;" />
+                                </td>
+                            </tr>
+                            
+                            <!-- Reminder Message -->
+                            <tr>
+                                <td style="padding: 40px;">
+                                    <h1 style="color: #f59e0b; margin: 0 0 20px 0; font-size: 28px; font-weight: 600;">Mock Interview Tomorrow! ⏰</h1>
+                                    <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        Hi <strong>{booking['mentor_name']}</strong>,
+                                    </p>
+                                    <p style="color: #94a3b8; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        This is a friendly reminder that you have a mock interview scheduled tomorrow with <strong style="color: #06b6d4;">{booking['mentee_name']}</strong> for <strong>{booking['company_name']}</strong>.
+                                    </p>
+                                    
+                                    <!-- Session Details -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; border-radius: 12px; margin: 30px 0;">
+                                        <tr>
+                                            <td style="padding: 24px;">
+                                                <h3 style="color: #f59e0b; margin: 0 0 16px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Session Details</h3>
+                                                <table width="100%" cellpadding="0" cellspacing="0">
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Date & Time</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{slot_datetime}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Mentee</td>
+                                                        <td style="color: #10b981; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['mentee_name']}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Company</td>
+                                                        <td style="color: #06b6d4; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['company_name']}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Interview Type</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['interview_type'].replace('_', ' ').title()}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Experience Level</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['experience_level'].replace('_', ' ').title()}</td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    {mentor_topics_section}
+                                    {mentor_notes_section}
+                                    
+                                    <!-- CTA Button -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                                        <tr>
+                                            <td align="center">
+                                                <a href="{booking['meeting_link']}" style="display: inline-block; background-color: #06b6d4; color: #0f172a; padding: 16px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 6px rgba(6, 182, 212, 0.3);">
+                                                    Join Meeting
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <p style="color: #64748b; font-size: 12px; text-align: center; margin: 20px 0 0 0;">
+                                        Please join 5 minutes early to prepare
+                                    </p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td style="padding: 24px 40px; background-color: #0f172a; border-top: 1px solid #334155;">
+                                    <p style="color: #64748b; font-size: 12px; margin: 0; text-align: center;">
+                                        © 2025 Codementee. All rights reserved.<br>
+                                        Questions? Reply to this email or contact us at support@codementee.com
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        
+        mentee_params = {
+            "from": SENDER_EMAIL,
+            "to": [booking['mentee_email']],
+            "subject": f"Reminder: Mock Interview Tomorrow - {booking['company_name']}",
+            "html": mentee_html
+        }
+        
+        if BCC_EMAIL:
+            mentee_params["bcc"] = [BCC_EMAIL]
+        
+        mentor_params = {
+            "from": SENDER_EMAIL,
+            "to": [booking['mentor_email']],
+            "subject": f"Reminder: Mock Interview Tomorrow - {booking['company_name']} with {booking['mentee_name']}",
+            "html": mentor_html
+        }
+        
+        if BCC_EMAIL:
+            mentor_params["bcc"] = [BCC_EMAIL]
+        
+        # Send both emails
+        mentee_result = await asyncio.to_thread(resend.Emails.send, mentee_params)
+        mentor_result = await asyncio.to_thread(resend.Emails.send, mentor_params)
+        
+        logger.info(f"Reminder emails sent - Mentee: {mentee_result.get('id')}, Mentor: {mentor_result.get('id')}")
+        return {"mentee": mentee_result, "mentor": mentor_result}
+        
+    except Exception as e:
+        logger.error(f"Failed to send reminder emails: {str(e)}")
+        return None
+
+async def check_and_send_reminder_emails():
+    """
+    Background job to check for sessions 24 hours away and queue reminder emails.
+    This should be called by a scheduler (cron job or background task).
+    Requirements: 14.1-14.5
+    """
+    try:
+        # Calculate the target date (24 hours from now)
+        target_datetime = datetime.now(timezone.utc) + timedelta(hours=24)
+        target_date = target_datetime.date().isoformat()
+        target_hour = target_datetime.hour
+        
+        # Find bookings scheduled for approximately 24 hours from now
+        # We'll check bookings on the target date within a 2-hour window
+        bookings = await db.bookings.find({
+            "date": target_date,
+            "status": "confirmed"  # Only send reminders for confirmed bookings
+        }).to_list(1000)
+        
+        reminders_sent = 0
+        for booking in bookings:
+            # Parse the booking time
+            booking_hour = int(booking['start_time'].split(':')[0])
+            
+            # Check if this booking is within our 2-hour window
+            if abs(booking_hour - target_hour) <= 1:
+                # Send reminder emails
+                result = await send_reminder_emails(dict(booking))
+                if result:
+                    reminders_sent += 1
+        
+        logger.info(f"Reminder email check complete. Sent {reminders_sent} reminders.")
+        return {"reminders_sent": reminders_sent}
+        
+    except Exception as e:
+        logger.error(f"Failed to check and send reminder emails: {str(e)}")
+        return None
+
+async def send_feedback_request_emails(booking: dict):
+    """
+    Send feedback request emails 1 hour after session end time.
+    Includes direct link to feedback form and session details.
+    Skip if feedback already submitted.
+    Requirements: 15.1, 15.2, 15.3, 15.4, 15.5
+    """
+    try:
+        # Check if feedback already submitted
+        if booking.get('feedback_submitted'):
+            logger.info(f"Skipping feedback request for booking {booking['id']} - feedback already submitted")
+            return None
+        
+        # Format date and time for display
+        slot_datetime = f"{booking['date']} at {booking['start_time']} - {booking['end_time']}"
+        
+        # Generate feedback form links
+        mentee_feedback_link = f"https://codementee.com/mentee/feedback/{booking['id']}"
+        mentor_feedback_link = f"https://codementee.com/mentor/feedback/{booking['id']}"
+        
+        # Send email to mentee
+        mentee_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 40px 20px;">
+                <tr>
+                    <td align="center">
+                        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #1e293b; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
+                            <!-- Header with Logo -->
+                            <tr>
+                                <td style="padding: 30px 40px; text-align: center; border-bottom: 1px solid #334155;">
+                                    <img src="{LOGO_URL}" alt="Codementee" style="height: 50px; width: auto;" />
+                                </td>
+                            </tr>
+                            
+                            <!-- Feedback Request Message -->
+                            <tr>
+                                <td style="padding: 40px;">
+                                    <h1 style="color: #06b6d4; margin: 0 0 20px 0; font-size: 28px; font-weight: 600;">How Was Your Interview? 💭</h1>
+                                    <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        Hi <strong>{booking['mentee_name']}</strong>,
+                                    </p>
+                                    <p style="color: #94a3b8; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        We hope your mock interview with <strong style="color: #06b6d4;">{booking['mentor_name']}</strong> went well! Your feedback helps us improve and helps other mentees make informed decisions.
+                                    </p>
+                                    
+                                    <!-- Session Details -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; border-radius: 12px; margin: 30px 0;">
+                                        <tr>
+                                            <td style="padding: 24px;">
+                                                <h3 style="color: #06b6d4; margin: 0 0 16px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Session Details</h3>
+                                                <table width="100%" cellpadding="0" cellspacing="0">
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Date & Time</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{slot_datetime}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Company</td>
+                                                        <td style="color: #06b6d4; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['company_name']}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Interview Type</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['interview_type'].replace('_', ' ').title()}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Mentor</td>
+                                                        <td style="color: #10b981; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['mentor_name']}</td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <div style="background-color: #0f172a; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #10b981;">
+                                        <h3 style="color: #10b981; margin: 0 0 12px 0; font-size: 16px;">📝 Your Feedback Matters</h3>
+                                        <p style="color: #e2e8f0; font-size: 14px; line-height: 1.6; margin: 0;">
+                                            Please take 2 minutes to share your experience. Your honest feedback helps us maintain quality and helps other mentees choose the right mentor.
+                                        </p>
+                                    </div>
+                                    
+                                    <!-- CTA Button -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                                        <tr>
+                                            <td align="center">
+                                                <a href="{mentee_feedback_link}" style="display: inline-block; background-color: #10b981; color: white; padding: 16px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
+                                                    Submit Feedback
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <p style="color: #64748b; font-size: 12px; text-align: center; margin: 20px 0 0 0;">
+                                        This should only take 2 minutes of your time
+                                    </p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td style="padding: 24px 40px; background-color: #0f172a; border-top: 1px solid #334155;">
+                                    <p style="color: #64748b; font-size: 12px; margin: 0; text-align: center;">
+                                        © 2025 Codementee. All rights reserved.<br>
+                                        Questions? Reply to this email or contact us at support@codementee.com
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        
+        # Send email to mentor
+        mentor_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 40px 20px;">
+                <tr>
+                    <td align="center">
+                        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #1e293b; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
+                            <!-- Header with Logo -->
+                            <tr>
+                                <td style="padding: 30px 40px; text-align: center; border-bottom: 1px solid #334155;">
+                                    <img src="{LOGO_URL}" alt="Codementee" style="height: 50px; width: auto;" />
+                                </td>
+                            </tr>
+                            
+                            <!-- Feedback Request Message -->
+                            <tr>
+                                <td style="padding: 40px;">
+                                    <h1 style="color: #06b6d4; margin: 0 0 20px 0; font-size: 28px; font-weight: 600;">Share Your Feedback 💭</h1>
+                                    <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        Hi <strong>{booking['mentor_name']}</strong>,
+                                    </p>
+                                    <p style="color: #94a3b8; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                        Thank you for conducting the mock interview with <strong style="color: #06b6d4;">{booking['mentee_name']}</strong>! Please share your feedback to help them improve.
+                                    </p>
+                                    
+                                    <!-- Session Details -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; border-radius: 12px; margin: 30px 0;">
+                                        <tr>
+                                            <td style="padding: 24px;">
+                                                <h3 style="color: #06b6d4; margin: 0 0 16px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Session Details</h3>
+                                                <table width="100%" cellpadding="0" cellspacing="0">
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Date & Time</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{slot_datetime}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Mentee</td>
+                                                        <td style="color: #10b981; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['mentee_name']}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Company</td>
+                                                        <td style="color: #06b6d4; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['company_name']}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Interview Type</td>
+                                                        <td style="color: #e2e8f0; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{booking['interview_type'].replace('_', ' ').title()}</td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <div style="background-color: #0f172a; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #10b981;">
+                                        <h3 style="color: #10b981; margin: 0 0 12px 0; font-size: 16px;">📝 Your Feedback Helps Them Grow</h3>
+                                        <p style="color: #e2e8f0; font-size: 14px; line-height: 1.6; margin: 0;">
+                                            Please provide constructive feedback on their performance. Your insights will help them prepare better for their actual interviews.
+                                        </p>
+                                    </div>
+                                    
+                                    <!-- CTA Button -->
+                                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                                        <tr>
+                                            <td align="center">
+                                                <a href="{mentor_feedback_link}" style="display: inline-block; background-color: #06b6d4; color: #0f172a; padding: 16px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 6px rgba(6, 182, 212, 0.3);">
+                                                    Submit Feedback
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <p style="color: #64748b; font-size: 12px; text-align: center; margin: 20px 0 0 0;">
+                                        This should only take 3-5 minutes of your time
+                                    </p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td style="padding: 24px 40px; background-color: #0f172a; border-top: 1px solid #334155;">
+                                    <p style="color: #64748b; font-size: 12px; margin: 0; text-align: center;">
+                                        © 2025 Codementee. All rights reserved.<br>
+                                        Questions? Reply to this email or contact us at support@codementee.com
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        
+        mentee_params = {
+            "from": SENDER_EMAIL,
+            "to": [booking['mentee_email']],
+            "subject": f"How was your interview with {booking['mentor_name']}?",
+            "html": mentee_html
+        }
+        
+        if BCC_EMAIL:
+            mentee_params["bcc"] = [BCC_EMAIL]
+        
+        mentor_params = {
+            "from": SENDER_EMAIL,
+            "to": [booking['mentor_email']],
+            "subject": f"Feedback Request - {booking['company_name']} with {booking['mentee_name']}",
+            "html": mentor_html
+        }
+        
+        if BCC_EMAIL:
+            mentor_params["bcc"] = [BCC_EMAIL]
+        
+        # Send both emails
+        mentee_result = await asyncio.to_thread(resend.Emails.send, mentee_params)
+        mentor_result = await asyncio.to_thread(resend.Emails.send, mentor_params)
+        
+        logger.info(f"Feedback request emails sent - Mentee: {mentee_result.get('id')}, Mentor: {mentor_result.get('id')}")
+        return {"mentee": mentee_result, "mentor": mentor_result}
+        
+    except Exception as e:
+        logger.error(f"Failed to send feedback request emails: {str(e)}")
+        return None
+
+async def check_and_send_feedback_requests():
+    """
+    Background job to check for completed sessions and send feedback requests 1 hour after end time.
+    This should be called by a scheduler (cron job or background task).
+    Requirements: 15.1-15.5
+    """
+    try:
+        # Calculate the target time (1 hour ago)
+        target_datetime = datetime.now(timezone.utc) - timedelta(hours=1)
+        target_date = target_datetime.date().isoformat()
+        target_hour = target_datetime.hour
+        
+        # Find bookings that ended approximately 1 hour ago
+        bookings = await db.bookings.find({
+            "date": target_date,
+            "status": "confirmed",
+            "feedback_submitted": False
+        }).to_list(1000)
+        
+        feedback_requests_sent = 0
+        for booking in bookings:
+            # Parse the booking end time
+            end_hour = int(booking['end_time'].split(':')[0])
+            
+            # Check if this booking ended within our 2-hour window
+            if abs(end_hour - target_hour) <= 1:
+                # Send feedback request emails
+                result = await send_feedback_request_emails(dict(booking))
+                if result:
+                    feedback_requests_sent += 1
+        
+        logger.info(f"Feedback request check complete. Sent {feedback_requests_sent} requests.")
+        return {"feedback_requests_sent": feedback_requests_sent}
+        
+    except Exception as e:
+        logger.error(f"Failed to check and send feedback requests: {str(e)}")
+        return None
+
+async def update_completed_slot_statuses():
+    """
+    Background job to check for past sessions and update slot status to "completed".
+    This should be called by a scheduler (cron job or background task).
+    Requirements: 16.4
+    """
+    try:
+        # Get current date and time
+        now = datetime.now(timezone.utc)
+        current_date = now.date().isoformat()
+        current_time = now.strftime('%H:%M')
+        
+        # Find all booked slots where the end time has passed
+        # First, get all booked slots from today and earlier
+        slots = await db.mentor_slots.find({
+            "status": "booked",
+            "date": {"$lte": current_date}
+        }).to_list(1000)
+        
+        slots_updated = 0
+        for slot in slots:
+            slot_date = slot['date']
+            slot_end_time = slot['end_time']
+            
+            # Create datetime for slot end
+            try:
+                slot_end_datetime = datetime.fromisoformat(f"{slot_date}T{slot_end_time}:00")
+                if slot_end_datetime.tzinfo is None:
+                    slot_end_datetime = slot_end_datetime.replace(tzinfo=timezone.utc)
+                
+                # If slot end time has passed, update status to completed
+                if slot_end_datetime < now:
+                    await db.mentor_slots.update_one(
+                        {"id": slot['id']},
+                        {"$set": {
+                            "status": "completed",
+                            "updated_at": now.isoformat()
+                        }}
+                    )
+                    slots_updated += 1
+                    logger.info(f"Updated slot {slot['id']} to completed status")
+            except Exception as e:
+                logger.error(f"Failed to process slot {slot.get('id')}: {str(e)}")
+                continue
+        
+        logger.info(f"Slot status update complete. Updated {slots_updated} slots to completed.")
+        return {"slots_updated": slots_updated}
+        
+    except Exception as e:
+        logger.error(f"Failed to update completed slot statuses: {str(e)}")
+        return None
+
+# ============ SCHEDULER SETUP ============
+scheduler = AsyncIOScheduler()
+
+def start_scheduler():
+    """
+    Start the background scheduler for automated tasks.
+    Runs:
+    - Slot status updates every hour
+    - Reminder emails every hour
+    - Feedback requests every hour
+    """
+    try:
+        # Update completed slot statuses every hour
+        scheduler.add_job(
+            update_completed_slot_statuses,
+            CronTrigger(minute=0),  # Run at the top of every hour
+            id='update_slot_statuses',
+            name='Update completed slot statuses',
+            replace_existing=True
+        )
+        
+        # Send reminder emails every hour
+        scheduler.add_job(
+            check_and_send_reminder_emails,
+            CronTrigger(minute=15),  # Run at 15 minutes past every hour
+            id='send_reminder_emails',
+            name='Send reminder emails for sessions 24h away',
+            replace_existing=True
+        )
+        
+        # Send feedback requests every hour
+        scheduler.add_job(
+            check_and_send_feedback_requests,
+            CronTrigger(minute=30),  # Run at 30 minutes past every hour
+            id='send_feedback_requests',
+            name='Send feedback requests for completed sessions',
+            replace_existing=True
+        )
+        
+        scheduler.start()
+        logger.info("Background scheduler started successfully")
+        logger.info("Scheduled jobs:")
+        logger.info("  - Update slot statuses: Every hour at :00")
+        logger.info("  - Send reminder emails: Every hour at :15")
+        logger.info("  - Send feedback requests: Every hour at :30")
+        
+    except Exception as e:
+        logger.error(f"Failed to start scheduler: {str(e)}")
+
 # ============ AUTH ROUTES ============
 @api_router.post("/auth/register")
 async def register(user: UserCreate):
@@ -587,7 +2253,7 @@ async def register_free_user(data: FreeUserCreate):
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    # Create free mentee account
+    # Create free mentee account with quota fields
     user_doc = {
         "id": str(uuid.uuid4()),
         "name": data.name,
@@ -600,6 +2266,18 @@ async def register_free_user(data: FreeUserCreate):
         "mentor_id": None,
         "current_role": data.current_role,
         "target_role": data.target_role,
+        "interview_quota_total": 0,
+        "interview_quota_remaining": 0,
+        "plan_features": {
+            "mock_interviews": 0,
+            "resume_reviews": 0,
+            "offline_profile_creation": 0,
+            "ai_tools_access": "none",
+            "community_access": False,
+            "priority_support": False,
+            "strategy_calls": 0,
+            "referral_guidance": False
+        },
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -628,6 +2306,67 @@ async def login(credentials: UserLogin):
     if not verify_password(credentials.password, user["password"]):
         logger.warning(f"Invalid password for user: {credentials.email}")
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # Ensure user has quota fields (for users created before migration)
+    if "interview_quota_total" not in user:
+        # Determine quota based on plan
+        plan_configs = {
+            "starter": {"quota": 1, "features": {
+                "mock_interviews": 1, "resume_reviews": 1, "offline_profile_creation": 0,
+                "ai_tools_access": "limited", "community_access": False, "priority_support": False,
+                "strategy_calls": 0, "referral_guidance": False
+            }},
+            "pro": {"quota": 3, "features": {
+                "mock_interviews": 3, "resume_reviews": 1, "offline_profile_creation": 0,
+                "ai_tools_access": "full", "community_access": True, "priority_support": False,
+                "strategy_calls": 1, "referral_guidance": False
+            }},
+            "elite": {"quota": 6, "features": {
+                "mock_interviews": 6, "resume_reviews": 1, "offline_profile_creation": 1,
+                "ai_tools_access": "full", "community_access": True, "priority_support": True,
+                "strategy_calls": 0, "referral_guidance": True
+            }}
+        }
+        
+        plan_id = user.get("plan_id")
+        if plan_id and plan_id in plan_configs:
+            config = plan_configs[plan_id]
+            # Count existing bookings
+            bookings_count = await db.bookings.count_documents({
+                "mentee_id": user["id"],
+                "status": {"$in": ["confirmed", "completed"]}
+            })
+            remaining = max(0, config["quota"] - bookings_count)
+            
+            # Update user with quota fields
+            await db.users.update_one(
+                {"id": user["id"]},
+                {"$set": {
+                    "interview_quota_total": config["quota"],
+                    "interview_quota_remaining": remaining,
+                    "plan_features": config["features"]
+                }}
+            )
+            user["interview_quota_total"] = config["quota"]
+            user["interview_quota_remaining"] = remaining
+            user["plan_features"] = config["features"]
+        else:
+            # Free user or unknown plan
+            user["interview_quota_total"] = 0
+            user["interview_quota_remaining"] = 0
+            user["plan_features"] = {
+                "mock_interviews": 0, "resume_reviews": 0, "offline_profile_creation": 0,
+                "ai_tools_access": "none", "community_access": False, "priority_support": False,
+                "strategy_calls": 0, "referral_guidance": False
+            }
+            await db.users.update_one(
+                {"id": user["id"]},
+                {"$set": {
+                    "interview_quota_total": 0,
+                    "interview_quota_remaining": 0,
+                    "plan_features": user["plan_features"]
+                }}
+            )
     
     logger.info(f"Login successful for user: {credentials.email}")
     token = create_token(user["id"], user["role"])
@@ -1056,6 +2795,281 @@ async def assign_meet_link(link_id: str, booking_id: str):
         {"$set": {"status": "in_use", "current_booking_id": booking_id}}
     )
 
+# ============ BUG REPORT SYSTEM ============
+@api_router.post("/bug-reports")
+async def create_bug_report(data: BugReportCreate):
+    """Create a bug report - accessible to all users (authenticated or not)"""
+    bug_report = {
+        "id": str(uuid.uuid4()),
+        "title": data.title,
+        "description": data.description,
+        "severity": data.severity,
+        "priority": data.priority if hasattr(data, 'priority') else "medium",
+        "page_url": data.page,
+        "screenshot_url": data.screenshot_url if hasattr(data, 'screenshot_url') else None,
+        "reporter_id": data.user_id,
+        "reporter_name": data.user_name,
+        "reporter_email": data.user_email,
+        "reporter_role": data.user_role,
+        "status": "open",  # open, in_progress, resolved
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.bug_reports.insert_one(bug_report)
+    
+    # Send email notification to admin
+    try:
+        await send_bug_report_email(bug_report)
+    except Exception as e:
+        logger.error(f"Failed to send bug report email: {str(e)}")
+    
+    return {"message": "Bug report submitted successfully", "id": bug_report["id"]}
+
+@api_router.get("/admin/bug-reports")
+async def get_bug_reports(user=Depends(get_current_user)):
+    """Get all bug reports - admin only"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    bug_reports = await db.bug_reports.find().sort("created_at", -1).to_list(1000)
+    return [serialize_doc(dict(b)) for b in bug_reports]
+
+@api_router.get("/bug-reports/my")
+async def get_my_bug_reports(user=Depends(get_current_user)):
+    """Get bug reports submitted by current user"""
+    bug_reports = await db.bug_reports.find({"reporter_id": user["id"]}).sort("created_at", -1).to_list(1000)
+    return [serialize_doc(dict(b)) for b in bug_reports]
+
+@api_router.put("/admin/bug-reports/{bug_id}/status")
+async def update_bug_status(bug_id: str, data: dict, user=Depends(get_current_user)):
+    """Update bug report status - admin only"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    status = data.get("status")
+    if status not in ["open", "in_progress", "resolved"]:
+        raise HTTPException(status_code=400, detail="Invalid status")
+    
+    # Get the bug report
+    bug_report = await db.bug_reports.find_one({"id": bug_id})
+    if not bug_report:
+        raise HTTPException(status_code=404, detail="Bug report not found")
+    
+    # Update status
+    await db.bug_reports.update_one(
+        {"id": bug_id},
+        {"$set": {"status": status, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Create notification for the reporter
+    notification = {
+        "id": str(uuid.uuid4()),
+        "user_id": bug_report["reporter_id"],
+        "type": "bug_status_update",
+        "title": "Bug Report Status Updated",
+        "message": f"Your bug report '{bug_report['title']}' has been marked as {status.replace('_', ' ')}",
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.notifications.insert_one(notification)
+    
+    return {"message": "Bug report status updated"}
+
+# ============ NOTIFICATION SYSTEM ============
+@api_router.get("/notifications")
+async def get_notifications(user=Depends(get_current_user)):
+    """Get notifications for current user"""
+    notifications = await db.notifications.find({"user_id": user["id"]}).sort("created_at", -1).limit(50).to_list(50)
+    return [serialize_doc(dict(n)) for n in notifications]
+
+@api_router.put("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, user=Depends(get_current_user)):
+    """Mark notification as read"""
+    await db.notifications.update_one(
+        {"id": notification_id, "user_id": user["id"]},
+        {"$set": {"read": True}}
+    )
+    return {"message": "Notification marked as read"}
+
+@api_router.get("/notifications/unread/count")
+async def get_unread_count(user=Depends(get_current_user)):
+    """Get count of unread notifications"""
+    count = await db.notifications.count_documents({"user_id": user["id"], "read": False})
+    return {"count": count}
+
+# ============ ADMIN RESUME REVIEW MANAGEMENT ============
+@api_router.get("/admin/resume-requests")
+async def get_all_resume_requests(user=Depends(get_current_user)):
+    """Get all resume review requests - admin only"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    requests = await db.resume_requests.find().sort("created_at", -1).to_list(1000)
+    
+    # Remove resume_data from response (too large)
+    for req in requests:
+        if "resume_data" in req:
+            del req["resume_data"]
+    
+    return [serialize_doc(dict(r)) for r in requests]
+
+@api_router.get("/admin/resume-requests/{request_id}/download")
+async def admin_download_resume(request_id: str, user=Depends(get_current_user)):
+    """Download the submitted resume - admin only"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    request = await db.resume_requests.find_one({"id": request_id})
+    if not request:
+        raise HTTPException(status_code=404, detail="Resume request not found")
+    
+    # Decode base64 data
+    import base64
+    file_content = base64.b64decode(request["resume_data"])
+    
+    from fastapi.responses import Response
+    return Response(
+        content=file_content,
+        media_type=request["resume_content_type"],
+        headers={"Content-Disposition": f"attachment; filename={request['resume_filename']}"}
+    )
+
+@api_router.put("/admin/resume-requests/{request_id}/status")
+async def update_resume_status(request_id: str, data: dict, user=Depends(get_current_user)):
+    """Update resume request status - admin only"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    status = data.get("status")
+    if not status or status not in ["pending", "in_review", "completed", "cancelled"]:
+        raise HTTPException(status_code=400, detail="Invalid status")
+    
+    await db.resume_requests.update_one(
+        {"id": request_id},
+        {"$set": {"status": status, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"message": "Resume request status updated"}
+
+@api_router.post("/admin/resume-requests/{request_id}/feedback")
+async def submit_resume_feedback(
+    request_id: str,
+    feedback_data: dict,
+    user=Depends(get_current_user)
+):
+    """Submit feedback for a resume review - admin only"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    request = await db.resume_requests.find_one({"id": request_id})
+    if not request:
+        raise HTTPException(status_code=404, detail="Resume request not found")
+    
+    # Check if this is an update (already has feedback)
+    is_update = request.get("status") == "completed" and request.get("reviewer_notes")
+    
+    # Structure the feedback object
+    feedback = {
+        "overall_score": feedback_data.get("overall_score"),
+        "ats_score": feedback_data.get("ats_score"),
+        "impact_score": feedback_data.get("impact_score"),
+        "strengths": feedback_data.get("strengths", ""),
+        "improvements": feedback_data.get("improvements", ""),
+        "ats_recommendations": feedback_data.get("ats_recommendations", ""),
+        "reviewer_notes": feedback_data.get("reviewer_notes", ""),
+        "reference_resume_url": feedback_data.get("reference_resume_url", ""),
+        "submitted_at": datetime.now(timezone.utc).isoformat(),
+        "updated": is_update
+    }
+    
+    # Update request with feedback
+    await db.resume_requests.update_one(
+        {"id": request_id},
+        {"$set": {
+            "status": "completed",
+            "reviewer_id": user["id"],
+            "reviewer_notes": feedback_data.get("reviewer_notes", ""),  # Keep for backward compatibility
+            "feedback": feedback,  # New structured feedback
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Send email notification to mentee
+    try:
+        email_subject_prefix = "🔄 Updated" if is_update else "✅"
+        await send_resume_feedback_email(request, feedback_data.get("reviewer_notes", ""), is_update)
+    except Exception as e:
+        logger.error(f"Failed to send resume feedback email: {str(e)}")
+    
+    return {"message": "Feedback updated successfully" if is_update else "Feedback submitted successfully"}
+
+@api_router.post("/admin/upload-reference-resume")
+async def upload_reference_resume(
+    file: UploadFile = File(...),
+    request_id: str = Form(...),
+    user=Depends(get_current_user)
+):
+    """Upload a reference resume file for a review"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    # Validate file
+    if not file.content_type in ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]:
+        raise HTTPException(status_code=400, detail="Only PDF and Word documents are allowed")
+    
+    # Read file content
+    file_content = await file.read()
+    if len(file_content) > 5 * 1024 * 1024:  # 5MB limit
+        raise HTTPException(status_code=400, detail="File size must be less than 5MB")
+    
+    # Store file as base64 in MongoDB (in production, use S3 or similar)
+    import base64
+    file_base64 = base64.b64encode(file_content).decode('utf-8')
+    
+    # Create a reference resume document
+    reference_doc = {
+        "id": str(uuid.uuid4()),
+        "request_id": request_id,
+        "filename": file.filename,
+        "content_type": file.content_type,
+        "file_data": file_base64,
+        "uploaded_by": user["id"],
+        "uploaded_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.reference_resumes.insert_one(reference_doc)
+    
+    # Return a download URL
+    file_url = f"/api/admin/reference-resume/{reference_doc['id']}/download"
+    
+    return {"file_url": file_url, "filename": file.filename}
+
+@api_router.get("/admin/reference-resume/{reference_id}/download")
+async def download_reference_resume(
+    reference_id: str,
+    user=Depends(get_current_user)
+):
+    """Download a reference resume file"""
+    # Allow both admin and mentees to download
+    if user["role"] not in ["admin", "mentee"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    reference = await db.reference_resumes.find_one({"id": reference_id})
+    if not reference:
+        raise HTTPException(status_code=404, detail="Reference resume not found")
+    
+    # Decode base64 file
+    import base64
+    file_content = base64.b64decode(reference["file_data"])
+    
+    return Response(
+        content=file_content,
+        media_type=reference["content_type"],
+        headers={
+            "Content-Disposition": f"attachment; filename={reference['filename']}"
+        }
+    )
+
 # ============ BOOKING SYSTEM - PUBLIC/MENTEE ROUTES ============
 @api_router.get("/companies")
 async def get_public_companies():
@@ -1304,13 +3318,750 @@ async def get_mentor_feedbacks(user=Depends(get_current_user)):
     feedbacks = await db.feedbacks.find({"mentor_id": user["id"]}).to_list(1000)
     return [serialize_doc(dict(f)) for f in feedbacks]
 
+# ============ MENTOR SLOT MANAGEMENT ROUTES ============
+
+def validate_time_range(start_time: str, end_time: str) -> bool:
+    """Validate that time range is at least 30 minutes"""
+    from datetime import datetime
+    start = datetime.strptime(start_time, "%H:%M")
+    end = datetime.strptime(end_time, "%H:%M")
+    duration = (end - start).total_seconds() / 60
+    return duration >= 30
+
+def validate_date_not_past(date_str: str) -> bool:
+    """Validate that date is not in the past"""
+    from datetime import datetime, date
+    slot_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+    return slot_date >= date.today()
+
+def validate_meeting_link(link: str) -> bool:
+    """Validate meeting link URL format"""
+    import re
+    # Accept Google Meet, Zoom, and Microsoft Teams URLs
+    patterns = [
+        r'https?://meet\.google\.com/[a-z\-]+',
+        r'https?://[^/]*zoom\.us/j/\d+',  # Fixed: allow subdomains
+        r'https?://teams\.microsoft\.com/.*'
+    ]
+    return any(re.match(pattern, link) for pattern in patterns)
+
+@api_router.post("/mentor/slots")
+async def create_mentor_slot(slot_data: MentorSlotCreate, user=Depends(get_current_user)):
+    """Create a new availability slot for a mentor"""
+    if user["role"] != "mentor":
+        raise HTTPException(status_code=403, detail="Mentor only")
+    
+    # Validate required fields (Pydantic handles this, but explicit check for clarity)
+    if not all([slot_data.date, slot_data.start_time, slot_data.end_time, slot_data.meeting_link]):
+        raise HTTPException(status_code=400, detail="Missing required fields")
+    
+    # Validate time range (minimum 30 minutes)
+    if not validate_time_range(slot_data.start_time, slot_data.end_time):
+        raise HTTPException(status_code=400, detail="Time range must be at least 30 minutes")
+    
+    # Validate date is not in the past
+    if not validate_date_not_past(slot_data.date):
+        raise HTTPException(status_code=400, detail="Date cannot be in the past")
+    
+    # Validate meeting link URL
+    if not validate_meeting_link(slot_data.meeting_link):
+        raise HTTPException(status_code=400, detail="Invalid meeting link URL. Must be Google Meet, Zoom, or Microsoft Teams")
+    
+    # Create slot document
+    slot_doc = {
+        "id": str(uuid.uuid4()),
+        "mentor_id": user["id"],
+        "mentor_name": user["name"],
+        "mentor_email": user["email"],
+        "date": slot_data.date,
+        "start_time": slot_data.start_time,
+        "end_time": slot_data.end_time,
+        "meeting_link": slot_data.meeting_link,
+        "status": "available",  # Initial status
+        "interview_types": slot_data.interview_types,
+        "experience_levels": slot_data.experience_levels,
+        "company_specializations": slot_data.company_specializations,
+        "preparation_notes": slot_data.preparation_notes,
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc)
+    }
+    
+    await db.mentor_slots.insert_one(slot_doc)
+    return serialize_doc(slot_doc)
+
+@api_router.get("/mentor/slots")
+async def get_mentor_slots(status: Optional[str] = None, user=Depends(get_current_user)):
+    """Get all slots for a mentor with optional status filtering"""
+    if user["role"] != "mentor":
+        raise HTTPException(status_code=403, detail="Mentor only")
+    
+    query = {"mentor_id": user["id"]}
+    if status:
+        query["status"] = status
+    
+    slots = await db.mentor_slots.find(query).sort("date", 1).to_list(1000)
+    return [serialize_doc(dict(s)) for s in slots]
+
+@api_router.put("/mentor/slots/{slot_id}")
+async def update_mentor_slot(slot_id: str, updates: MentorSlotUpdate, user=Depends(get_current_user)):
+    """Update an existing slot (with restrictions for booked slots)"""
+    if user["role"] != "mentor":
+        raise HTTPException(status_code=403, detail="Mentor only")
+    
+    # Get the slot
+    slot = await db.mentor_slots.find_one({"id": slot_id})
+    if not slot:
+        raise HTTPException(status_code=404, detail="Slot not found")
+    
+    # Check ownership
+    if slot["mentor_id"] != user["id"]:
+        raise HTTPException(status_code=403, detail="Not your slot")
+    
+    # Prepare update fields
+    update_fields = {}
+    
+    # If slot is booked, only allow notes updates
+    if slot["status"] == "booked":
+        if updates.preparation_notes is not None:
+            update_fields["preparation_notes"] = updates.preparation_notes
+        
+        # Reject other field updates
+        if any([
+            updates.date is not None,
+            updates.start_time is not None,
+            updates.end_time is not None,
+            updates.meeting_link is not None,
+            updates.interview_types is not None,
+            updates.experience_levels is not None,
+            updates.company_specializations is not None
+        ]):
+            raise HTTPException(status_code=400, detail="Cannot modify date, time, or meeting link for booked slots. Only preparation notes can be updated.")
+    else:
+        # For available slots, allow all updates
+        if updates.date is not None:
+            if not validate_date_not_past(updates.date):
+                raise HTTPException(status_code=400, detail="Date cannot be in the past")
+            update_fields["date"] = updates.date
+        
+        if updates.start_time is not None:
+            update_fields["start_time"] = updates.start_time
+        
+        if updates.end_time is not None:
+            update_fields["end_time"] = updates.end_time
+        
+        # Validate time range if both times are being updated
+        if updates.start_time or updates.end_time:
+            start = updates.start_time or slot["start_time"]
+            end = updates.end_time or slot["end_time"]
+            if not validate_time_range(start, end):
+                raise HTTPException(status_code=400, detail="Time range must be at least 30 minutes")
+        
+        if updates.meeting_link is not None:
+            if not validate_meeting_link(updates.meeting_link):
+                raise HTTPException(status_code=400, detail="Invalid meeting link URL")
+            update_fields["meeting_link"] = updates.meeting_link
+        
+        if updates.interview_types is not None:
+            update_fields["interview_types"] = updates.interview_types
+        
+        if updates.experience_levels is not None:
+            update_fields["experience_levels"] = updates.experience_levels
+        
+        if updates.company_specializations is not None:
+            update_fields["company_specializations"] = updates.company_specializations
+        
+        if updates.preparation_notes is not None:
+            update_fields["preparation_notes"] = updates.preparation_notes
+    
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    
+    update_fields["updated_at"] = datetime.now(timezone.utc)
+    
+    await db.mentor_slots.update_one({"id": slot_id}, {"$set": update_fields})
+    
+    updated_slot = await db.mentor_slots.find_one({"id": slot_id})
+    return serialize_doc(dict(updated_slot))
+
+@api_router.delete("/mentor/slots/{slot_id}")
+async def delete_mentor_slot(slot_id: str, user=Depends(get_current_user)):
+    """Delete a slot (only if not booked)"""
+    if user["role"] != "mentor":
+        raise HTTPException(status_code=403, detail="Mentor only")
+    
+    # Get the slot
+    slot = await db.mentor_slots.find_one({"id": slot_id})
+    if not slot:
+        raise HTTPException(status_code=404, detail="Slot not found")
+    
+    # Check ownership
+    if slot["mentor_id"] != user["id"]:
+        raise HTTPException(status_code=403, detail="Not your slot")
+    
+    # Prevent deletion if booked
+    if slot["status"] == "booked":
+        raise HTTPException(status_code=400, detail="Cannot delete a booked slot. Please contact admin if you need to cancel.")
+    
+    await db.mentor_slots.delete_one({"id": slot_id})
+    return {"message": "Slot deleted successfully"}
+
+@api_router.patch("/mentor/slots/{slot_id}/availability")
+async def toggle_slot_availability(slot_id: str, available: bool, user=Depends(get_current_user)):
+    """Mark slot as available/unavailable"""
+    if user["role"] != "mentor":
+        raise HTTPException(status_code=403, detail="Mentor only")
+    
+    # Get the slot
+    slot = await db.mentor_slots.find_one({"id": slot_id})
+    if not slot:
+        raise HTTPException(status_code=404, detail="Slot not found")
+    
+    # Check ownership
+    if slot["mentor_id"] != user["id"]:
+        raise HTTPException(status_code=403, detail="Not your slot")
+    
+    # Determine new status
+    if available:
+        # Only set to available if not booked or completed
+        if slot["status"] in ["booked", "completed"]:
+            raise HTTPException(status_code=400, detail="Cannot make booked or completed slots available")
+        new_status = "available"
+    else:
+        new_status = "unavailable"
+    
+    await db.mentor_slots.update_one(
+        {"id": slot_id},
+        {"$set": {"status": new_status, "updated_at": datetime.now(timezone.utc)}}
+    )
+    
+    updated_slot = await db.mentor_slots.find_one({"id": slot_id})
+    return serialize_doc(dict(updated_slot))
+
+@api_router.get("/mentor/bookings")
+async def get_mentor_bookings(user=Depends(get_current_user)):
+    """Get all bookings for a mentor, separated by upcoming and past"""
+    if user["role"] != "mentor":
+        raise HTTPException(status_code=403, detail="Mentor only")
+    
+    # Get all bookings for this mentor
+    all_bookings = await db.bookings.find({"mentor_id": user["id"]}).to_list(1000)
+    
+    # Separate into upcoming and past
+    now = datetime.now(timezone.utc).date()
+    upcoming = []
+    past = []
+    
+    for booking in all_bookings:
+        booking_date = datetime.strptime(booking["date"], "%Y-%m-%d").date()
+        if booking_date >= now:
+            upcoming.append(serialize_doc(dict(booking)))
+        else:
+            past.append(serialize_doc(dict(booking)))
+    
+    # Sort upcoming by date ascending, past by date descending
+    upcoming.sort(key=lambda x: (x["date"], x["start_time"]))
+    past.sort(key=lambda x: (x["date"], x["start_time"]), reverse=True)
+    
+    return {
+        "upcoming": upcoming,
+        "past": past
+    }
+
 # ============ MENTEE ROUTES ============
+
+@api_router.get("/mentee/slots/browse")
+async def browse_available_slots(
+    interview_type: Optional[str] = None,
+    experience_level: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    company_id: Optional[str] = None,
+    user=Depends(get_current_user)
+):
+    """
+    Browse available slots with filtering.
+    Returns only available slots with future dates, hiding mentor identity.
+    Supports filtering by interview_type, experience_level, date_range, and company.
+    """
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    # Build query - only available slots with future dates
+    today = datetime.now(timezone.utc).date().isoformat()
+    query = {
+        "status": "available",
+        "date": {"$gte": today}
+    }
+    
+    # Apply filters (AND logic)
+    if interview_type:
+        query["interview_types"] = interview_type
+    
+    if experience_level:
+        query["experience_levels"] = experience_level
+    
+    if date_from:
+        query["date"]["$gte"] = date_from
+    
+    if date_to:
+        if "$lte" not in query.get("date", {}):
+            query["date"] = query.get("date", {})
+        query["date"]["$lte"] = date_to
+    
+    if company_id:
+        query["company_specializations"] = company_id
+    
+    # Fetch slots
+    slots = await db.mentor_slots.find(query).to_list(1000)
+    
+    # Sort by date and time ascending
+    slots.sort(key=lambda x: (x["date"], x["start_time"]))
+    
+    # Return anonymized slots (hide mentor identity)
+    anonymized_slots = []
+    for slot in slots:
+        anonymized_slot = {
+            "id": slot["id"],
+            "date": slot["date"],
+            "start_time": slot["start_time"],
+            "end_time": slot["end_time"],
+            "interview_types": slot["interview_types"],
+            "experience_levels": slot["experience_levels"],
+            "company_specializations": slot["company_specializations"],
+            "preparation_notes": slot.get("preparation_notes")
+        }
+        anonymized_slots.append(anonymized_slot)
+    
+    return anonymized_slots
+
+@api_router.post("/mentee/bookings")
+async def create_booking(booking_data: BookingCreate, user=Depends(get_current_user)):
+    """
+    Create a booking for an available slot.
+    Validates tier, quota, company selection, and slot availability.
+    Implements slot locking for concurrent access prevention.
+    """
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    # Verify mentee tier (paid only)
+    if user.get("status") == "Free" or not user.get("plan_id"):
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "authorization_error",
+                "message": "Upgrade to a paid plan to book mock interviews",
+                "code": "TIER_UPGRADE_REQUIRED",
+                "upgrade_url": "/mentee/book"
+            }
+        )
+    
+    # Check interview quota
+    quota_remaining = user.get("interview_quota_remaining", 0)
+    if quota_remaining <= 0:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "quota_exceeded",
+                "message": "You have used all interviews in your plan",
+                "code": "INTERVIEW_QUOTA_EXCEEDED",
+                "remaining_quota": 0,
+                "upgrade_url": "/mentee/book"
+            }
+        )
+    
+    # Acquire slot lock for transaction (using MongoDB findAndModify for atomicity)
+    slot_lock_result = await db.mentor_slots.find_one_and_update(
+        {
+            "id": booking_data.slot_id,
+            "status": "available",
+            "$or": [
+                {"lock": {"$exists": False}},
+                {"lock.expires_at": {"$lt": datetime.now(timezone.utc)}}
+            ]
+        },
+        {
+            "$set": {
+                "lock": {
+                    "locked_by": user["id"],
+                    "locked_at": datetime.now(timezone.utc),
+                    "expires_at": datetime.now(timezone.utc) + timedelta(seconds=30)
+                }
+            }
+        },
+        return_document=True
+    )
+    
+    if not slot_lock_result:
+        # Slot not available or already locked
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "conflict",
+                "message": "This slot is no longer available or is being booked by another user",
+                "code": "SLOT_NOT_AVAILABLE"
+            }
+        )
+    
+    try:
+        slot = dict(slot_lock_result)
+        
+        # Validate company is in slot's specializations
+        if booking_data.company_id not in slot["company_specializations"]:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "validation_error",
+                    "message": "Selected company is not in slot's specializations",
+                    "field": "company_id",
+                    "code": "INVALID_COMPANY_SELECTION"
+                }
+            )
+        
+        # Get company details
+        company = await db.companies.find_one({"id": booking_data.company_id})
+        if not company:
+            raise HTTPException(status_code=404, detail="Company not found")
+        
+        # Determine interview type and experience level from slot
+        # For now, use the first values (in a real system, mentee would select these)
+        interview_type = slot["interview_types"][0] if slot["interview_types"] else "coding"
+        experience_level = slot["experience_levels"][0] if slot["experience_levels"] else "mid"
+        
+        # Create booking record
+        booking_id = str(uuid.uuid4())
+        booking_doc = {
+            "id": booking_id,
+            "slot_id": slot["id"],
+            "mentee_id": user["id"],
+            "mentee_name": user["name"],
+            "mentee_email": user["email"],
+            "mentor_id": slot["mentor_id"],
+            "mentor_name": slot["mentor_name"],
+            "mentor_email": slot["mentor_email"],
+            "company_id": booking_data.company_id,
+            "company_name": company["name"],
+            "interview_type": interview_type,
+            "experience_level": experience_level,
+            "interview_track": booking_data.interview_track,
+            "specific_topics": booking_data.specific_topics or [],
+            "additional_notes": booking_data.additional_notes or "",
+            "date": slot["date"],
+            "start_time": slot["start_time"],
+            "end_time": slot["end_time"],
+            "meeting_link": slot["meeting_link"],
+            "status": "confirmed",
+            "cancelled_by": None,
+            "cancellation_reason": None,
+            "feedback_submitted": False,
+            "feedback_id": None,
+            "created_at": datetime.now(timezone.utc),
+            "confirmed_at": datetime.now(timezone.utc),
+            "completed_at": None,
+            "cancelled_at": None
+        }
+        
+        await db.bookings.insert_one(booking_doc)
+        
+        # Update slot status to "booked" and remove lock
+        await db.mentor_slots.update_one(
+            {"id": slot["id"]},
+            {
+                "$set": {"status": "booked", "updated_at": datetime.now(timezone.utc)},
+                "$unset": {"lock": ""}
+            }
+        )
+        
+        # Decrement mentee quota
+        await db.users.update_one(
+            {"id": user["id"]},
+            {
+                "$inc": {"interview_quota_remaining": -1},
+                "$set": {"updated_at": datetime.now(timezone.utc)}
+            }
+        )
+        
+        # Send confirmation emails (async, don't wait)
+        asyncio.create_task(send_new_booking_confirmation_emails(booking_doc))
+        
+        # Return booking response with revealed mentor information
+        return {
+            "id": booking_doc["id"],
+            "slot_id": booking_doc["slot_id"],
+            "mentee_id": booking_doc["mentee_id"],
+            "mentor_id": booking_doc["mentor_id"],
+            "mentor_name": booking_doc["mentor_name"],
+            "mentor_email": booking_doc["mentor_email"],
+            "company_name": booking_doc["company_name"],
+            "interview_type": booking_doc["interview_type"],
+            "experience_level": booking_doc["experience_level"],
+            "date": booking_doc["date"],
+            "start_time": booking_doc["start_time"],
+            "end_time": booking_doc["end_time"],
+            "meeting_link": booking_doc["meeting_link"],
+            "status": booking_doc["status"],
+            "created_at": booking_doc["created_at"]
+        }
+        
+    except HTTPException:
+        # Release lock on error
+        await db.mentor_slots.update_one(
+            {"id": booking_data.slot_id},
+            {"$unset": {"lock": ""}}
+        )
+        raise
+    except Exception as e:
+        # Release lock on any error
+        await db.mentor_slots.update_one(
+            {"id": booking_data.slot_id},
+            {"$unset": {"lock": ""}}
+        )
+        raise HTTPException(status_code=500, detail=f"Booking failed: {str(e)}")
+
+@api_router.delete("/mentee/bookings/{booking_id}")
+async def cancel_booking(booking_id: str, user=Depends(get_current_user)):
+    """
+    Cancel a booking.
+    Verifies booking ownership and 24-hour cancellation policy.
+    Restores slot status and mentee quota.
+    """
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    # Find booking
+    booking = await db.bookings.find_one({"id": booking_id})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    # Verify booking ownership
+    if booking["mentee_id"] != user["id"]:
+        raise HTTPException(
+            status_code=403,
+            detail="You can only cancel your own bookings"
+        )
+    
+    # Check if already cancelled
+    if booking["status"] == "cancelled":
+        raise HTTPException(status_code=400, detail="Booking already cancelled")
+    
+    # Check 24-hour cancellation policy
+    booking_datetime = datetime.fromisoformat(f"{booking['date']}T{booking['start_time']}:00")
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    hours_until_session = (booking_datetime - now).total_seconds() / 3600
+    
+    if hours_until_session < 24:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "policy_violation",
+                "message": "Bookings can only be cancelled more than 24 hours in advance",
+                "code": "CANCELLATION_POLICY_VIOLATION",
+                "hours_until_session": round(hours_until_session, 1)
+            }
+        )
+    
+    # Update slot status to "available"
+    await db.mentor_slots.update_one(
+        {"id": booking["slot_id"]},
+        {
+            "$set": {
+                "status": "available",
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    # Delete booking record
+    await db.bookings.delete_one({"id": booking_id})
+    
+    # Restore mentee quota
+    await db.users.update_one(
+        {"id": user["id"]},
+        {
+            "$inc": {"interview_quota_remaining": 1},
+            "$set": {"updated_at": datetime.now(timezone.utc)}
+        }
+    )
+    
+    # Send cancellation notifications (async, don't wait)
+    asyncio.create_task(send_cancellation_notification_emails(
+        booking=dict(booking),
+        cancelled_by_role="mentee",
+        cancellation_reason=None
+    ))
+    
+    return {"message": "Booking cancelled successfully"}
+
+@api_router.get("/mentee/bookings")
+async def get_mentee_bookings(user=Depends(get_current_user)):
+    """
+    Get all bookings for a mentee.
+    Returns bookings separated into upcoming and past sessions.
+    Includes mentor information, meeting links, and feedback status.
+    """
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    # Fetch all bookings for mentee
+    bookings = await db.bookings.find({"mentee_id": user["id"]}).to_list(1000)
+    
+    # Separate into upcoming and past
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    upcoming = []
+    past = []
+    
+    for booking in bookings:
+        booking_dict = dict(booking)
+        
+        # Check if feedback exists for this booking
+        feedback = await db.feedbacks.find_one({"booking_id": booking_dict["id"]})
+        booking_dict["feedback_submitted"] = feedback is not None
+        if feedback:
+            booking_dict["feedback_id"] = feedback["id"]
+        
+        # Determine if upcoming or past
+        booking_datetime = datetime.fromisoformat(f"{booking_dict['date']}T{booking_dict['start_time']}:00")
+        
+        if booking_datetime > now:
+            upcoming.append(serialize_doc(booking_dict))
+        else:
+            past.append(serialize_doc(booking_dict))
+    
+    # Sort upcoming by date ascending, past by date descending
+    upcoming.sort(key=lambda x: (x["date"], x["start_time"]))
+    past.sort(key=lambda x: (x["date"], x["start_time"]), reverse=True)
+    
+    return {
+        "upcoming": upcoming,
+        "past": past
+    }
+
 @api_router.get("/mentee/feedbacks")
 async def get_mentee_feedbacks(user=Depends(get_current_user)):
     if user["role"] != "mentee":
         raise HTTPException(status_code=403, detail="Mentee only")
     feedbacks = await db.feedbacks.find({"mentee_id": user["id"]}).to_list(1000)
     return [serialize_doc(dict(f)) for f in feedbacks]
+
+# ============ RESUME REVIEW SYSTEM ============
+@api_router.post("/mentee/resume-request")
+async def create_resume_request(
+    resume: UploadFile = File(...),
+    target_role: str = Form(...),
+    target_companies: str = Form(""),
+    specific_focus: str = Form(""),
+    additional_notes: str = Form(""),
+    user=Depends(get_current_user)
+):
+    """Submit a resume for expert review"""
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    # Check if user has resume review quota
+    resume_reviews = user.get("plan_features", {}).get("resume_reviews", 0)
+    if resume_reviews <= 0:
+        raise HTTPException(
+            status_code=403,
+            detail="No resume reviews available in your plan. Please upgrade."
+        )
+    
+    # Check how many reviews already used
+    used_reviews = await db.resume_requests.count_documents({
+        "mentee_id": user["id"],
+        "status": {"$ne": "cancelled"}
+    })
+    
+    if used_reviews >= resume_reviews:
+        raise HTTPException(
+            status_code=403,
+            detail="You have used all your resume reviews. Please upgrade your plan."
+        )
+    
+    # Validate file
+    if not resume.content_type in ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]:
+        raise HTTPException(status_code=400, detail="Only PDF and Word documents are allowed")
+    
+    # Read file content
+    file_content = await resume.read()
+    if len(file_content) > 5 * 1024 * 1024:  # 5MB limit
+        raise HTTPException(status_code=400, detail="File size must be less than 5MB")
+    
+    # Store file (in production, use S3 or similar)
+    # For now, we'll store as base64 in MongoDB
+    import base64
+    file_base64 = base64.b64encode(file_content).decode('utf-8')
+    
+    # Create resume request
+    request_doc = {
+        "id": str(uuid.uuid4()),
+        "mentee_id": user["id"],
+        "mentee_name": user["name"],
+        "mentee_email": user["email"],
+        "plan_id": user.get("plan_id"),
+        "resume_filename": resume.filename,
+        "resume_content_type": resume.content_type,
+        "resume_data": file_base64,  # In production, store S3 URL
+        "target_role": target_role,
+        "target_companies": target_companies,
+        "specific_focus": specific_focus,
+        "additional_notes": additional_notes,
+        "status": "pending",  # pending, in_review, completed, cancelled
+        "reviewer_id": None,
+        "reviewer_notes": None,
+        "feedback_file": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.resume_requests.insert_one(request_doc)
+    
+    # Send email notification to admin
+    try:
+        await send_resume_request_email(request_doc)
+    except Exception as e:
+        logger.error(f"Failed to send resume request email: {str(e)}")
+    
+    return {
+        "message": "Resume review request submitted successfully",
+        "request_id": request_doc["id"],
+        "status": "pending"
+    }
+
+@api_router.get("/mentee/resume-requests")
+async def get_resume_requests(user=Depends(get_current_user)):
+    """Get all resume review requests for the mentee"""
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    requests = await db.resume_requests.find({"mentee_id": user["id"]}).sort("created_at", -1).to_list(1000)
+    
+    # Remove resume_data from response (too large)
+    for req in requests:
+        if "resume_data" in req:
+            del req["resume_data"]
+    
+    return [serialize_doc(dict(r)) for r in requests]
+
+@api_router.get("/mentee/resume-requests/{request_id}/download")
+async def download_resume(request_id: str, user=Depends(get_current_user)):
+    """Download the submitted resume"""
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    request = await db.resume_requests.find_one({"id": request_id, "mentee_id": user["id"]})
+    if not request:
+        raise HTTPException(status_code=404, detail="Resume request not found")
+    
+    # Decode base64 data
+    import base64
+    file_content = base64.b64decode(request["resume_data"])
+    
+    from fastapi.responses import Response
+    return Response(
+        content=file_content,
+        media_type=request["resume_content_type"],
+        headers={"Content-Disposition": f"attachment; filename={request['resume_filename']}"}
+    )
 
 # ============ USERS LOOKUP ============
 @api_router.get("/users/{user_id}")
@@ -1617,12 +4368,13 @@ async def select_mentor(mentor_id: str, user=Depends(get_current_user)):
 class CreateOrderRequest(BaseModel):
     name: str
     email: EmailStr
-    password: str
-    plan_id: str  # starter, professional, premium
+    password: Optional[str] = None  # Optional for existing users upgrading
+    plan_id: str  # starter, professional, premium, mock_1, mock_3, mock_5
     current_role: str = ""
     target_role: str = ""
     timeline: str = ""
     struggle: str = ""
+    is_upgrade: bool = False  # True if existing user is upgrading/buying add-ons
 
 class VerifyPaymentRequest(BaseModel):
     razorpay_order_id: str
@@ -1669,6 +4421,16 @@ async def get_pricing_plan(plan_id: str):
             "features": plan.get("features", [])
         }
     
+    # Mock add-on plans (not in database)
+    mock_addons = {
+        "mock_1": {"price": 249900, "name": "1 Mock Interview", "duration_months": 0},
+        "mock_3": {"price": 699900, "name": "3 Mock Interviews", "duration_months": 0},
+        "mock_5": {"price": 1099900, "name": "5 Mock Interviews", "duration_months": 0}
+    }
+    
+    if plan_id in mock_addons:
+        return mock_addons[plan_id]
+    
     # Fallback to hardcoded values for backward compatibility
     if plan_id in PLAN_PRICES:
         duration_map = {
@@ -1697,18 +4459,27 @@ async def get_pricing_plan(plan_id: str):
 async def create_payment_order(data: CreateOrderRequest):
     # Check if email already exists
     existing = await db.users.find_one({"email": data.email})
+    
+    # Handle different scenarios
     if existing:
-        # If user exists and is already paid, reject
-        if existing.get("status") == "Active" or existing.get("plan_id"):
-            raise HTTPException(status_code=400, detail="Email already registered with a paid plan. Please login instead.")
-        
-        # If user exists but is free tier, allow upgrade
-        if existing.get("status") == "Free":
-            # This is a free user trying to upgrade - allow it
+        # If this is an upgrade/add-on purchase (user is logged in and buying more)
+        if data.is_upgrade:
+            # Allow existing users to buy add-ons or upgrade
             pass
         else:
-            # Other cases (shouldn't happen, but be safe)
-            raise HTTPException(status_code=400, detail="Email already registered. Please login instead.")
+            # New registration attempt with existing email
+            if existing.get("status") == "Active" or existing.get("plan_id"):
+                raise HTTPException(status_code=400, detail="Email already registered with a paid plan. Please login instead.")
+            
+            # If user exists but is free tier, allow upgrade
+            if existing.get("status") == "Free":
+                pass
+            else:
+                raise HTTPException(status_code=400, detail="Email already registered. Please login instead.")
+    else:
+        # New user registration - password is required
+        if not data.password:
+            raise HTTPException(status_code=400, detail="Password is required for new registration")
     
     # Get pricing plan (dynamic or fallback)
     plan_info = await get_pricing_plan(data.plan_id)
@@ -1739,7 +4510,7 @@ async def create_payment_order(data: CreateOrderRequest):
         "razorpay_order_id": razorpay_order["id"],
         "name": data.name,
         "email": data.email,
-        "password": hash_password(data.password) if not existing else existing["password"],
+        "password": hash_password(data.password) if data.password else (existing["password"] if existing else None),
         "plan_id": data.plan_id,
         "plan_name": plan_name,
         "amount": amount,
@@ -1748,7 +4519,7 @@ async def create_payment_order(data: CreateOrderRequest):
         "timeline": data.timeline,
         "struggle": data.struggle,
         "status": "pending",
-        "is_upgrade": True if existing else False,
+        "is_upgrade": data.is_upgrade or bool(existing),
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.orders.insert_one(order_doc)
@@ -1800,6 +4571,98 @@ async def verify_payment(data: VerifyPaymentRequest):
     existing_user = await db.users.find_one({"email": order["email"]})
     
     if existing_user and order.get("is_upgrade"):
+        # Check if this is a mock add-on purchase
+        if order["plan_id"].startswith("mock_"):
+            # This is a mock add-on purchase - just add to quota
+            mock_counts = {
+                "mock_1": 1,
+                "mock_3": 3,
+                "mock_5": 5
+            }
+            
+            additional_mocks = mock_counts.get(order["plan_id"], 0)
+            
+            # Update user's quota
+            await db.users.update_one(
+                {"email": order["email"]},
+                {
+                    "$inc": {
+                        "interview_quota_total": additional_mocks,
+                        "interview_quota_remaining": additional_mocks
+                    },
+                    "$set": {
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }
+                }
+            )
+            
+            # Get updated user
+            updated_user = await db.users.find_one({"email": order["email"]})
+            user_doc = updated_user
+            
+            # Generate token for auto-login
+            token = create_token(user_doc["id"], user_doc["role"])
+            
+            # Send upgrade email (non-blocking)
+            asyncio.create_task(send_upgrade_email(
+                name=order["name"],
+                email=order["email"],
+                plan_name=order["plan_name"],
+                amount=int(order["amount"] / 100)  # Convert paise to rupees
+            ))
+            
+            return {
+                "success": True,
+                "message": f"Payment successful! {additional_mocks} mock interview(s) added to your account.",
+                "access_token": token,
+                "user": serialize_doc(user_doc)
+            }
+        
+        # Get plan configuration for quota (for plan upgrades)
+        plan_configs = {
+            "starter": {
+                "interview_quota_total": 1,
+                "plan_features": {
+                    "mock_interviews": 1,
+                    "resume_reviews": 1,
+                    "offline_profile_creation": 0,
+                    "ai_tools_access": "limited",
+                    "community_access": False,
+                    "priority_support": False,
+                    "strategy_calls": 0,
+                    "referral_guidance": False
+                }
+            },
+            "pro": {
+                "interview_quota_total": 3,
+                "plan_features": {
+                    "mock_interviews": 3,
+                    "resume_reviews": 1,
+                    "offline_profile_creation": 0,
+                    "ai_tools_access": "full",
+                    "community_access": True,
+                    "priority_support": False,
+                    "strategy_calls": 1,
+                    "referral_guidance": False
+                }
+            },
+            "elite": {
+                "interview_quota_total": 6,
+                "plan_features": {
+                    "mock_interviews": 6,
+                    "resume_reviews": 1,
+                    "offline_profile_creation": 1,
+                    "ai_tools_access": "full",
+                    "community_access": True,
+                    "priority_support": True,
+                    "strategy_calls": 0,
+                    "referral_guidance": True
+                }
+            }
+        }
+        
+        plan_config = plan_configs.get(order["plan_id"], plan_configs["starter"])
+        
         # This is an upgrade - update existing user
         await db.users.update_one(
             {"email": order["email"]},
@@ -1809,6 +4672,9 @@ async def verify_payment(data: VerifyPaymentRequest):
                 "plan_name": order["plan_name"],
                 "current_role": order.get("current_role", existing_user.get("current_role", "")),
                 "target_role": order.get("target_role", existing_user.get("target_role", "")),
+                "interview_quota_total": plan_config["interview_quota_total"],
+                "interview_quota_remaining": plan_config["interview_quota_total"],
+                "plan_features": plan_config["plan_features"],
                 "upgraded_at": datetime.now(timezone.utc).isoformat()
             }}
         )
@@ -1836,6 +4702,51 @@ async def verify_payment(data: VerifyPaymentRequest):
         }
     
     else:
+        # Get plan configuration for quota
+        plan_configs = {
+            "starter": {
+                "interview_quota_total": 1,
+                "plan_features": {
+                    "mock_interviews": 1,
+                    "resume_reviews": 1,
+                    "offline_profile_creation": 0,
+                    "ai_tools_access": "limited",
+                    "community_access": False,
+                    "priority_support": False,
+                    "strategy_calls": 0,
+                    "referral_guidance": False
+                }
+            },
+            "pro": {
+                "interview_quota_total": 3,
+                "plan_features": {
+                    "mock_interviews": 3,
+                    "resume_reviews": 1,
+                    "offline_profile_creation": 0,
+                    "ai_tools_access": "full",
+                    "community_access": True,
+                    "priority_support": False,
+                    "strategy_calls": 1,
+                    "referral_guidance": False
+                }
+            },
+            "elite": {
+                "interview_quota_total": 6,
+                "plan_features": {
+                    "mock_interviews": 6,
+                    "resume_reviews": 1,
+                    "offline_profile_creation": 1,
+                    "ai_tools_access": "full",
+                    "community_access": True,
+                    "priority_support": True,
+                    "strategy_calls": 0,
+                    "referral_guidance": True
+                }
+            }
+        }
+        
+        plan_config = plan_configs.get(order["plan_id"], plan_configs["starter"])
+        
         # This is a new user - create account
         user_doc = {
             "id": str(uuid.uuid4()),
@@ -1849,6 +4760,9 @@ async def verify_payment(data: VerifyPaymentRequest):
             "mentor_id": None,
             "current_role": order.get("current_role", ""),
             "target_role": order.get("target_role", ""),
+            "interview_quota_total": plan_config["interview_quota_total"],
+            "interview_quota_remaining": plan_config["interview_quota_total"],
+            "plan_features": plan_config["plan_features"],
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.users.insert_one(user_doc)
@@ -2107,6 +5021,388 @@ async def get_admin_payout_stats(user=Depends(get_current_user)):
     
     return stats
 
+# ============ ADMIN ANALYTICS AND MONITORING ============
+
+@api_router.get("/admin/sessions")
+async def get_all_sessions(
+    status: Optional[str] = None,
+    mentor_id: Optional[str] = None,
+    mentee_id: Optional[str] = None,
+    interview_type: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    user=Depends(get_current_user)
+):
+    """
+    Get all bookings with filtering for admin monitoring
+    Requirements: 9.1, 9.2, 9.3, 9.4, 9.5
+    """
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    # Build filter query
+    query = {}
+    
+    if status:
+        query["status"] = status
+    
+    if mentor_id:
+        query["mentor_id"] = mentor_id
+    
+    if mentee_id:
+        query["mentee_id"] = mentee_id
+    
+    if interview_type:
+        query["interview_type"] = interview_type
+    
+    # Date range filtering
+    if date_from or date_to:
+        date_query = {}
+        if date_from:
+            date_query["$gte"] = date_from
+        if date_to:
+            date_query["$lte"] = date_to
+        if date_query:
+            query["date"] = date_query
+    
+    # Get bookings sorted by date/time descending
+    bookings = await db.bookings.find(query).sort([("date", -1), ("start_time", -1)]).to_list(1000)
+    
+    return [serialize_doc(dict(b)) for b in bookings]
+
+
+@api_router.delete("/admin/sessions/{booking_id}")
+async def cancel_session_as_admin(
+    booking_id: str,
+    cancellation_reason: Optional[str] = None,
+    user=Depends(get_current_user)
+):
+    """
+    Admin cancels a session
+    Requirements: 9.6
+    """
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    # Get booking
+    booking = await db.bookings.find_one({"id": booking_id})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    # Update slot status to "available"
+    await db.mentor_slots.update_one(
+        {"id": booking["slot_id"]},
+        {"$set": {"status": "available", "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Update booking status to cancelled
+    await db.bookings.update_one(
+        {"id": booking_id},
+        {
+            "$set": {
+                "status": "cancelled",
+                "cancelled_by": user["id"],
+                "cancellation_reason": cancellation_reason or "Cancelled by admin",
+                "cancelled_at": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    )
+    
+    # Restore mentee's interview quota
+    mentee = await db.users.find_one({"id": booking["mentee_id"]})
+    if mentee and mentee.get("interview_quota_remaining") is not None:
+        await db.users.update_one(
+            {"id": booking["mentee_id"]},
+            {"$inc": {"interview_quota_remaining": 1}}
+        )
+    
+    # Send cancellation notifications
+    try:
+        await send_cancellation_notification_emails(
+            dict(booking),
+            cancelled_by_role="admin",
+            cancellation_reason=cancellation_reason or "Cancelled by admin"
+        )
+    except Exception as e:
+        logger.error(f"Failed to send cancellation emails: {str(e)}")
+    
+    return {"message": "Session cancelled successfully"}
+
+
+@api_router.get("/admin/mentor-analytics")
+async def get_mentor_analytics(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    sort_by: Optional[str] = "total_slots_created",
+    sort_order: Optional[str] = "desc",
+    user=Depends(get_current_user)
+):
+    """
+    Calculate metrics for each mentor
+    Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7
+    """
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    # Get all mentors
+    mentors = await db.users.find({"role": "mentor"}).to_list(1000)
+    
+    analytics = []
+    
+    for mentor in mentors:
+        mentor_id = mentor["id"]
+        
+        # Build date filter for slots
+        slot_query = {"mentor_id": mentor_id}
+        if date_from or date_to:
+            date_query = {}
+            if date_from:
+                date_query["$gte"] = date_from
+            if date_to:
+                date_query["$lte"] = date_to
+            if date_query:
+                slot_query["created_at"] = date_query
+        
+        # Total slots created
+        total_slots_created = await db.mentor_slots.count_documents(slot_query)
+        
+        # Total slots booked
+        booked_query = {**slot_query, "status": "booked"}
+        total_slots_booked = await db.mentor_slots.count_documents(booked_query)
+        
+        # Utilization rate
+        utilization_rate = (total_slots_booked / total_slots_created * 100) if total_slots_created > 0 else 0
+        
+        # Build date filter for bookings
+        booking_query = {"mentor_id": mentor_id, "status": "completed"}
+        if date_from or date_to:
+            date_query = {}
+            if date_from:
+                date_query["$gte"] = date_from
+            if date_to:
+                date_query["$lte"] = date_to
+            if date_query:
+                booking_query["date"] = date_query
+        
+        # Total sessions completed
+        total_sessions_completed = await db.bookings.count_documents(booking_query)
+        
+        # Average rating from feedback
+        completed_bookings = await db.bookings.find(booking_query).to_list(1000)
+        booking_ids = [b["id"] for b in completed_bookings]
+        
+        average_rating = 0.0
+        if booking_ids:
+            feedbacks = await db.feedbacks.find({"booking_id": {"$in": booking_ids}}).to_list(1000)
+            if feedbacks:
+                total_rating = sum(f.get("overall", 0) for f in feedbacks)
+                average_rating = total_rating / len(feedbacks)
+        
+        analytics.append({
+            "mentor_id": mentor_id,
+            "mentor_name": mentor.get("name", "Unknown"),
+            "mentor_email": mentor.get("email", ""),
+            "total_slots_created": total_slots_created,
+            "total_slots_booked": total_slots_booked,
+            "utilization_rate": round(utilization_rate, 2),
+            "average_rating": round(average_rating, 2),
+            "total_sessions_completed": total_sessions_completed
+        })
+    
+    # Sort analytics
+    reverse = (sort_order == "desc")
+    analytics.sort(key=lambda x: x.get(sort_by, 0), reverse=reverse)
+    
+    return analytics
+
+
+@api_router.get("/admin/booking-analytics")
+async def get_booking_analytics(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    user=Depends(get_current_user)
+):
+    """
+    Aggregate booking pattern data
+    Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6
+    """
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    # Build date filter
+    query = {}
+    if date_from or date_to:
+        date_query = {}
+        if date_from:
+            date_query["$gte"] = date_from
+        if date_to:
+            date_query["$lte"] = date_to
+        if date_query:
+            query["date"] = date_query
+    
+    # Get all bookings in date range
+    bookings = await db.bookings.find(query).to_list(10000)
+    
+    # Popular time slots by day/hour
+    popular_time_slots = {}
+    for booking in bookings:
+        # Parse date to get day of week
+        try:
+            booking_date = datetime.fromisoformat(booking["date"])
+            day_name = booking_date.strftime("%A")
+            hour = booking["start_time"].split(":")[0]
+            slot_key = f"{day_name} {hour}:00"
+            popular_time_slots[slot_key] = popular_time_slots.get(slot_key, 0) + 1
+        except:
+            pass
+    
+    # Most requested interview types
+    interview_type_counts = {}
+    for booking in bookings:
+        interview_type = booking.get("interview_type", "unknown")
+        interview_type_counts[interview_type] = interview_type_counts.get(interview_type, 0) + 1
+    
+    # Most requested companies
+    company_counts = {}
+    for booking in bookings:
+        company_name = booking.get("company_name", "unknown")
+        company_counts[company_name] = company_counts.get(company_name, 0) + 1
+    
+    # Booking trends over time (group by date)
+    booking_trends = {}
+    for booking in bookings:
+        date = booking.get("date", "unknown")
+        booking_trends[date] = booking_trends.get(date, 0) + 1
+    
+    # Convert to list of dicts for easier charting
+    booking_trends_list = [{"date": date, "count": count} for date, count in sorted(booking_trends.items())]
+    
+    # Average time to booking (from slot creation to booking)
+    total_time_hours = 0
+    booking_count = 0
+    for booking in bookings:
+        try:
+            # Get the slot
+            slot = await db.mentor_slots.find_one({"id": booking["slot_id"]})
+            if slot and slot.get("created_at") and booking.get("created_at"):
+                slot_created = datetime.fromisoformat(slot["created_at"])
+                booking_created = datetime.fromisoformat(booking["created_at"])
+                time_diff = (booking_created - slot_created).total_seconds() / 3600  # Convert to hours
+                total_time_hours += time_diff
+                booking_count += 1
+        except:
+            pass
+    
+    avg_time_to_booking = (total_time_hours / booking_count) if booking_count > 0 else 0
+    
+    # Cancellation rate
+    total_bookings = len(bookings)
+    cancelled_bookings = len([b for b in bookings if b.get("status") == "cancelled"])
+    cancellation_rate = (cancelled_bookings / total_bookings * 100) if total_bookings > 0 else 0
+    
+    return {
+        "popular_time_slots": popular_time_slots,
+        "interview_type_counts": interview_type_counts,
+        "company_counts": company_counts,
+        "booking_trends": booking_trends_list,
+        "avg_time_to_booking": round(avg_time_to_booking, 2),
+        "cancellation_rate": round(cancellation_rate, 2),
+        "total_bookings": total_bookings,
+        "cancelled_bookings": cancelled_bookings
+    }
+
+
+@api_router.get("/admin/revenue-tracking")
+async def get_revenue_tracking(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    user=Depends(get_current_user)
+):
+    """
+    Calculate revenue and payout metrics
+    Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6
+    """
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    # Build date filter for orders
+    order_query = {"status": "paid"}
+    if date_from or date_to:
+        date_query = {}
+        if date_from:
+            date_query["$gte"] = date_from
+        if date_to:
+            date_query["$lte"] = date_to
+        if date_query:
+            order_query["created_at"] = date_query
+    
+    # Get all paid orders in date range
+    orders = await db.orders.find(order_query).to_list(10000)
+    
+    # Total revenue (convert paise to rupees)
+    total_revenue = sum(o.get("amount", 0) for o in orders) / 100
+    
+    # Revenue by pricing plan
+    revenue_by_plan = {}
+    for order in orders:
+        plan_id = order.get("plan_id", "unknown")
+        amount = order.get("amount", 0) / 100
+        revenue_by_plan[plan_id] = revenue_by_plan.get(plan_id, 0) + amount
+    
+    # Build date filter for bookings
+    booking_query = {"status": "completed"}
+    if date_from or date_to:
+        date_query = {}
+        if date_from:
+            date_query["$gte"] = date_from
+        if date_to:
+            date_query["$lte"] = date_to
+        if date_query:
+            booking_query["date"] = date_query
+    
+    # Get completed bookings to calculate mentor payouts
+    completed_bookings = await db.bookings.find(booking_query).to_list(10000)
+    
+    # Mentor payout rate (₹800 per session as per unit economics)
+    MENTOR_PAYOUT_PER_SESSION = 800
+    
+    # Calculate mentor payouts
+    mentor_payouts = {}
+    for booking in completed_bookings:
+        mentor_id = booking.get("mentor_id")
+        mentor_name = booking.get("mentor_name", "Unknown")
+        
+        if mentor_id not in mentor_payouts:
+            mentor_payouts[mentor_id] = {
+                "mentor_id": mentor_id,
+                "mentor_name": mentor_name,
+                "sessions_completed": 0,
+                "total_payout": 0
+            }
+        
+        mentor_payouts[mentor_id]["sessions_completed"] += 1
+        mentor_payouts[mentor_id]["total_payout"] += MENTOR_PAYOUT_PER_SESSION
+    
+    # Convert to list
+    mentor_payouts_list = list(mentor_payouts.values())
+    
+    # Total payouts owed
+    total_payouts_owed = sum(mp["total_payout"] for mp in mentor_payouts_list)
+    
+    # Net profit
+    net_profit = total_revenue - total_payouts_owed
+    
+    return {
+        "total_revenue": round(total_revenue, 2),
+        "total_payouts_owed": round(total_payouts_owed, 2),
+        "net_profit": round(net_profit, 2),
+        "revenue_by_plan": {k: round(v, 2) for k, v in revenue_by_plan.items()},
+        "mentor_payouts": mentor_payouts_list,
+        "total_orders": len(orders),
+        "total_completed_sessions": len(completed_bookings)
+    }
+
+
 @api_router.get("/payment/config")
 async def get_payment_config():
     return {"razorpay_key_id": RAZORPAY_KEY_ID}
@@ -2129,6 +5425,13 @@ app.add_middleware(
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+@app.on_event("startup")
+async def startup_scheduler():
+    """Start the background scheduler on application startup"""
+    start_scheduler()
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    """Shutdown database client and scheduler on application shutdown"""
+    scheduler.shutdown()
     client.close()

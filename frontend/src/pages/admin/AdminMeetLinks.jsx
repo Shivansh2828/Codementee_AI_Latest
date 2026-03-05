@@ -69,22 +69,22 @@ const AdminMeetLinks = () => {
     <DashboardLayout title="Google Meet Links">
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-5">
-          <p className="text-slate-400 text-sm">Total Links</p>
+        <div className="bg-[#171717] rounded-xl border border-[#404040] p-5">
+          <p className="text-gray-500 text-sm">Total Links</p>
           <p className="text-2xl font-bold text-white">{links.length}</p>
         </div>
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-5">
-          <p className="text-slate-400 text-sm">Available</p>
+        <div className="bg-[#171717] rounded-xl border border-[#404040] p-5">
+          <p className="text-gray-500 text-sm">Available</p>
           <p className="text-2xl font-bold text-emerald-400">{availableCount}</p>
         </div>
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-5">
-          <p className="text-slate-400 text-sm">In Use</p>
+        <div className="bg-[#171717] rounded-xl border border-[#404040] p-5">
+          <p className="text-gray-500 text-sm">In Use</p>
           <p className="text-2xl font-bold text-amber-400">{inUseCount}</p>
         </div>
       </div>
 
       <div className="flex justify-between items-center mb-6">
-        <p className="text-slate-400">Pre-generated Google Meet links for mock interviews</p>
+        <p className="text-gray-500">Pre-generated Google Meet links for mock interviews</p>
         <button
           onClick={() => setShowModal(true)}
           className="flex items-center gap-2 bg-[#06b6d4] text-[#0f172a] px-4 py-2 rounded-lg font-medium hover:bg-[#06b6d4]/90 transition-colors"
@@ -103,20 +103,20 @@ const AdminMeetLinks = () => {
 
       {/* Links List */}
       {loading ? (
-        <p className="text-slate-400 text-center py-8">Loading...</p>
+        <p className="text-gray-500 text-center py-8">Loading...</p>
       ) : links.length === 0 ? (
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-8 text-center">
-          <Video size={48} className="mx-auto text-slate-500 mb-4" />
-          <p className="text-slate-400">No meet links added yet</p>
-          <p className="text-slate-500 text-sm mt-1">Add Google Meet links to enable auto-assignment for bookings</p>
+        <div className="bg-[#171717] rounded-xl border border-[#404040] p-8 text-center">
+          <Video size={48} className="mx-auto text-gray-600 mb-4" />
+          <p className="text-gray-500">No meet links added yet</p>
+          <p className="text-gray-600 text-sm mt-1">Add Google Meet links to enable auto-assignment for bookings</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {links.map((link) => (
             <div
               key={link.id}
-              className={`bg-[#1e293b] rounded-xl border p-5 ${
-                link.status === 'in_use' ? 'border-amber-500/50' : 'border-[#334155]'
+              className={`bg-[#171717] rounded-xl border p-5 ${
+                link.status === 'in_use' ? 'border-amber-500/50' : 'border-[#404040]'
               }`}
               data-testid={`link-${link.id}`}
             >
@@ -152,7 +152,7 @@ const AdminMeetLinks = () => {
                 </div>
               </div>
               
-              <div className="flex items-center justify-end gap-2 mt-4 pt-4 border-t border-[#334155]">
+              <div className="flex items-center justify-end gap-2 mt-4 pt-4 border-t border-[#404040]">
                 {link.status === 'in_use' && (
                   <button
                     onClick={() => handleRelease(link.id)}
@@ -178,36 +178,36 @@ const AdminMeetLinks = () => {
       {/* Add Link Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1e293b] rounded-xl border border-[#334155] w-full max-w-md">
-            <div className="flex items-center justify-between p-4 border-b border-[#334155]">
+          <div className="bg-[#171717] rounded-xl border border-[#404040] w-full max-w-md">
+            <div className="flex items-center justify-between p-4 border-b border-[#404040]">
               <h3 className="text-lg font-semibold text-white">Add Google Meet Link</h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-white">
                 <X size={20} />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Google Meet Link *</label>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Google Meet Link *</label>
                 <input
                   type="url"
                   required
                   value={formData.link}
                   onChange={(e) => setFormData({ ...formData, link: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-[#0f172a] border border-[#334155] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#06b6d4]"
+                  className="w-full px-4 py-2.5 bg-[#0d0d0d] border border-[#404040] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#06b6d4]"
                   placeholder="https://meet.google.com/xxx-xxxx-xxx"
                   data-testid="meet-link-input"
                 />
-                <p className="text-slate-500 text-xs mt-1">
+                <p className="text-gray-600 text-xs mt-1">
                   Create a meeting at <a href="https://meet.google.com" target="_blank" rel="noopener noreferrer" className="text-[#06b6d4]">meet.google.com</a> and paste the link here
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Label (optional)</label>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Label (optional)</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-[#0f172a] border border-[#334155] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#06b6d4]"
+                  className="w-full px-4 py-2.5 bg-[#0d0d0d] border border-[#404040] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#06b6d4]"
                   placeholder="e.g., Room 1, Interview Room A"
                 />
               </div>

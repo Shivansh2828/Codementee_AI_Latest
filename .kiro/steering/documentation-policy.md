@@ -9,6 +9,17 @@
 2. **DEPLOYMENT_SOP.md** - Complete deployment guide
 3. **PRODUCT_REQUIREMENTS.md** - Product features and roadmap
 
+## Temporary Implementation Files (Remove After Deployment)
+
+These files were created during dashboard implementation and should be removed after successful deployment:
+
+- `COMPLETE_DASHBOARD_IMPLEMENTATION.md` - Move content to DEPLOYMENT_SOP.md
+- `DASHBOARD_IMPROVEMENTS_SUMMARY.md` - Move content to PRODUCT_REQUIREMENTS.md
+- `UX_IMPROVEMENT_PLAN.md` - Move content to PRODUCT_REQUIREMENTS.md
+- `QUICK_START_GUIDE.md` - Move content to DEPLOYMENT_SOP.md
+- `IMPLEMENTATION_COMPLETE.md` - Delete after deployment verification
+- `backend/PLAN_CONTROL_IMPLEMENTATION.md` - Move to .kiro/steering/development.md
+
 ## What to Do Instead
 
 ### When Making Changes

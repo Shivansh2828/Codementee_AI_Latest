@@ -6,18 +6,18 @@ import Footer from '../components/layout/Footer';
 
 const PrivacyPolicy = () => {
   return (
-    <div className="min-h-screen bg-[#0f172a]">
+    <div className="min-h-screen bg-[#0d0d0d]">
       <Header />
       <main className="pt-24 pb-16">
         <div className="container max-w-4xl">
-          <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-[#06b6d4] transition-colors mb-8">
+          <Link to="/" className="flex items-center gap-2 text-gray-500 hover:text-[#06b6d4] transition-colors mb-8">
             <ArrowLeft size={18} /> Back to Home
           </Link>
 
           <h1 className="text-3xl font-bold text-white mb-8">Privacy Policy</h1>
-          <p className="text-slate-400 mb-8">Last updated: {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+          <p className="text-gray-500 mb-8">Last updated: {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
 
-          <div className="prose prose-invert max-w-none space-y-6 text-slate-300">
+          <div className="prose prose-invert max-w-none space-y-6 text-gray-400">
             <section>
               <h2 className="text-xl font-semibold text-white mb-4">1. Introduction</h2>
               <p>Codementee ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our website and services.</p>

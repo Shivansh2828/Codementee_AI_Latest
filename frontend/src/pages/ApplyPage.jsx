@@ -149,7 +149,7 @@ const ApplyPage = () => {
   const selectedPlanDetails = pricingPlans.find(p => p.id === formData.selectedPlan);
 
   return (
-    <div className="min-h-screen bg-[#0f172a]">
+    <div className="min-h-screen bg-[#0d0d0d]">
       <Header />
       <main className="pt-24 pb-16 md:pt-32 md:pb-24">
         <div className="container">
@@ -157,7 +157,7 @@ const ApplyPage = () => {
             {/* Back Link */}
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 text-slate-400 hover:text-[#06b6d4] transition-colors mb-8"
+              className="flex items-center gap-2 text-gray-500 hover:text-[#06b6d4] transition-colors mb-8"
             >
               <ArrowLeft size={18} />
               Back to Home
@@ -168,7 +168,7 @@ const ApplyPage = () => {
               <h1 className="text-3xl font-bold text-white mb-4">
                 Join Codementee
               </h1>
-              <p className="text-slate-400">
+              <p className="text-gray-500">
                 Complete your registration and payment to get started with mock interviews.
               </p>
             </div>
@@ -176,9 +176,9 @@ const ApplyPage = () => {
             {/* Form */}
             <form onSubmit={handlePayment} className="space-y-6">
               {/* Plan Selection */}
-              <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-6">
+              <div className="bg-[#171717] rounded-xl border border-[#404040] p-6">
                 <h3 className="text-white font-semibold mb-2">Select Your Plan</h3>
-                <p className="text-slate-400 text-sm mb-4">
+                <p className="text-gray-500 text-sm mb-4">
                   All prices are final - no hidden fees or additional charges
                 </p>
                 <div className="grid grid-cols-1 gap-3">
@@ -188,7 +188,7 @@ const ApplyPage = () => {
                       className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-all ${
                         formData.selectedPlan === plan.id
                           ? 'border-[#06b6d4] bg-[#06b6d4]/10'
-                          : 'border-[#334155] bg-[#0f172a] hover:border-[#475569]'
+                          : 'border-[#404040] bg-[#0d0d0d] hover:border-[#475569]'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -201,17 +201,17 @@ const ApplyPage = () => {
                           className="sr-only"
                         />
                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                          formData.selectedPlan === plan.id ? 'border-[#06b6d4] bg-[#06b6d4]' : 'border-slate-500'
+                          formData.selectedPlan === plan.id ? 'border-[#06b6d4] bg-[#06b6d4]' : 'border-gray-500'
                         }`}>
-                          {formData.selectedPlan === plan.id && <div className="w-2 h-2 rounded-full bg-[#0f172a]" />}
+                          {formData.selectedPlan === plan.id && <div className="w-2 h-2 rounded-full bg-[#0d0d0d]" />}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="text-white font-medium">{plan.name}</span>
                             {plan.popular && <span className="text-xs px-2 py-0.5 rounded-full bg-[#06b6d4] text-[#0f172a] font-semibold">Best Value</span>}
                           </div>
-                          <p className="text-slate-400 text-sm">{plan.features[0]}</p>
-                          <p className="text-slate-500 text-xs">
+                          <p className="text-gray-500 text-sm">{plan.features[0]}</p>
+                          <p className="text-gray-600 text-xs">
                             {plan.id === 'foundation' ? '1 mock interview total' : 
                              plan.id === 'growth' ? '3 mock interviews total' : 
                              '6 mock interviews total'} • {plan.duration}
@@ -221,7 +221,7 @@ const ApplyPage = () => {
                       <div className="text-right">
                         <span className="text-white font-bold text-lg">{cohortData.currency}{plan.price.toLocaleString()}</span>
                         {plan.savings && <p className="text-[#06b6d4] text-xs">{plan.savings}</p>}
-                        <p className="text-slate-500 text-xs">{cohortData.currency}{plan.perMonth.toLocaleString()}/month</p>
+                        <p className="text-gray-600 text-xs">{cohortData.currency}{plan.perMonth.toLocaleString()}/month</p>
                       </div>
                     </label>
                   ))}
@@ -229,7 +229,7 @@ const ApplyPage = () => {
               </div>
 
               {/* Account Details */}
-              <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-6">
+              <div className="bg-[#171717] rounded-xl border border-[#404040] p-6">
                 <h3 className="text-white font-semibold mb-4">Account Details</h3>
                 <div className="space-y-4">
                   <div>
@@ -240,7 +240,7 @@ const ApplyPage = () => {
                       value={formData.name}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 rounded-lg bg-[#0f172a] border border-[#334155] text-white placeholder-slate-500 focus:outline-none focus:border-[#06b6d4]"
+                      className="w-full px-4 py-3 rounded-lg bg-[#0d0d0d] border border-[#404040] text-white placeholder-gray-500 focus:outline-none focus:border-[#06b6d4]"
                       placeholder="John Doe"
                     />
                   </div>
@@ -252,7 +252,7 @@ const ApplyPage = () => {
                       value={formData.email}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 rounded-lg bg-[#0f172a] border border-[#334155] text-white placeholder-slate-500 focus:outline-none focus:border-[#06b6d4]"
+                      className="w-full px-4 py-3 rounded-lg bg-[#0d0d0d] border border-[#404040] text-white placeholder-gray-500 focus:outline-none focus:border-[#06b6d4]"
                       placeholder="you@example.com"
                     />
                   </div>
@@ -265,7 +265,7 @@ const ApplyPage = () => {
                       onChange={handleInputChange}
                       required
                       minLength={6}
-                      className="w-full px-4 py-3 rounded-lg bg-[#0f172a] border border-[#334155] text-white placeholder-slate-500 focus:outline-none focus:border-[#06b6d4]"
+                      className="w-full px-4 py-3 rounded-lg bg-[#0d0d0d] border border-[#404040] text-white placeholder-gray-500 focus:outline-none focus:border-[#06b6d4]"
                       placeholder="Min 6 characters"
                     />
                   </div>
@@ -273,8 +273,8 @@ const ApplyPage = () => {
               </div>
 
               {/* Additional Info (Optional) */}
-              <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-6">
-                <h3 className="text-white font-semibold mb-4">Tell Us About You <span className="text-slate-400 font-normal">(Optional)</span></h3>
+              <div className="bg-[#171717] rounded-xl border border-[#404040] p-6">
+                <h3 className="text-white font-semibold mb-4">Tell Us About You <span className="text-gray-500 font-normal">(Optional)</span></h3>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-white text-sm font-medium mb-2">Current Role</label>
@@ -283,7 +283,7 @@ const ApplyPage = () => {
                       name="currentRole"
                       value={formData.currentRole}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-lg bg-[#0f172a] border border-[#334155] text-white placeholder-slate-500 focus:outline-none focus:border-[#06b6d4]"
+                      className="w-full px-4 py-3 rounded-lg bg-[#0d0d0d] border border-[#404040] text-white placeholder-gray-500 focus:outline-none focus:border-[#06b6d4]"
                       placeholder="e.g., SDE-1, 3 years"
                     />
                   </div>
@@ -294,7 +294,7 @@ const ApplyPage = () => {
                       name="targetRole"
                       value={formData.targetRole}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-lg bg-[#0f172a] border border-[#334155] text-white placeholder-slate-500 focus:outline-none focus:border-[#06b6d4]"
+                      className="w-full px-4 py-3 rounded-lg bg-[#0d0d0d] border border-[#404040] text-white placeholder-gray-500 focus:outline-none focus:border-[#06b6d4]"
                       placeholder="e.g., Google, Amazon, Flipkart"
                     />
                   </div>
@@ -308,7 +308,7 @@ const ApplyPage = () => {
                   <span className="text-[#06b6d4] text-sm">{selectedPlanDetails?.name}</span>
                 </div>
                 <div className="flex justify-between items-center text-2xl font-bold">
-                  <span className="text-slate-300">Total</span>
+                  <span className="text-gray-400">Total</span>
                   <span className="text-white">{cohortData.currency}{selectedPlanDetails?.price.toLocaleString()}</span>
                 </div>
                 {selectedPlanDetails?.savings && (
@@ -330,7 +330,7 @@ const ApplyPage = () => {
               </button>
 
               {/* Trust Badges */}
-              <div className="flex items-center justify-center gap-6 text-slate-400 text-sm">
+              <div className="flex items-center justify-center gap-6 text-gray-500 text-sm">
                 <div className="flex items-center gap-2">
                   <Shield size={16} />
                   <span>Secure Payment</span>
@@ -340,7 +340,7 @@ const ApplyPage = () => {
               </div>
 
               {/* Terms */}
-              <p className="text-center text-xs text-slate-500">
+              <p className="text-center text-xs text-gray-600">
                 By proceeding, you agree to our{' '}
                 <Link to="/terms-of-service" className="text-[#06b6d4] hover:underline">Terms of Service</Link>
                 {' '}and{' '}
@@ -348,7 +348,7 @@ const ApplyPage = () => {
               </p>
 
               {/* Already have account */}
-              <p className="text-center text-slate-400 text-sm">
+              <p className="text-center text-gray-500 text-sm">
                 Already have an account?{' '}
                 <Link to="/login" className="text-[#06b6d4] hover:underline">Login here</Link>
               </p>

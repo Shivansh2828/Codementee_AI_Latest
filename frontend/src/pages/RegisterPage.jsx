@@ -60,7 +60,7 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f172a]">
+    <div className="min-h-screen bg-[#0d0d0d]">
       <Header />
       <main className="pt-24 pb-16 md:pt-32 md:pb-24">
         <div className="container">
@@ -68,7 +68,7 @@ const RegisterPage = () => {
             {/* Back Link */}
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 text-slate-400 hover:text-[#06b6d4] transition-colors mb-8"
+              className="flex items-center gap-2 text-gray-500 hover:text-[#06b6d4] transition-colors mb-8"
             >
               <ArrowLeft size={18} />
               Back to Home
@@ -79,7 +79,7 @@ const RegisterPage = () => {
               <h1 className="text-3xl font-bold text-white mb-4">
                 Join Codementee
               </h1>
-              <p className="text-slate-400">
+              <p className="text-gray-500">
                 Create your free account and explore the platform
               </p>
             </div>
@@ -89,14 +89,14 @@ const RegisterPage = () => {
               <p className="text-[#06b6d4] text-sm font-medium">
                 🎉 Free to explore - No payment required
               </p>
-              <p className="text-slate-300 text-xs mt-1">
+              <p className="text-gray-400 text-xs mt-1">
                 Browse features, see pricing, and upgrade when you're ready to book mock interviews.
               </p>
             </div>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-6">
+              <div className="bg-[#171717] rounded-xl border border-[#404040] p-6">
                 <div className="space-y-4">
                   {/* Name */}
                   <div>
@@ -109,7 +109,7 @@ const RegisterPage = () => {
                       value={formData.name}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 bg-[#0f172a] border border-[#334155] rounded-lg text-white placeholder-slate-500 focus:border-[#06b6d4] focus:outline-none transition-colors"
+                      className="w-full px-4 py-3 bg-[#0d0d0d] border border-[#404040] rounded-lg text-white placeholder-gray-500 focus:border-[#06b6d4] focus:outline-none transition-colors"
                       placeholder="Enter your full name"
                     />
                   </div>
@@ -125,7 +125,7 @@ const RegisterPage = () => {
                       value={formData.email}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 bg-[#0f172a] border border-[#334155] rounded-lg text-white placeholder-slate-500 focus:border-[#06b6d4] focus:outline-none transition-colors"
+                      className="w-full px-4 py-3 bg-[#0d0d0d] border border-[#404040] rounded-lg text-white placeholder-gray-500 focus:border-[#06b6d4] focus:outline-none transition-colors"
                       placeholder="Enter your email"
                     />
                   </div>
@@ -142,13 +142,13 @@ const RegisterPage = () => {
                         value={formData.password}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-4 py-3 bg-[#0f172a] border border-[#334155] rounded-lg text-white placeholder-slate-500 focus:border-[#06b6d4] focus:outline-none transition-colors pr-12"
+                        className="w-full px-4 py-3 bg-[#0d0d0d] border border-[#404040] rounded-lg text-white placeholder-gray-500 focus:border-[#06b6d4] focus:outline-none transition-colors pr-12"
                         placeholder="Create a password"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
                       >
                         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                       </button>
@@ -165,7 +165,7 @@ const RegisterPage = () => {
                       name="currentRole"
                       value={formData.currentRole}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-[#0f172a] border border-[#334155] rounded-lg text-white placeholder-slate-500 focus:border-[#06b6d4] focus:outline-none transition-colors"
+                      className="w-full px-4 py-3 bg-[#0d0d0d] border border-[#404040] rounded-lg text-white placeholder-gray-500 focus:border-[#06b6d4] focus:outline-none transition-colors"
                       placeholder="e.g., SDE-1, Frontend Developer"
                     />
                   </div>
@@ -180,7 +180,7 @@ const RegisterPage = () => {
                       name="targetRole"
                       value={formData.targetRole}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-[#0f172a] border border-[#334155] rounded-lg text-white placeholder-slate-500 focus:border-[#06b6d4] focus:outline-none transition-colors"
+                      className="w-full px-4 py-3 bg-[#0d0d0d] border border-[#404040] rounded-lg text-white placeholder-gray-500 focus:border-[#06b6d4] focus:outline-none transition-colors"
                       placeholder="e.g., Amazon SDE-2, Google L4"
                     />
                   </div>
@@ -202,7 +202,7 @@ const RegisterPage = () => {
 
               {/* Login Link */}
               <div className="text-center">
-                <p className="text-slate-400 text-sm">
+                <p className="text-gray-500 text-sm">
                   Already have an account?{' '}
                   <Link to="/login" className="text-[#06b6d4] hover:underline">
                     Sign in

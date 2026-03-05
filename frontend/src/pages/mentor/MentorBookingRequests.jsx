@@ -59,7 +59,7 @@ const MentorBookingRequests = () => {
   if (loading) {
     return (
       <DashboardLayout title="Booking Requests">
-        <div className="text-center py-12 text-slate-400">Loading...</div>
+        <div className="text-center py-12 text-gray-500">Loading...</div>
       </DashboardLayout>
     );
   }
@@ -67,15 +67,15 @@ const MentorBookingRequests = () => {
   return (
     <DashboardLayout title="Booking Requests">
       {requests.length === 0 ? (
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-8 text-center">
-          <ClipboardList size={48} className="mx-auto text-slate-500 mb-4" />
-          <p className="text-slate-400">No pending booking requests</p>
-          <p className="text-slate-500 text-sm mt-1">When mentees request mock interviews, they'll appear here</p>
+        <div className="bg-[#171717] rounded-xl border border-[#404040] p-8 text-center">
+          <ClipboardList size={48} className="mx-auto text-gray-600 mb-4" />
+          <p className="text-gray-500">No pending booking requests</p>
+          <p className="text-gray-600 text-sm mt-1">When mentees request mock interviews, they'll appear here</p>
         </div>
       ) : (
         <div className="space-y-4">
           {requests.map((request) => (
-            <div key={request.id} className="bg-[#1e293b] rounded-xl border border-[#334155] overflow-hidden" data-testid={`request-${request.id}`}>
+            <div key={request.id} className="bg-[#171717] rounded-xl border border-[#404040] overflow-hidden" data-testid={`request-${request.id}`}>
               <div className="p-5">
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                   <div className="flex items-start gap-4">
@@ -84,33 +84,33 @@ const MentorBookingRequests = () => {
                     </div>
                     <div>
                       <h3 className="text-white font-semibold text-lg">{request.company_name}</h3>
-                      <p className="text-slate-400">
+                      <p className="text-gray-500">
                         Requested by <span className="text-white">{request.mentee_name}</span>
                       </p>
-                      <p className="text-slate-500 text-sm">{request.mentee_email}</p>
+                      <p className="text-gray-600 text-sm">{request.mentee_email}</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-amber-500/20 text-amber-400">
                       <Clock size={14} /> Pending
                     </span>
-                    <p className="text-slate-500 text-xs mt-2">
+                    <p className="text-gray-600 text-xs mt-2">
                       {new Date(request.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-[#334155]">
-                  <p className="text-slate-400 text-sm mb-3">Mentee's Preferred Slots:</p>
+                <div className="mt-4 pt-4 border-t border-[#404040]">
+                  <p className="text-gray-500 text-sm mb-3">Mentee's Preferred Slots:</p>
                   <div className="flex flex-wrap gap-3">
                     {request.preferred_slots?.map((slot) => (
                       <div
                         key={slot.id}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#0f172a] rounded-lg border border-[#334155]"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#0d0d0d] rounded-lg border border-[#404040]"
                       >
                         <Calendar size={16} className="text-[#06b6d4]" />
                         <span className="text-white">{formatDate(slot.date)}</span>
-                        <Clock size={16} className="text-slate-400 ml-2" />
+                        <Clock size={16} className="text-gray-500 ml-2" />
                         <span className="text-white">{slot.start_time} - {slot.end_time}</span>
                       </div>
                     ))}
@@ -128,9 +128,9 @@ const MentorBookingRequests = () => {
                     </button>
                   </div>
                 ) : (
-                  <div className="mt-4 pt-4 border-t border-[#334155] space-y-4">
+                  <div className="mt-4 pt-4 border-t border-[#404040] space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">Select a slot to confirm *</label>
+                      <label className="block text-sm font-medium text-gray-400 mb-2">Select a slot to confirm *</label>
                       <div className="flex flex-wrap gap-2">
                         {request.preferred_slots?.map((slot) => (
                           <button
@@ -139,7 +139,7 @@ const MentorBookingRequests = () => {
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
                               selectedSlotId === slot.id
                                 ? 'bg-[#06b6d4]/10 border-[#06b6d4] text-[#06b6d4]'
-                                : 'bg-[#0f172a] border-[#334155] text-slate-300 hover:border-[#06b6d4]/50'
+                                : 'bg-[#0d0d0d] border-[#404040] text-gray-400 hover:border-[#06b6d4]/50'
                             }`}
                             data-testid={`select-slot-${slot.id}`}
                           >
@@ -164,7 +164,7 @@ const MentorBookingRequests = () => {
                           setConfirmingId(null);
                           setSelectedSlotId('');
                         }}
-                        className="flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-white transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 text-gray-500 hover:text-white transition-colors"
                       >
                         <X size={18} /> Cancel
                       </button>

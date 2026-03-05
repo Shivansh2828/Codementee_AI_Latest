@@ -1,279 +1,535 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import { useTheme } from '../../contexts/ThemeContext';
-import api from '../../utils/api';
-import { Calendar, MessageSquare, TrendingUp, CreditCard, ArrowRight, Check, Star, Sparkles, Target, Clock, Award } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Link } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Badge } from "../../components/ui/badge";
+import { Progress } from "../../components/ui/progress";
+import { toast } from "sonner";
+import { 
+  Calendar, 
+  Clock, 
+  CheckCircle, 
+  TrendingUp,
+  AlertCircle,
+  RefreshCw,
+  Sparkles,
+  FileText,
+  MessageSquare,
+  Users,
+  Crown,
+  Lock,
+  ArrowRight,
+  Target,
+  Award,
+  BookOpen,
+  Code,
+  Network,
+  MessageCircle,
+  Briefcase,
+  Bug
+} from "lucide-react";
+import api from "../../utils/api";
+import { Link } from "react-router-dom";
 
 const MenteeDashboard = () => {
-  const { user } = useAuth();
   const { theme } = useTheme();
-  const [stats, setStats] = useState({ mocks: 0, feedbacks: 0 });
-  const [nextMock, setNextMock] = useState(null);
-  const [pricingPlans, setPricingPlans] = useState([]);
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const [mocks, feedbacks] = await Promise.all([api.get('/mocks'), api.get('/mentee/feedbacks')]);
-        setStats({ mocks: mocks.data.length, feedbacks: feedbacks.data.length });
-        const upcoming = mocks.data.filter(m => m.status === 'scheduled').sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at))[0];
-        setNextMock(upcoming);
-      } catch (e) { console.error(e); }
-    };
-
-    const fetchPricing = async () => {
-      try {
-        const response = await api.get('/pricing-plans');
-        setPricingPlans(response.data);
-      } catch (e) { console.error(e); }
-    };
-
-    fetchStats();
-    fetchPricing();
-  }, []);
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalBookings: 0,
+    upcomingBookings: 0,
+    completedBookings: 0,
+    quotaRemaining: 0,
+    quotaTotal: 0,
+    resumeReviewsUsed: 0,
+    resumeReviewsTotal: 0
+  });
+  const [planFeatures, setPlanFeatures] = useState([]);
 
   const isFreeUser = user?.status === 'Free' || !user?.plan_id;
+  
+  // Get plan display name (remove any "Plan" or month references)
+  const getPlanDisplayName = () => {
+    if (isFreeUser) return 'Free Tier';
+    const planId = user?.plan_id;
+    if (planId === 'starter') return 'Starter';
+    if (planId === 'pro') return 'Pro';
+    if (planId === 'elite') return 'Elite';
+    return user?.plan_name || 'Free Tier';
+  };
+  
+  const planName = getPlanDisplayName();
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      // Fetch bookings
+      const bookingsRes = await api.get('/mentee/bookings');
+      const bookings = bookingsRes.data;
+      
+      const upcoming = bookings.upcoming || [];
+      const past = bookings.past || [];
+      
+      // Fetch resume requests to calculate used reviews
+      let resumeReviewsUsed = 0;
+      const resumeReviewsTotal = user?.plan_features?.resume_reviews || 0;
+      
+      if (resumeReviewsTotal > 0) {
+        try {
+          const resumeRes = await api.get('/mentee/resume-requests');
+          const resumeRequests = resumeRes.data || [];
+          // Count non-cancelled requests as used
+          resumeReviewsUsed = resumeRequests.filter(r => r.status !== 'cancelled').length;
+        } catch (error) {
+          console.error('Failed to fetch resume requests:', error);
+        }
+      }
+      
+      setStats({
+        totalBookings: upcoming.length + past.length,
+        upcomingBookings: upcoming.length,
+        completedBookings: past.length,
+        quotaRemaining: user?.interview_quota_remaining ?? 0,
+        quotaTotal: user?.interview_quota_total ?? 0,
+        resumeReviewsUsed,
+        resumeReviewsTotal
+      });
+
+      // Set plan features based on user's plan
+      if (user?.plan_id) {
+        const features = getPlanFeatures(user.plan_id);
+        setPlanFeatures(features);
+      }
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getPlanFeatures = (planId) => {
+    const featureMap = {
+      'starter': [
+        { name: 'Mock Interviews', value: '1 mock interview', available: true, icon: Calendar },
+        { name: 'Resume Review', value: '1 email review (on request)', available: true, icon: FileText, description: 'Submit your resume via email for expert feedback' },
+        { name: 'Offline Profile Creation', value: 'Not included', available: false, icon: Target },
+        { name: 'AI Tools', value: 'Limited access', available: true, icon: Sparkles },
+        { name: 'Community Access', value: 'Not included', available: false, icon: Users },
+        { name: 'Priority Support', value: 'Not included', available: false, icon: MessageSquare }
+      ],
+      'pro': [
+        { name: 'Mock Interviews', value: '3 mock interviews', available: true, icon: Calendar },
+        { name: 'Resume Review', value: '1 call with MAANG engineer (on request)', available: true, icon: FileText, description: 'Schedule a call with a MAANG engineer for live resume review' },
+        { name: 'Offline Profile Creation', value: 'Not included', available: false, icon: Target },
+        { name: 'AI Tools', value: 'Full access', available: true, icon: Sparkles },
+        { name: 'Strategy Call', value: '1 session', available: true, icon: MessageSquare },
+        { name: 'Community Access', value: 'Full access', available: true, icon: Users }
+      ],
+      'elite': [
+        { name: 'Mock Interviews', value: '6 mock interviews', available: true, icon: Calendar },
+        { name: 'Resume Review', value: '1 live call session (on request)', available: true, icon: FileText, description: 'Book a live call session for comprehensive resume review' },
+        { name: 'Offline Profile Creation', value: '1 session included', available: true, icon: Target },
+        { name: 'AI Tools', value: 'Full access', available: true, icon: Sparkles },
+        { name: 'Referral Guidance', value: 'Best effort', available: true, icon: Award },
+        { name: 'Priority Support', value: 'WhatsApp', available: true, icon: MessageSquare },
+        { name: 'Community Access', value: 'Full access', available: true, icon: Users }
+      ]
+    };
+
+    return featureMap[planId] || [];
+  };
+
+  const QuickActionCard = ({ title, description, icon: Icon, to, locked, badge }) => (
+    <Link to={locked ? '#' : to} className={locked ? 'cursor-not-allowed' : ''}>
+      <div className={`${theme.glass} rounded-xl p-6 ${theme.border.primary} border ${theme.shadow} transition-all hover:scale-105 ${locked ? 'opacity-60' : 'hover:border-[#06b6d4]'}`}>
+        <div className="flex items-start justify-between mb-4">
+          <div className={`w-12 h-12 rounded-xl ${locked ? 'bg-gray-600' : 'bg-gradient-to-br from-[#06b6d4] to-[#0891b2]'} flex items-center justify-center`}>
+            {locked ? <Lock className="w-6 h-6 text-gray-400" /> : <Icon className="w-6 h-6 text-white" />}
+          </div>
+          {badge && (
+            <Badge className="bg-yellow-400/20 text-yellow-400 border-yellow-400/30 text-xs">
+              {badge}
+            </Badge>
+          )}
+        </div>
+        <h3 className={`${theme.text.primary} font-semibold mb-2`}>{title}</h3>
+        <p className={`${theme.text.secondary} text-sm mb-4`}>{description}</p>
+        {locked ? (
+          <div className="flex items-center gap-2 text-yellow-400 text-sm">
+            <Crown className="w-4 h-4" />
+            <span>Upgrade to unlock</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-[#06b6d4] text-sm font-medium">
+            <span>Get started</span>
+            <ArrowRight className="w-4 h-4" />
+          </div>
+        )}
+      </div>
+    </Link>
+  );
+
+  if (loading) {
+    return (
+      <DashboardLayout title="Dashboard">
+        <div className={`text-center py-12 ${theme.text.secondary}`}>
+          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <p>Loading your dashboard...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
-    <DashboardLayout title={isFreeUser ? "Welcome to Codementee!" : "Welcome back!"}>
-      {/* Free User Upgrade Banner */}
-      {isFreeUser && (
-        <div className={`${theme.glass} ${theme.border.primary} border rounded-2xl p-6 mb-8 ${theme.shadow}`}>
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="w-5 h-5 text-[#06b6d4]" />
-                <h3 className={`text-xl font-bold ${theme.text.primary}`}>
-                  You're exploring Codementee for free!
-                </h3>
+    <DashboardLayout title="Dashboard">
+      <div className="space-y-8">
+        {/* Welcome Header */}
+        <div className="text-center">
+          <h1 className={`text-3xl font-bold ${theme.text.primary} mb-2`}>
+            Welcome back, {user?.name?.split(' ')[0]}! 👋
+          </h1>
+          <p className={theme.text.secondary}>
+            Here's your interview preparation progress
+          </p>
+        </div>
+
+        {/* Migration Warning - Show if quota fields are missing */}
+        {!isFreeUser && (user?.interview_quota_total === undefined || user?.interview_quota_total === null) && (
+          <div className={`${theme.bg.secondary} rounded-xl p-4 border-2 border-yellow-500/30`}>
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className={`${theme.text.primary} font-semibold mb-1`}>System Update Required</p>
+                <p className={`${theme.text.secondary} text-sm`}>
+                  Your account needs to be updated to show quota information. Please contact support or refresh the page in a few minutes.
+                </p>
               </div>
-              <p className={`${theme.text.secondary} mb-2`}>
-                Browse features, see how everything works, and upgrade when you're ready to book mock interviews.
-              </p>
-              <p className="text-[#06b6d4] text-sm font-medium">
-                No pressure - take your time to explore!
-              </p>
             </div>
-            <Link 
-              to="/mentee/book" 
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-semibold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 whitespace-nowrap"
-            >
-              Start Booking Process
-              <ArrowRight size={16} />
-            </Link>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className={`${theme.glass} rounded-2xl ${theme.border.primary} border p-6 ${theme.shadow}`}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-purple-500 text-sm font-medium">Total Mocks</p>
-              <p className={`text-3xl font-bold ${theme.text.primary} mt-1`}>{stats.mocks}</p>
-              {isFreeUser && <p className="text-purple-500 text-xs mt-1">Upgrade to book interviews</p>}
-            </div>
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-3 rounded-xl shadow-lg">
-              <Calendar size={24} className="text-white" />
-            </div>
-          </div>
-        </div>
-        
-        <div className={`${theme.glass} rounded-2xl ${theme.border.primary} border p-6 ${theme.shadow}`}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-green-500 text-sm font-medium">Feedbacks Received</p>
-              <p className={`text-3xl font-bold ${theme.text.primary} mt-1`}>{stats.feedbacks}</p>
-              {isFreeUser && <p className="text-green-500 text-xs mt-1">Available after interviews</p>}
-            </div>
-            <div className="bg-gradient-to-br from-green-500 to-green-600 p-3 rounded-xl shadow-lg">
-              <MessageSquare size={24} className="text-white" />
-            </div>
-          </div>
-        </div>
-        
-        <div className={`${theme.glass} rounded-2xl ${theme.border.primary} border p-6 ${theme.shadow}`}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[#06b6d4] text-sm font-medium">Status</p>
-              <p className={`text-xl font-bold mt-1 capitalize ${isFreeUser ? theme.text.muted : theme.text.primary}`}>
-                {user?.status || 'Free'}
-              </p>
-              {isFreeUser && <p className="text-[#06b6d4] text-xs mt-1">Free exploration mode</p>}
-            </div>
-            <div className="bg-gradient-to-br from-[#06b6d4] to-[#0891b2] p-3 rounded-xl shadow-lg">
-              <TrendingUp size={24} className="text-white" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Pricing Plans for Free Users */}
-      {isFreeUser && pricingPlans.length > 0 && (
-        <div className="mb-8">
+        {/* Plan Status Card */}
+        <div className={`${theme.glass} rounded-2xl p-6 ${theme.border.primary} border ${theme.shadow}`}>
           <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className={`text-2xl font-bold ${theme.text.primary} mb-1`}>Choose Your Plan</h3>
-              <p className={`${theme.text.secondary}`}>Upgrade to start booking mock interviews with top engineers</p>
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 rounded-xl ${isFreeUser ? 'bg-gray-600' : 'bg-gradient-to-br from-[#06b6d4] to-[#0891b2]'} flex items-center justify-center`}>
+                {isFreeUser ? <Lock className="w-6 h-6 text-gray-400" /> : <Crown className="w-6 h-6 text-white" />}
+              </div>
+              <div>
+                <h2 className={`${theme.text.primary} text-xl font-bold`}>{planName}</h2>
+                <p className={`${theme.text.secondary} text-sm`}>
+                  {isFreeUser ? 'Upgrade to start booking interviews' : 'Active subscription'}
+                </p>
+              </div>
             </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {pricingPlans.map((plan) => (
-              <div 
-                key={plan.id}
-                className={`rounded-2xl overflow-hidden transition-all hover:-translate-y-1 hover:shadow-xl ${
-                  plan.popular 
-                    ? `border-2 border-[#06b6d4] ${theme.glass} relative ${theme.shadow}` 
-                    : `${theme.border.primary} border ${theme.bg.card} ${theme.shadow}`
-                }`}
-              >
-                {plan.popular && (
-                  <div className="bg-gradient-to-r from-[#06b6d4] to-[#0891b2] py-2 px-4 flex items-center justify-center gap-2">
-                    <Star size={14} className="text-white fill-white" />
-                    <span className="text-white font-bold text-xs uppercase tracking-wide">
-                      Most Popular
-                    </span>
-                  </div>
-                )}
-
-                <div className="p-6">
-                  <div className="mb-4">
-                    <h4 className={`text-lg font-bold ${theme.text.primary} mb-1`}>{plan.name}</h4>
-                    <p className={`${theme.text.secondary} text-sm`}>{plan.duration}</p>
-                  </div>
-
-                  <div className="mb-4">
-                    <div className="flex items-baseline gap-1">
-                      <span className={`${theme.text.secondary}`}>₹</span>
-                      <span className={`text-3xl font-bold ${theme.text.primary}`}>{plan.price.toLocaleString()}</span>
-                    </div>
-                    {plan.savings && (
-                      <p className="text-[#06b6d4] text-sm mt-1 font-medium">{plan.savings}</p>
-                    )}
-                    <p className={`${theme.text.secondary} text-sm mt-1`}>₹{plan.perMonth.toLocaleString()}/month</p>
-                  </div>
-
-                  <ul className="space-y-2 mb-6">
-                    {plan.features.slice(0, 4).map((feature, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <div className="w-5 h-5 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center shrink-0 mt-0.5">
-                          <Check size={12} className="text-white" />
-                        </div>
-                        <span className={`${theme.text.secondary} text-sm`}>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Link 
-                    to="/mentee/book"
-                    className={`w-full inline-flex items-center justify-center gap-2 px-6 py-3 font-semibold rounded-xl transition-all duration-200 ${
-                      plan.popular 
-                        ? 'bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white hover:from-[#0891b2] hover:to-[#0e7490] shadow-lg hover:shadow-xl transform hover:-translate-y-0.5' 
-                        : `${theme.bg.secondary} ${theme.text.primary} ${theme.bg.hover} ${theme.border.primary} border`
-                    }`}
-                  >
-                    Choose Plan
-                    <ArrowRight size={16} />
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Quick Actions for Free Users */}
-      {isFreeUser && (
-        <div className="mb-8">
-          <h3 className={`text-xl font-bold ${theme.text.primary} mb-4`}>Explore Platform Features</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link 
-              to="/mentee/book" 
-              className={`p-4 ${theme.glass} ${theme.border.primary} border rounded-xl hover:shadow-md transition-all duration-200 group`}
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-[#06b6d4] to-[#0891b2] rounded-lg flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-white" />
-                </div>
-                <h4 className={`font-semibold ${theme.text.primary}`}>Book Mock</h4>
-              </div>
-              <p className={`text-sm ${theme.text.secondary}`}>Start the booking process</p>
-            </Link>
-
-            <Link 
-              to="/mentee/resume-analyzer" 
-              className={`p-4 ${theme.glass} ${theme.border.primary} border rounded-xl hover:shadow-md transition-all duration-200 group`}
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <Target className="w-5 h-5 text-white" />
-                </div>
-                <h4 className={`font-semibold ${theme.text.primary}`}>AI Resume</h4>
-              </div>
-              <p className={`text-sm ${theme.text.secondary}`}>Analyze your resume</p>
-            </Link>
-
-            <Link 
-              to="/mentee/interview-prep" 
-              className={`p-4 ${theme.glass} ${theme.border.primary} border rounded-xl hover:shadow-md transition-all duration-200 group`}
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                  <Award className="w-5 h-5 text-white" />
-                </div>
-                <h4 className={`font-semibold ${theme.text.primary}`}>Interview Prep</h4>
-              </div>
-              <p className={`text-sm ${theme.text.secondary}`}>AI-powered preparation</p>
-            </Link>
-
-            <Link 
-              to="/mentee/community" 
-              className={`p-4 ${theme.glass} ${theme.border.primary} border rounded-xl hover:shadow-md transition-all duration-200 group`}
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-                  <MessageSquare className="w-5 h-5 text-white" />
-                </div>
-                <h4 className={`font-semibold ${theme.text.primary}`}>Community</h4>
-              </div>
-              <p className={`text-sm ${theme.text.secondary}`}>Connect with peers</p>
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* Upcoming Mock Interview */}
-      {nextMock && (
-        <div className={`${theme.glass} ${theme.border.primary} border rounded-2xl p-6 ${theme.shadow}`}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
-              <Clock className="w-5 h-5 text-white" />
-            </div>
-            <h3 className={`text-lg font-semibold ${theme.text.primary}`}>Upcoming Mock Interview</h3>
-          </div>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <p className={`${theme.text.primary} font-medium`}>{new Date(nextMock.scheduled_at).toLocaleString()}</p>
-              <p className={`${theme.text.secondary} text-sm`}>Status: <span className="capitalize">{nextMock.status}</span></p>
-            </div>
-            {nextMock.meet_link && (
-              <a 
-                href={nextMock.meet_link} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-              >
-                Join Interview
-                <ArrowRight size={16} />
-              </a>
+            {isFreeUser ? (
+              <Link to="/mentee/book">
+                <Button className="bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white">
+                  <Crown className="w-4 h-4 mr-2" />
+                  Upgrade Now
+                </Button>
+              </Link>
+            ) : (
+              <Badge className="bg-green-400/20 text-green-400 border-green-400/30 px-4 py-2">
+                <CheckCircle className="w-4 h-4 mr-1" />
+                Active
+              </Badge>
             )}
           </div>
+
+          {/* Plan Quotas Summary */}
+          {!isFreeUser && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              {/* Mock Interviews Quota */}
+              <div className={`${theme.bg.secondary} rounded-xl p-4`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className="w-4 h-4 text-[#06b6d4]" />
+                  <span className={`${theme.text.secondary} text-sm font-medium`}>Mock Interviews</span>
+                </div>
+                <p className={`${theme.text.primary} text-2xl font-bold`}>
+                  {stats.quotaRemaining} / {stats.quotaTotal}
+                </p>
+                <p className={`${theme.text.muted} text-xs mt-1`}>
+                  {stats.quotaRemaining === 0 ? 'All used' : `${stats.quotaRemaining} remaining`}
+                </p>
+              </div>
+
+              {/* Resume Reviews Quota */}
+              <div className={`${theme.bg.secondary} rounded-xl p-4 relative`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-purple-400" />
+                    <span className={`${theme.text.secondary} text-sm font-medium`}>Resume Reviews</span>
+                  </div>
+                </div>
+                <p className={`${theme.text.primary} text-2xl font-bold mb-1`}>
+                  {stats.resumeReviewsTotal - stats.resumeReviewsUsed} / {stats.resumeReviewsTotal}
+                </p>
+                <p className={`${theme.text.muted} text-xs mb-3`}>
+                  {user?.plan_id === 'starter' && 'Email review'}
+                  {user?.plan_id === 'pro' && 'Call with MAANG engineer'}
+                  {user?.plan_id === 'elite' && '1:1 Live call session'}
+                </p>
+                {stats.resumeReviewsTotal > 0 && stats.resumeReviewsUsed < stats.resumeReviewsTotal && (
+                  <Link to="/mentee/resume-review" className="block">
+                    <Button className="w-full bg-purple-500 hover:bg-purple-600 text-white text-xs font-medium py-2 px-4">
+                      Request Review
+                    </Button>
+                  </Link>
+                )}
+                {stats.resumeReviewsUsed >= stats.resumeReviewsTotal && stats.resumeReviewsTotal > 0 && (
+                  <div className={`text-center py-2 px-3 rounded-md ${theme.bg.tertiary}`}>
+                    <p className={`${theme.text.muted} text-xs`}>All reviews used</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Offline Profile Creation */}
+              <div className={`${theme.bg.secondary} rounded-xl p-4`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="w-4 h-4 text-orange-400" />
+                  <span className={`${theme.text.secondary} text-sm font-medium`}>Profile Creation</span>
+                </div>
+                <p className={`${theme.text.primary} text-2xl font-bold`}>
+                  {user?.plan_features?.offline_profile_creation || 0}
+                </p>
+                <p className={`${theme.text.muted} text-xs mt-1`}>
+                  {user?.plan_features?.offline_profile_creation > 0 ? 'Offline session' : 'Not included'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Interview Quota Progress Bar */}
+          {!isFreeUser && stats.quotaTotal > 0 && (
+            <div className={`${theme.bg.secondary} rounded-xl p-4`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className={`${theme.text.secondary} text-sm`}>Interview Quota Usage</span>
+                <span className={`${theme.text.primary} font-semibold`}>
+                  {Math.round(((stats.quotaTotal - stats.quotaRemaining) / stats.quotaTotal) * 100)}% used
+                </span>
+              </div>
+              <Progress 
+                value={((stats.quotaTotal - stats.quotaRemaining) / stats.quotaTotal) * 100} 
+                className="h-2"
+              />
+              <p className={`${theme.text.muted} text-xs mt-2`}>
+                {stats.quotaRemaining === 0 
+                  ? 'You have used all your interviews. Upgrade to continue.' 
+                  : `You have ${stats.quotaRemaining} interview${stats.quotaRemaining !== 1 ? 's' : ''} left.`
+                }
+              </p>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className={`${theme.glass} rounded-xl p-6 ${theme.border.primary} border text-center`}>
+            <div className="w-12 h-12 bg-blue-400/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+              <Calendar className="w-6 h-6 text-blue-400" />
+            </div>
+            <p className="text-3xl font-bold text-blue-400 mb-1">{stats.upcomingBookings}</p>
+            <p className={`${theme.text.secondary} text-sm`}>Upcoming Interviews</p>
+          </div>
+
+          <div className={`${theme.glass} rounded-xl p-6 ${theme.border.primary} border text-center`}>
+            <div className="w-12 h-12 bg-green-400/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+              <CheckCircle className="w-6 h-6 text-green-400" />
+            </div>
+            <p className="text-3xl font-bold text-green-400 mb-1">{stats.completedBookings}</p>
+            <p className={`${theme.text.secondary} text-sm`}>Completed Interviews</p>
+          </div>
+
+          <div className={`${theme.glass} rounded-xl p-6 ${theme.border.primary} border text-center`}>
+            <div className="w-12 h-12 bg-purple-400/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+              <Award className="w-6 h-6 text-purple-400" />
+            </div>
+            <p className="text-3xl font-bold text-purple-400 mb-1">{stats.totalBookings}</p>
+            <p className={`${theme.text.secondary} text-sm`}>Total Interviews</p>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div>
+          <h2 className={`${theme.text.primary} text-2xl font-bold mb-6`}>Quick Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <QuickActionCard
+              title="Book Mock Interview"
+              description="Schedule a mock interview with expert mentors from top companies"
+              icon={Calendar}
+              to="/mentee/slots"
+              locked={isFreeUser}
+              badge={stats.quotaRemaining > 0 ? `${stats.quotaRemaining} left` : null}
+            />
+            
+            <QuickActionCard
+              title="My Interviews"
+              description="View your upcoming and past interview sessions"
+              icon={BookOpen}
+              to="/mentee/mocks"
+              locked={false}
+            />
+            
+            <QuickActionCard
+              title="Resume Analyzer"
+              description="Get AI-powered feedback on your resume with ATS optimization"
+              icon={FileText}
+              to="/mentee/resume-analyzer"
+              locked={isFreeUser}
+            />
+            
+            <QuickActionCard
+              title="Interview Prep"
+              description="Access AI-powered interview preparation tools and resources"
+              icon={Sparkles}
+              to="/mentee/interview-prep"
+              locked={isFreeUser}
+            />
+            
+            <QuickActionCard
+              title="Community Forum"
+              description="Connect with other mentees and share interview experiences"
+              icon={Users}
+              to="/mentee/community"
+              locked={!['pro', 'elite'].includes(user?.plan_id)}
+            />
+            
+            <QuickActionCard
+              title="My Feedbacks"
+              description="Review detailed feedback from your completed interviews"
+              icon={MessageSquare}
+              to="/mentee/feedbacks"
+              locked={false}
+            />
+          </div>
+        </div>
+
+        {/* Interview Types Section */}
+        <div>
+          <h2 className={`${theme.text.primary} text-2xl font-bold mb-3`}>Interview Types We Offer</h2>
+          <p className={`${theme.text.secondary} mb-6`}>
+            Choose from various interview formats to match your target role
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* DSA/Coding */}
+            <div className={`${theme.glass} rounded-xl p-6 ${theme.border.primary} border ${theme.shadow} hover:scale-105 transition-all group cursor-pointer`}>
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Code className="w-6 h-6 text-white" />
+              </div>
+              <h3 className={`${theme.text.primary} font-bold mb-2`}>DSA & Coding</h3>
+              <p className={`${theme.text.muted} text-sm mb-3`}>
+                Data structures, algorithms, and problem-solving
+              </p>
+              <div className="flex flex-wrap gap-1">
+                <Badge className="bg-blue-500/20 text-blue-400 border-0 text-xs">Arrays</Badge>
+                <Badge className="bg-blue-500/20 text-blue-400 border-0 text-xs">Trees</Badge>
+                <Badge className="bg-blue-500/20 text-blue-400 border-0 text-xs">DP</Badge>
+              </div>
+            </div>
+
+            {/* System Design */}
+            <div className={`${theme.glass} rounded-xl p-6 ${theme.border.primary} border ${theme.shadow} hover:scale-105 transition-all group cursor-pointer`}>
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Network className="w-6 h-6 text-white" />
+              </div>
+              <h3 className={`${theme.text.primary} font-bold mb-2`}>System Design</h3>
+              <p className={`${theme.text.muted} text-sm mb-3`}>
+                Architecture, scalability, and distributed systems
+              </p>
+              <div className="flex flex-wrap gap-1">
+                <Badge className="bg-purple-500/20 text-purple-400 border-0 text-xs">HLD</Badge>
+                <Badge className="bg-purple-500/20 text-purple-400 border-0 text-xs">LLD</Badge>
+                <Badge className="bg-purple-500/20 text-purple-400 border-0 text-xs">Scale</Badge>
+              </div>
+            </div>
+
+            {/* Behavioral */}
+            <div className={`${theme.glass} rounded-xl p-6 ${theme.border.primary} border ${theme.shadow} hover:scale-105 transition-all group cursor-pointer`}>
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <MessageCircle className="w-6 h-6 text-white" />
+              </div>
+              <h3 className={`${theme.text.primary} font-bold mb-2`}>Behavioral</h3>
+              <p className={`${theme.text.muted} text-sm mb-3`}>
+                Leadership, teamwork, and problem-solving scenarios
+              </p>
+              <div className="flex flex-wrap gap-1">
+                <Badge className="bg-green-500/20 text-green-400 border-0 text-xs">STAR</Badge>
+                <Badge className="bg-green-500/20 text-green-400 border-0 text-xs">Stories</Badge>
+              </div>
+            </div>
+
+            {/* HR Round */}
+            <div className={`${theme.glass} rounded-xl p-6 ${theme.border.primary} border ${theme.shadow} hover:scale-105 transition-all group cursor-pointer`}>
+              <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Briefcase className="w-6 h-6 text-white" />
+              </div>
+              <h3 className={`${theme.text.primary} font-bold mb-2`}>HR Round</h3>
+              <p className={`${theme.text.muted} text-sm mb-3`}>
+                Culture fit, salary negotiation, and company questions
+              </p>
+              <div className="flex flex-wrap gap-1">
+                <Badge className="bg-orange-500/20 text-orange-400 border-0 text-xs">Fit</Badge>
+                <Badge className="bg-orange-500/20 text-orange-400 border-0 text-xs">Salary</Badge>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Plan Features */}
+        {planFeatures.length > 0 && (
+          <div>
+            <h2 className={`${theme.text.primary} text-2xl font-bold mb-6`}>Your Plan Features</h2>
+            <div className={`${theme.glass} rounded-xl p-6 ${theme.border.primary} border`}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {planFeatures.map((feature, index) => {
+                  const Icon = feature.icon;
+                  return (
+                    <div key={index} className="flex items-start gap-3">
+                      <div className={`w-10 h-10 rounded-lg ${feature.available ? 'bg-green-400/20' : 'bg-gray-600/20'} flex items-center justify-center flex-shrink-0`}>
+                        <Icon className={`w-5 h-5 ${feature.available ? 'text-green-400' : 'text-gray-400'}`} />
+                      </div>
+                      <div>
+                        <p className={`${theme.text.primary} font-medium`}>{feature.name}</p>
+                        <p className={`${feature.available ? theme.text.secondary : theme.text.muted} text-sm`}>
+                          {feature.value}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Upgrade CTA for Free Users */}
+        {isFreeUser && (
+          <div className={`${theme.glass} rounded-2xl p-8 text-center ${theme.border.accent} border-2`}>
+            <div className="w-16 h-16 bg-gradient-to-br from-[#06b6d4] to-[#0891b2] rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Crown className="w-8 h-8 text-white" />
+            </div>
+            <h3 className={`${theme.text.primary} text-2xl font-bold mb-3`}>
+              Unlock Your Full Potential
+            </h3>
+            <p className={`${theme.text.secondary} mb-6 max-w-2xl mx-auto`}>
+              Upgrade to a paid plan to access mock interviews, AI tools, resume reviews, and more. 
+              Start your journey to landing your dream job today!
+            </p>
+            <Link to="/mentee/book">
+              <Button className="bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white px-8 py-3 text-lg">
+                <Crown className="w-5 h-5 mr-2" />
+                View Plans & Upgrade
+              </Button>
+            </Link>
+          </div>
+        )}
+      </div>
     </DashboardLayout>
   );
 };

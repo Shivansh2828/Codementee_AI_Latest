@@ -57,28 +57,28 @@ const AdminMocks = () => {
         <button onClick={() => setShowModal(true)} className="btn-primary">Schedule New Mock</button>
       </div>
 
-      <div className="bg-[#1e293b] rounded-xl border border-[#334155] overflow-hidden">
+      <div className="bg-[#171717] rounded-xl border border-[#404040] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-[#0f172a]">
+            <thead className="bg-[#0d0d0d]">
               <tr>
-                <th className="text-left p-4 text-slate-400 font-medium">Mentee</th>
-                <th className="text-left p-4 text-slate-400 font-medium">Mentor</th>
-                <th className="text-left p-4 text-slate-400 font-medium">Scheduled</th>
-                <th className="text-left p-4 text-slate-400 font-medium">Status</th>
-                <th className="text-left p-4 text-slate-400 font-medium">Actions</th>
+                <th className="text-left p-4 text-gray-500 font-medium">Mentee</th>
+                <th className="text-left p-4 text-gray-500 font-medium">Mentor</th>
+                <th className="text-left p-4 text-gray-500 font-medium">Scheduled</th>
+                <th className="text-left p-4 text-gray-500 font-medium">Status</th>
+                <th className="text-left p-4 text-gray-500 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="p-4 text-center text-slate-400">Loading...</td></tr>
+                <tr><td colSpan={5} className="p-4 text-center text-gray-500">Loading...</td></tr>
               ) : mocks.length === 0 ? (
-                <tr><td colSpan={5} className="p-4 text-center text-slate-400">No mocks scheduled</td></tr>
+                <tr><td colSpan={5} className="p-4 text-center text-gray-500">No mocks scheduled</td></tr>
               ) : mocks.map((mock) => (
-                <tr key={mock.id} className="border-t border-[#334155]">
+                <tr key={mock.id} className="border-t border-[#404040]">
                   <td className="p-4 text-white">{users[mock.mentee_id] || mock.mentee_id}</td>
-                  <td className="p-4 text-slate-300">{users[mock.mentor_id] || mock.mentor_id}</td>
-                  <td className="p-4 text-slate-300">{new Date(mock.scheduled_at).toLocaleString()}</td>
+                  <td className="p-4 text-gray-400">{users[mock.mentor_id] || mock.mentor_id}</td>
+                  <td className="p-4 text-gray-400">{new Date(mock.scheduled_at).toLocaleString()}</td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded text-xs ${mock.status === 'completed' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
                       {mock.status}
@@ -105,19 +105,19 @@ const AdminMocks = () => {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-6 w-full max-w-md">
+          <div className="bg-[#171717] rounded-xl border border-[#404040] p-6 w-full max-w-md">
             <h2 className="text-xl font-bold text-white mb-4">Schedule Mock Interview</h2>
             <form onSubmit={createMock} className="space-y-4">
-              <select value={form.mentee_id} onChange={e => setForm({...form, mentee_id: e.target.value})} required className="w-full px-4 py-3 rounded-lg bg-[#0f172a] border border-[#334155] text-white">
+              <select value={form.mentee_id} onChange={e => setForm({...form, mentee_id: e.target.value})} required className="w-full px-4 py-3 rounded-lg bg-[#0d0d0d] border border-[#404040] text-white">
                 <option value="">Select Mentee</option>
                 {mentees.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
               </select>
-              <select value={form.mentor_id} onChange={e => setForm({...form, mentor_id: e.target.value})} required className="w-full px-4 py-3 rounded-lg bg-[#0f172a] border border-[#334155] text-white">
+              <select value={form.mentor_id} onChange={e => setForm({...form, mentor_id: e.target.value})} required className="w-full px-4 py-3 rounded-lg bg-[#0d0d0d] border border-[#404040] text-white">
                 <option value="">Select Mentor</option>
                 {mentors.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
               </select>
-              <input type="datetime-local" value={form.scheduled_at} onChange={e => setForm({...form, scheduled_at: e.target.value})} required className="w-full px-4 py-3 rounded-lg bg-[#0f172a] border border-[#334155] text-white" />
-              <input type="url" placeholder="Google Meet Link" value={form.meet_link} onChange={e => setForm({...form, meet_link: e.target.value})} className="w-full px-4 py-3 rounded-lg bg-[#0f172a] border border-[#334155] text-white placeholder-slate-500" />
+              <input type="datetime-local" value={form.scheduled_at} onChange={e => setForm({...form, scheduled_at: e.target.value})} required className="w-full px-4 py-3 rounded-lg bg-[#0d0d0d] border border-[#404040] text-white" />
+              <input type="url" placeholder="Google Meet Link" value={form.meet_link} onChange={e => setForm({...form, meet_link: e.target.value})} className="w-full px-4 py-3 rounded-lg bg-[#0d0d0d] border border-[#404040] text-white placeholder-gray-500" />
               <div className="flex gap-3">
                 <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">Cancel</button>
                 <button type="submit" className="btn-primary flex-1">Schedule</button>
