@@ -2892,6 +2892,21 @@ async def mark_notification_read(notification_id: str, user=Depends(get_current_
     )
     return {"message": "Notification marked as read"}
 
+@api_router.put("/notifications/mark-all-read")
+async def mark_all_notifications_read(user=Depends(get_current_user)):
+    """Mark all notifications as read for current user"""
+    result = await db.notifications.update_many(
+        {"user_id": user["id"], "read": False},
+        {"$set": {"read": True}}
+    )
+    return {"message": f"Marked {result.modified_count} notifications as read"}
+
+@api_router.delete("/notifications/clear-all")
+async def clear_all_notifications(user=Depends(get_current_user)):
+    """Delete all notifications for current user"""
+    result = await db.notifications.delete_many({"user_id": user["id"]})
+    return {"message": f"Cleared {result.deleted_count} notifications"}
+
 @api_router.get("/notifications/unread/count")
 async def get_unread_count(user=Depends(get_current_user)):
     """Get count of unread notifications"""

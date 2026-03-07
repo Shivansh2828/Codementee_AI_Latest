@@ -41,19 +41,23 @@ const SocialProofPopup = () => {
 
   // Show popup at random intervals
   useEffect(() => {
-    if (bookings.length === 0) return;
+    if (bookings.length === 0 || isVisible) return;
 
     const scheduleNextPopup = () => {
       // Random delay between 20-40 seconds
       const delay = Math.random() * 20000 + 20000;
+      
+      console.log(`📢 Scheduling next popup in ${Math.round(delay/1000)} seconds`);
 
       timeoutRef.current = setTimeout(() => {
         const booking = bookings[currentIndex];
+        console.log('📢 Showing popup for booking:', booking);
         setCurrentBooking(booking);
         setIsVisible(true);
 
         // Auto hide after 6 seconds
         hideTimeoutRef.current = setTimeout(() => {
+          console.log('📢 Auto-hiding popup');
           setIsVisible(false);
           // Move to next booking after hiding
           setCurrentIndex((prev) => (prev + 1) % bookings.length);
@@ -99,7 +103,7 @@ const SocialProofPopup = () => {
 
   return (
     <div
-      className={`fixed bottom-6 left-6 z-50 transition-all duration-500 ease-out ${
+      className={`fixed bottom-6 left-6 z-[9998] transition-all duration-500 ease-out ${
         isVisible 
           ? 'translate-y-0 opacity-100' 
           : 'translate-y-4 opacity-0 pointer-events-none'

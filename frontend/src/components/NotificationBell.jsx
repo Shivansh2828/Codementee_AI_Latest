@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, Check, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import api from '../utils/api';
 
 const NotificationBell = () => {
@@ -74,14 +75,43 @@ const NotificationBell = () => {
         if (user.role === 'admin') {
           navigate('/admin/bug-reports');
         } else {
-          navigate(`/${user.role}/dashboard`);
+          navigate(`/${user.role}/bug-reports`);
         }
+      } else if (notification.type === 'booking_confirmed') {
+        navigate(`/${user.role}/mocks`);
+      } else if (notification.type === 'feedback_received') {
+        navigate(`/${user.role}/feedbacks`);
       }
       
       setShowDropdown(false);
       fetchNotifications();
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
+      toast.error('Failed to update notification');
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await api.put('/notifications/mark-all-read');
+      toast.success('All notifications marked as read');
+      fetchNotifications();
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+      toast.error('Failed to mark all as read');
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      await api.delete('/notifications/clear-all');
+      toast.success('All notifications cleared');
+      setNotifications([]);
+      setUnreadCount(0);
+      setShowDropdown(false);
+    } catch (error) {
+      console.error('Failed to clear notifications:', error);
+      toast.error('Failed to clear notifications');
     }
   };
 
@@ -107,16 +137,38 @@ const NotificationBell = () => {
             className="fixed inset-0 z-10"
             onClick={() => setShowDropdown(false)}
           />
-          <div className="absolute right-0 mt-2 w-80 bg-[#171717] border border-[#404040] rounded-lg shadow-xl z-20 max-h-96 overflow-y-auto">
-            <div className="p-4 border-b border-[#404040]">
+          <div className="absolute right-0 mt-2 w-80 bg-[#171717] border border-[#404040] rounded-lg shadow-xl z-20 max-h-96 overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-[#404040] flex items-center justify-between">
               <h3 className="text-white font-semibold">Notifications</h3>
+              {notifications.length > 0 && (
+                <div className="flex gap-2">
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={handleMarkAllRead}
+                      className="text-xs text-[#06b6d4] hover:text-[#0891b2] transition-colors flex items-center gap-1"
+                      title="Mark all as read"
+                    >
+                      <Check className="w-3 h-3" />
+                      Mark all read
+                    </button>
+                  )}
+                  <button
+                    onClick={handleClearAll}
+                    className="text-xs text-red-400 hover:text-red-300 transition-colors flex items-center gap-1"
+                    title="Clear all notifications"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Clear all
+                  </button>
+                </div>
+              )}
             </div>
             {notifications.length === 0 ? (
               <div className="p-4 text-center text-gray-500">
                 No notifications
               </div>
             ) : (
-              <div>
+              <div className="overflow-y-auto">
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}

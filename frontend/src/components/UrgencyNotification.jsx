@@ -43,33 +43,31 @@ const UrgencyNotification = () => {
     previousRemainingRef.current = remaining;
   }, [remaining, loading, sold_out]);
 
-  // Show notification every 1 minute
+  // Show notification on load and every 1 minute
   useEffect(() => {
     if (loading || sold_out || remaining <= 0) {
-      console.log('🔥 Skipping interval setup:', { loading, sold_out, remaining });
+      console.log('🔥 Skipping notification setup:', { loading, sold_out, remaining });
       return;
     }
 
-    console.log('🔥 Setting up 1-minute interval');
+    console.log('🔥 Setting up notifications - show immediately and every 1 minute');
 
-    // Show initial notification after 1 second
-    const initialTimer = setTimeout(() => {
-      console.log('🔥 Initial notification');
-      showNotification(false);
-    }, 1000);
+    // Show immediately on load
+    showNotification(false);
 
     // Then show every 1 minute (60 seconds)
-    const interval = setInterval(() => {
+    intervalRef.current = setInterval(() => {
       console.log('🔥 1-minute interval triggered - showing notification');
       showNotification(false);
     }, 60000); // 60 seconds
 
     return () => {
-      console.log('🔥 Cleaning up timers');
-      clearTimeout(initialTimer);
-      clearInterval(interval);
+      console.log('🔥 Cleaning up interval');
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
     };
-  }, []); // Empty dependency array so it only runs once on mount
+  }, [loading, sold_out, remaining]); // Add dependencies so it reacts to changes
 
   // Separate effect for cleanup on unmount
   useEffect(() => {
