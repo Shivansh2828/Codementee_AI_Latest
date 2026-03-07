@@ -3076,6 +3076,79 @@ async def get_public_companies():
     companies = await db.companies.find().to_list(1000)
     return [serialize_doc(dict(c)) for c in companies]
 
+# ============ FOUNDING BATCH SLOTS ============
+FOUNDING_SLOTS_TOTAL = 25
+
+@api_router.get("/founding-slots")
+async def get_founding_slots():
+    """Get founding batch slot availability - public endpoint"""
+    try:
+        # Count successful founding batch purchases
+        # Assuming founding batch is tracked via a specific plan or flag
+        founding_purchases = await db.orders.count_documents({
+            "status": "success",
+            "is_founding_batch": True
+        })
+        
+        remaining = max(0, FOUNDING_SLOTS_TOTAL - founding_purchases)
+        
+        return {
+            "total": FOUNDING_SLOTS_TOTAL,
+            "filled": founding_purchases,
+            "remaining": remaining,
+            "sold_out": remaining == 0
+        }
+    except Exception as e:
+        logger.error(f"Error fetching founding slots: {str(e)}")
+        # Return default values on error
+        return {
+            "total": FOUNDING_SLOTS_TOTAL,
+            "filled": 0,
+            "remaining": FOUNDING_SLOTS_TOTAL,
+            "sold_out": False
+        }
+
+@api_router.get("/recent-bookings")
+async def get_recent_bookings():
+    """Get recent successful bookings for social proof - public endpoint"""
+    try:
+        # Get recent confirmed bookings (last 24 hours)
+        from datetime import datetime, timedelta, timezone
+        
+        twenty_four_hours_ago = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+        
+        # Get recent booking requests that were confirmed
+        recent_bookings = await db.booking_requests.find({
+            "status": "confirmed",
+            "confirmed_at": {"$gte": twenty_four_hours_ago}
+        }).sort("confirmed_at", -1).limit(20).to_list(20)
+        
+        # Format for social proof (anonymize data)
+        social_proof = []
+        for booking in recent_bookings:
+            # Extract first name only
+            mentee_name = booking.get("mentee_name", "Someone")
+            first_name = mentee_name.split()[0] if mentee_name else "Someone"
+            
+            # Get interview type
+            interview_type = booking.get("interview_type", "mock interview")
+            interview_type_display = interview_type.replace("_", " ").title()
+            
+            # Get company name
+            company_name = booking.get("company_name", "")
+            
+            social_proof.append({
+                "first_name": first_name,
+                "interview_type": interview_type_display,
+                "company_name": company_name,
+                "timestamp": booking.get("confirmed_at")
+            })
+        
+        return social_proof
+    except Exception as e:
+        logger.error(f"Error fetching recent bookings: {str(e)}")
+        return []
+
 @api_router.get("/available-slots")
 async def get_available_slots(user=Depends(get_current_user)):
     slots = await db.time_slots.find({"status": "available"}).sort("date", 1).to_list(1000)
@@ -4505,6 +4578,10 @@ async def create_payment_order(data: CreateOrderRequest):
         raise HTTPException(status_code=500, detail=f"Failed to create order: {str(e)}")
     
     # Store order in DB with user details (pending status)
+    # Check if this is a founding batch purchase (first 25 customers)
+    founding_count = await db.orders.count_documents({"status": "success", "is_founding_batch": True})
+    is_founding_batch = founding_count < FOUNDING_SLOTS_TOTAL
+    
     order_doc = {
         "id": str(uuid.uuid4()),
         "razorpay_order_id": razorpay_order["id"],
@@ -4520,6 +4597,7 @@ async def create_payment_order(data: CreateOrderRequest):
         "struggle": data.struggle,
         "status": "pending",
         "is_upgrade": data.is_upgrade or bool(existing),
+        "is_founding_batch": is_founding_batch,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.orders.insert_one(order_doc)

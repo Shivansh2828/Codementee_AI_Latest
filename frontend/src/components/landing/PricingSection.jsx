@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, Sparkles, TrendingUp, Crown } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useFoundingSlots } from '../../hooks/useFoundingSlots';
 import axios from 'axios';
 
 const PricingSection = () => {
   const { theme } = useTheme();
+  const { remaining, total, sold_out } = useFoundingSlots(30000);
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -203,6 +205,17 @@ const PricingSection = () => {
           <span className={`inline-block px-4 py-1.5 rounded-full text-sm font-medium mb-4 ${theme.bg.card} ${theme.text.accent} border ${theme.border.accent}`}>
             Pricing
           </span>
+          
+          {/* Founding Slots Badge */}
+          {!sold_out && remaining <= 10 && (
+            <div className="inline-flex items-center gap-2 mb-4 px-4 py-2 rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg animate-pulse-glow">
+              <span className="text-lg">🚀</span>
+              <span className="text-sm font-bold">
+                Only {remaining} of {total} Founding Seats Left
+              </span>
+            </div>
+          )}
+          
           <h2 className={`text-3xl md:text-5xl font-bold mb-6 ${theme.text.primary}`}>
             Simple, Outcome-Based Pricing
           </h2>

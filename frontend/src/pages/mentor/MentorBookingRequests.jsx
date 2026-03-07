@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
+import { useTheme } from '../../contexts/ThemeContext';
 import api from '../../utils/api';
 import { ClipboardList, Building2, Calendar, Clock, CheckCircle, X, Video } from 'lucide-react';
 import { toast } from 'sonner';
 
 const MentorBookingRequests = () => {
+  const { theme } = useTheme();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState(null);
@@ -59,7 +61,7 @@ const MentorBookingRequests = () => {
   if (loading) {
     return (
       <DashboardLayout title="Booking Requests">
-        <div className="text-center py-12 text-gray-500">Loading...</div>
+        <div className={`text-center py-12 ${theme.text.secondary}`}>Loading...</div>
       </DashboardLayout>
     );
   }
@@ -67,15 +69,15 @@ const MentorBookingRequests = () => {
   return (
     <DashboardLayout title="Booking Requests">
       {requests.length === 0 ? (
-        <div className="bg-[#171717] rounded-xl border border-[#404040] p-8 text-center">
-          <ClipboardList size={48} className="mx-auto text-gray-600 mb-4" />
-          <p className="text-gray-500">No pending booking requests</p>
-          <p className="text-gray-600 text-sm mt-1">When mentees request mock interviews, they'll appear here</p>
+        <div className={`${theme.bg.card} rounded-xl border ${theme.border.primary} p-8 text-center`}>
+          <ClipboardList size={48} className={`mx-auto ${theme.text.muted} mb-4`} />
+          <p className={theme.text.secondary}>No pending booking requests</p>
+          <p className={`${theme.text.muted} text-sm mt-1`}>When mentees request mock interviews, they'll appear here</p>
         </div>
       ) : (
         <div className="space-y-4">
           {requests.map((request) => (
-            <div key={request.id} className="bg-[#171717] rounded-xl border border-[#404040] overflow-hidden" data-testid={`request-${request.id}`}>
+            <div key={request.id} className={`${theme.bg.card} rounded-xl border ${theme.border.primary} overflow-hidden`} data-testid={`request-${request.id}`}>
               <div className="p-5">
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                   <div className="flex items-start gap-4">
@@ -83,35 +85,35 @@ const MentorBookingRequests = () => {
                       <Building2 size={24} className="text-[#06b6d4]" />
                     </div>
                     <div>
-                      <h3 className="text-white font-semibold text-lg">{request.company_name}</h3>
-                      <p className="text-gray-500">
-                        Requested by <span className="text-white">{request.mentee_name}</span>
+                      <h3 className={`${theme.text.primary} font-semibold text-lg`}>{request.company_name}</h3>
+                      <p className={theme.text.secondary}>
+                        Requested by <span className={theme.text.primary}>{request.mentee_name}</span>
                       </p>
-                      <p className="text-gray-600 text-sm">{request.mentee_email}</p>
+                      <p className={`${theme.text.muted} text-sm`}>{request.mentee_email}</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-amber-500/20 text-amber-400">
                       <Clock size={14} /> Pending
                     </span>
-                    <p className="text-gray-600 text-xs mt-2">
+                    <p className={`${theme.text.muted} text-xs mt-2`}>
                       {new Date(request.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-[#404040]">
-                  <p className="text-gray-500 text-sm mb-3">Mentee's Preferred Slots:</p>
+                <div className={`mt-4 pt-4 border-t ${theme.border.primary}`}>
+                  <p className={`${theme.text.secondary} text-sm mb-3`}>Mentee's Preferred Slots:</p>
                   <div className="flex flex-wrap gap-3">
                     {request.preferred_slots?.map((slot) => (
                       <div
                         key={slot.id}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#0d0d0d] rounded-lg border border-[#404040]"
+                        className={`flex items-center gap-2 px-4 py-2 ${theme.bg.secondary} rounded-lg border ${theme.border.primary}`}
                       >
                         <Calendar size={16} className="text-[#06b6d4]" />
-                        <span className="text-white">{formatDate(slot.date)}</span>
-                        <Clock size={16} className="text-gray-500 ml-2" />
-                        <span className="text-white">{slot.start_time} - {slot.end_time}</span>
+                        <span className={theme.text.primary}>{formatDate(slot.date)}</span>
+                        <Clock size={16} className={`${theme.text.muted} ml-2`} />
+                        <span className={theme.text.primary}>{slot.start_time} - {slot.end_time}</span>
                       </div>
                     ))}
                   </div>
@@ -128,9 +130,9 @@ const MentorBookingRequests = () => {
                     </button>
                   </div>
                 ) : (
-                  <div className="mt-4 pt-4 border-t border-[#404040] space-y-4">
+                  <div className={`mt-4 pt-4 border-t ${theme.border.primary} space-y-4`}>
                     <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-2">Select a slot to confirm *</label>
+                      <label className={`block text-sm font-medium ${theme.text.secondary} mb-2`}>Select a slot to confirm *</label>
                       <div className="flex flex-wrap gap-2">
                         {request.preferred_slots?.map((slot) => (
                           <button
@@ -139,7 +141,7 @@ const MentorBookingRequests = () => {
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
                               selectedSlotId === slot.id
                                 ? 'bg-[#06b6d4]/10 border-[#06b6d4] text-[#06b6d4]'
-                                : 'bg-[#0d0d0d] border-[#404040] text-gray-400 hover:border-[#06b6d4]/50'
+                                : `${theme.bg.secondary} ${theme.border.primary} ${theme.text.secondary} hover:border-[#06b6d4]/50`
                             }`}
                             data-testid={`select-slot-${slot.id}`}
                           >
@@ -164,7 +166,7 @@ const MentorBookingRequests = () => {
                           setConfirmingId(null);
                           setSelectedSlotId('');
                         }}
-                        className="flex items-center gap-2 px-4 py-2 text-gray-500 hover:text-white transition-colors"
+                        className={`flex items-center gap-2 px-4 py-2 ${theme.text.secondary} hover:${theme.text.primary} transition-colors`}
                       >
                         <X size={18} /> Cancel
                       </button>

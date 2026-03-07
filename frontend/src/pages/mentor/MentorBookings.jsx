@@ -83,14 +83,14 @@ const MentorBookings = () => {
           <div className="p-3 bg-gray-800/50 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
               <User className="w-4 h-4 text-cyan-400" />
-              <span className="text-sm font-semibold text-white">Mentee Information</span>
+              <span className={`text-sm font-semibold ${theme.text.primary}`}>Mentee Information</span>
             </div>
             <div className="space-y-1">
               <p className={`text-sm ${theme.text.primary}`}>
-                <span className="text-gray-500">Name:</span> {booking.mentee_name}
+                <span className={theme.text.muted}>Name:</span> {booking.mentee_name}
               </p>
               <p className={`text-sm ${theme.text.primary}`}>
-                <span className="text-gray-500">Email:</span> {booking.mentee_email}
+                <span className={theme.text.muted}>Email:</span> {booking.mentee_email}
               </p>
             </div>
           </div>
@@ -98,8 +98,8 @@ const MentorBookings = () => {
           {/* Session Details */}
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <Building2 className="w-3 h-3 text-gray-500" />
-              <span className="text-xs text-gray-500">Company</span>
+              <Building2 className={`w-3 h-3 ${theme.text.muted}`} />
+              <span className={`text-xs ${theme.text.muted}`}>Company</span>
             </div>
             <p className={`text-sm ${theme.text.primary}`}>{booking.company_name}</p>
           </div>
@@ -130,8 +130,8 @@ const MentorBookings = () => {
           {booking.interview_track && (
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <TrendingUp className="w-3 h-3 text-gray-500" />
-                <span className="text-xs text-gray-500">Interview Track</span>
+                <TrendingUp className={`w-3 h-3 ${theme.text.muted}`} />
+                <span className={`text-xs ${theme.text.muted}`}>Interview Track</span>
               </div>
               <p className={`text-sm ${theme.text.primary}`}>{booking.interview_track}</p>
             </div>
@@ -141,8 +141,8 @@ const MentorBookings = () => {
           {booking.specific_topics && booking.specific_topics.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <FileText className="w-3 h-3 text-gray-500" />
-                <span className="text-xs text-gray-500">Specific Topics</span>
+                <FileText className={`w-3 h-3 ${theme.text.muted}`} />
+                <span className={`text-xs ${theme.text.muted}`}>Specific Topics</span>
               </div>
               <div className="flex flex-wrap gap-1">
                 {booking.specific_topics.map((topic, idx) => (
@@ -158,7 +158,7 @@ const MentorBookings = () => {
           {booking.additional_notes && (
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <FileText className="w-3 h-3 text-gray-500" />
+                <FileText className={`w-3 h-3 ${theme.text.muted}`} />
                 <span className="text-xs text-gray-500">Additional Notes</span>
               </div>
               <p className={`text-sm ${theme.text.muted} italic`}>

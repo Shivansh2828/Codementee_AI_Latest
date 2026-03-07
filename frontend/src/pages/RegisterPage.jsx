@@ -4,12 +4,15 @@ import { ArrowLeft, ArrowRight, Loader2, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
+import UrgencyNotification from '../components/UrgencyNotification';
+import { useTheme } from '../contexts/ThemeContext';
 import api from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { theme } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -60,7 +63,7 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d]">
+    <div className={`min-h-screen ${theme.bg.primary}`}>
       <Header />
       <main className="pt-24 pb-16 md:pt-32 md:pb-24">
         <div className="container">
@@ -68,7 +71,7 @@ const RegisterPage = () => {
             {/* Back Link */}
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 text-gray-500 hover:text-[#06b6d4] transition-colors mb-8"
+              className={`flex items-center gap-2 transition-colors mb-8 ${theme.text.secondary} hover:text-[#06b6d4]`}
             >
               <ArrowLeft size={18} />
               Back to Home
@@ -76,10 +79,10 @@ const RegisterPage = () => {
 
             {/* Header */}
             <div className="mb-8 text-center">
-              <h1 className="text-3xl font-bold text-white mb-4">
+              <h1 className={`text-3xl font-bold mb-4 ${theme.text.primary}`}>
                 Join Codementee
               </h1>
-              <p className="text-gray-500">
+              <p className={theme.text.secondary}>
                 Create your free account and explore the platform
               </p>
             </div>
@@ -89,18 +92,18 @@ const RegisterPage = () => {
               <p className="text-[#06b6d4] text-sm font-medium">
                 🎉 Free to explore - No payment required
               </p>
-              <p className="text-gray-400 text-xs mt-1">
+              <p className={`text-xs mt-1 ${theme.text.secondary}`}>
                 Browse features, see pricing, and upgrade when you're ready to book mock interviews.
               </p>
             </div>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="bg-[#171717] rounded-xl border border-[#404040] p-6">
+              <div className="rounded-xl p-6" style={{ backgroundColor: theme.bg.card, borderColor: theme.border.primary, borderWidth: '1px' }}>
                 <div className="space-y-4">
                   {/* Name */}
                   <div>
-                    <label className="block text-white text-sm font-medium mb-2">
+                    <label className={`block text-sm font-medium mb-2 ${theme.text.primary}`}>
                       Full Name *
                     </label>
                     <input
@@ -109,14 +112,14 @@ const RegisterPage = () => {
                       value={formData.name}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 bg-[#0d0d0d] border border-[#404040] rounded-lg text-white placeholder-gray-500 focus:border-[#06b6d4] focus:outline-none transition-colors"
+                      className={`w-full px-4 py-3 rounded-lg focus:outline-none transition-colors ${theme.input.base}`}
                       placeholder="Enter your full name"
                     />
                   </div>
 
                   {/* Email */}
                   <div>
-                    <label className="block text-white text-sm font-medium mb-2">
+                    <label className={`block text-sm font-medium mb-2 ${theme.text.primary}`}>
                       Email Address *
                     </label>
                     <input
@@ -125,14 +128,14 @@ const RegisterPage = () => {
                       value={formData.email}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 bg-[#0d0d0d] border border-[#404040] rounded-lg text-white placeholder-gray-500 focus:border-[#06b6d4] focus:outline-none transition-colors"
+                      className={`w-full px-4 py-3 rounded-lg focus:outline-none transition-colors ${theme.input.base}`}
                       placeholder="Enter your email"
                     />
                   </div>
 
                   {/* Password */}
                   <div>
-                    <label className="block text-white text-sm font-medium mb-2">
+                    <label className={`block text-sm font-medium mb-2 ${theme.text.primary}`}>
                       Password *
                     </label>
                     <div className="relative">
@@ -142,13 +145,13 @@ const RegisterPage = () => {
                         value={formData.password}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-4 py-3 bg-[#0d0d0d] border border-[#404040] rounded-lg text-white placeholder-gray-500 focus:border-[#06b6d4] focus:outline-none transition-colors pr-12"
+                        className={`w-full px-4 py-3 rounded-lg focus:outline-none transition-colors pr-12 ${theme.input.base}`}
                         placeholder="Create a password"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                        className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors ${theme.text.secondary}`}
                       >
                         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                       </button>
@@ -157,7 +160,7 @@ const RegisterPage = () => {
 
                   {/* Current Role */}
                   <div>
-                    <label className="block text-white text-sm font-medium mb-2">
+                    <label className={`block text-sm font-medium mb-2 ${theme.text.primary}`}>
                       Current Role
                     </label>
                     <input
@@ -165,14 +168,14 @@ const RegisterPage = () => {
                       name="currentRole"
                       value={formData.currentRole}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-[#0d0d0d] border border-[#404040] rounded-lg text-white placeholder-gray-500 focus:border-[#06b6d4] focus:outline-none transition-colors"
+                      className={`w-full px-4 py-3 rounded-lg focus:outline-none transition-colors ${theme.input.base}`}
                       placeholder="e.g., SDE-1, Frontend Developer"
                     />
                   </div>
 
                   {/* Target Role */}
                   <div>
-                    <label className="block text-white text-sm font-medium mb-2">
+                    <label className={`block text-sm font-medium mb-2 ${theme.text.primary}`}>
                       Target Role
                     </label>
                     <input
@@ -180,7 +183,7 @@ const RegisterPage = () => {
                       name="targetRole"
                       value={formData.targetRole}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-[#0d0d0d] border border-[#404040] rounded-lg text-white placeholder-gray-500 focus:border-[#06b6d4] focus:outline-none transition-colors"
+                      className={`w-full px-4 py-3 rounded-lg focus:outline-none transition-colors ${theme.input.base}`}
                       placeholder="e.g., Amazon SDE-2, Google L4"
                     />
                   </div>
@@ -202,7 +205,7 @@ const RegisterPage = () => {
 
               {/* Login Link */}
               <div className="text-center">
-                <p className="text-gray-500 text-sm">
+                <p className={`text-sm ${theme.text.secondary}`}>
                   Already have an account?{' '}
                   <Link to="/login" className="text-[#06b6d4] hover:underline">
                     Sign in
@@ -214,6 +217,9 @@ const RegisterPage = () => {
         </div>
       </main>
       <Footer />
+      
+      {/* Urgency Notification */}
+      <UrgencyNotification />
     </div>
   );
 };

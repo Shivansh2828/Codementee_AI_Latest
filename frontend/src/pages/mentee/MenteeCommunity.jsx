@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -16,6 +17,7 @@ import api from "../../utils/api";
 
 const MenteeCommunity = () => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const isFreeUser = user?.status === 'Free' || !user?.plan_id;
   const hasAccess = ['pro', 'elite'].includes(user?.plan_id);
   
@@ -47,11 +49,11 @@ const MenteeCommunity = () => {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
+                    <h3 className={`text-xl font-bold ${theme.text.primary} mb-1 flex items-center gap-2`}>
                       Join Our WhatsApp Community
                       <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Active</Badge>
                     </h3>
-                    <p className="text-gray-400 text-sm">
+                    <p className={`${theme.text.secondary} text-sm`}>
                       Connect with 500+ mentees, share experiences, get instant help, and access exclusive resources
                     </p>
                   </div>
@@ -79,8 +81,8 @@ const MenteeCommunity = () => {
                     <Users className="w-4 h-4 text-green-400" />
                   </div>
                   <div>
-                    <p className="text-white font-medium text-sm">Active Community</p>
-                    <p className="text-gray-400 text-xs">500+ members sharing daily</p>
+                    <p className={`${theme.text.primary} font-medium text-sm`}>Active Community</p>
+                    <p className={`${theme.text.secondary} text-xs`}>500+ members sharing daily</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -88,8 +90,8 @@ const MenteeCommunity = () => {
                     <MessageSquare className="w-4 h-4 text-green-400" />
                   </div>
                   <div>
-                    <p className="text-white font-medium text-sm">Instant Support</p>
-                    <p className="text-gray-400 text-xs">Get quick answers & tips</p>
+                    <p className={`${theme.text.primary} font-medium text-sm`}>Instant Support</p>
+                    <p className={`${theme.text.secondary} text-xs`}>Get quick answers & tips</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -97,8 +99,8 @@ const MenteeCommunity = () => {
                     <Crown className="w-4 h-4 text-green-400" />
                   </div>
                   <div>
-                    <p className="text-white font-medium text-sm">Exclusive Resources</p>
-                    <p className="text-gray-400 text-xs">Interview tips & referrals</p>
+                    <p className={`${theme.text.primary} font-medium text-sm`}>Exclusive Resources</p>
+                    <p className={`${theme.text.secondary} text-xs`}>Interview tips & referrals</p>
                   </div>
                 </div>
               </div>
@@ -110,10 +112,10 @@ const MenteeCommunity = () => {
             <div className="w-20 h-20 bg-gradient-to-br from-[#06b6d4] to-[#0891b2] rounded-2xl flex items-center justify-center mx-auto mb-6">
               <Lock className="w-10 h-10 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-4">
+            <h2 className={`text-2xl font-bold ${theme.text.primary} mb-4`}>
               {isFreeUser ? 'Upgrade to Access Community Forum' : 'Upgrade to Pro or Elite'}
             </h2>
-            <p className="text-gray-500 mb-8 max-w-2xl mx-auto">
+            <p className={`${theme.text.secondary} mb-8 max-w-2xl mx-auto`}>
               Get access to our exclusive community forum to connect with other mentees, share interview experiences, ask questions, and get referrals. Forum access is available with Pro and Elite plans.
             </p>
             <Link to="/mentee/book">
@@ -215,11 +217,11 @@ const MenteeCommunity = () => {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
+                  <h3 className={`text-xl font-bold ${theme.text.primary} mb-1 flex items-center gap-2`}>
                     Join Our WhatsApp Community
                     <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Active</Badge>
                   </h3>
-                  <p className="text-gray-400 text-sm">
+                  <p className={`${theme.text.secondary} text-sm`}>
                     Connect with 500+ mentees, share experiences, get instant help, and access exclusive resources
                   </p>
                 </div>
@@ -275,8 +277,8 @@ const MenteeCommunity = () => {
 
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Community Forum</h1>
-            <p className="text-gray-500">Connect with fellow mentees, share experiences, and get help</p>
+            <h1 className={`text-3xl font-bold ${theme.text.primary} mb-2`}>Community Forum</h1>
+            <p className={theme.text.secondary}>Connect with fellow mentees, share experiences, and get help</p>
           </div>
           
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -286,33 +288,33 @@ const MenteeCommunity = () => {
                 New Post
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-[#171717] border-[#404040] max-w-2xl">
+            <DialogContent className={`${theme.bg.card} ${theme.border.primary} border max-w-2xl`}>
               <DialogHeader>
-                <DialogTitle className="text-white">Create New Post</DialogTitle>
-                <DialogDescription className="text-gray-500">
+                <DialogTitle className={theme.text.primary}>Create New Post</DialogTitle>
+                <DialogDescription className={theme.text.secondary}>
                   Share your thoughts, ask questions, or start a discussion
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-white">Title *</Label>
+                  <Label className={theme.text.primary}>Title *</Label>
                   <Input
                     value={newPost.title}
                     onChange={(e) => setNewPost({...newPost, title: e.target.value})}
                     placeholder="Enter post title..."
-                    className="bg-[#0d0d0d] border-[#404040] text-white placeholder-gray-400"
+                    className={theme.input.base}
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-white">Category *</Label>
+                  <Label className={theme.text.primary}>Category *</Label>
                   <Select value={newPost.category} onValueChange={(value) => setNewPost({...newPost, category: value})}>
-                    <SelectTrigger className="bg-[#0d0d0d] border-[#404040] text-white">
+                    <SelectTrigger className={`${theme.bg.secondary} ${theme.border.primary} ${theme.text.primary} border`}>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#171717] border-[#404040]">
+                    <SelectContent className={`${theme.bg.card} ${theme.border.primary} border`}>
                       {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id} className="text-white hover:bg-[#334155]">
+                        <SelectItem key={category.id} value={category.id} className={`${theme.text.primary} ${theme.bg.hover}`}>
                           {category.name}
                         </SelectItem>
                       ))}
@@ -321,28 +323,28 @@ const MenteeCommunity = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-white">Content *</Label>
+                  <Label className={theme.text.primary}>Content *</Label>
                   <Textarea
                     value={newPost.content}
                     onChange={(e) => setNewPost({...newPost, content: e.target.value})}
                     placeholder="Write your post content..."
-                    className="min-h-[120px] bg-[#0d0d0d] border-[#404040] text-white placeholder-gray-400"
+                    className={`min-h-[120px] ${theme.input.base}`}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-white">Tags (Optional)</Label>
+                  <Label className={theme.text.primary}>Tags (Optional)</Label>
                   <Input
                     value={newPost.tags}
                     onChange={(e) => setNewPost({...newPost, tags: e.target.value})}
                     placeholder="Enter tags separated by commas..."
-                    className="bg-[#0d0d0d] border-[#404040] text-white placeholder-gray-400"
+                    className={theme.input.base}
                   />
-                  <p className="text-xs text-gray-500">e.g., javascript, system-design, amazon</p>
+                  <p className={`text-xs ${theme.text.muted}`}>e.g., javascript, system-design, amazon</p>
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="border-[#404040] text-white hover:bg-[#334155]">
+                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className={`${theme.border.primary} ${theme.text.primary} ${theme.bg.hover} border`}>
                   Cancel
                 </Button>
                 <Button onClick={handleCreatePost} className="bg-[#06b6d4] hover:bg-[#06b6d4]/90 text-[#0f172a]">
@@ -357,24 +359,24 @@ const MenteeCommunity = () => {
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
+              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${theme.text.muted} w-4 h-4`} />
               <Input
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search posts..."
-                className="pl-10 bg-[#171717] border-[#404040] text-white placeholder-gray-400"
+                className={`pl-10 ${theme.input.base}`}
               />
             </div>
           </div>
           
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-full sm:w-48 bg-[#171717] border-[#404040] text-white">
+            <SelectTrigger className={`w-full sm:w-48 ${theme.bg.secondary} ${theme.border.primary} ${theme.text.primary} border`}>
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
-            <SelectContent className="bg-[#171717] border-[#404040]">
-              <SelectItem value="all" className="text-white hover:bg-[#334155]">All Categories</SelectItem>
+            <SelectContent className={`${theme.bg.card} ${theme.border.primary} border`}>
+              <SelectItem value="all" className={`${theme.text.primary} ${theme.bg.hover}`}>All Categories</SelectItem>
               {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id} className="text-white hover:bg-[#334155]">
+                <SelectItem key={category.id} value={category.id} className={`${theme.text.primary} ${theme.bg.hover}`}>
                   {category.name}
                 </SelectItem>
               ))}
@@ -389,7 +391,7 @@ const MenteeCommunity = () => {
             className={`px-3 py-1 rounded-full text-sm transition-all ${
               selectedCategory === 'all' 
                 ? 'bg-[#06b6d4] text-[#0f172a]' 
-                : 'bg-[#171717] text-gray-400 border border-[#404040] hover:border-[#06b6d4]/50'
+                : `${theme.bg.secondary} ${theme.text.secondary} border ${theme.border.primary} hover:border-[#06b6d4]/50`
             }`}
           >
             All
@@ -401,7 +403,7 @@ const MenteeCommunity = () => {
               className={`px-3 py-1 rounded-full text-sm transition-all ${
                 selectedCategory === category.id 
                   ? 'bg-[#06b6d4] text-[#0f172a]' 
-                  : 'bg-[#171717] text-gray-400 border border-[#404040] hover:border-[#06b6d4]/50'
+                  : `${theme.bg.secondary} ${theme.text.secondary} border ${theme.border.primary} hover:border-[#06b6d4]/50`
               }`}
             >
               {category.name}
@@ -411,13 +413,13 @@ const MenteeCommunity = () => {
 
         {/* Posts List */}
         {loading ? (
-          <div className="text-center py-12 text-gray-500">Loading posts...</div>
+          <div className={`text-center py-12 ${theme.text.secondary}`}>Loading posts...</div>
         ) : filteredPosts.length === 0 ? (
-          <Card className="bg-[#171717] border-[#404040]">
+          <Card className={`${theme.bg.card} ${theme.border.primary} border`}>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <MessageSquare className="w-12 h-12 text-gray-600 mb-4" />
-              <h3 className="text-lg font-medium text-white mb-2">No posts found</h3>
-              <p className="text-gray-500 text-center mb-4">
+              <MessageSquare className={`w-12 h-12 ${theme.text.muted} mb-4`} />
+              <h3 className={`text-lg font-medium ${theme.text.primary} mb-2`}>No posts found</h3>
+              <p className={`${theme.text.secondary} text-center mb-4`}>
                 {searchTerm || selectedCategory 
                   ? 'Try adjusting your search or filter criteria' 
                   : 'Be the first to start a discussion in the community!'}
@@ -436,7 +438,7 @@ const MenteeCommunity = () => {
             {filteredPosts.map((post) => {
               const categoryInfo = getCategoryInfo(post.category);
               return (
-                <Card key={post.id} className="bg-[#171717] border-[#404040] hover:border-[#06b6d4]/30 transition-colors">
+                <Card key={post.id} className={`${theme.bg.card} ${theme.border.primary} border hover:border-[#06b6d4]/30 transition-colors`}>
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
@@ -444,8 +446,8 @@ const MenteeCommunity = () => {
                           <User className="w-5 h-5 text-[#06b6d4]" />
                         </div>
                         <div>
-                          <p className="text-white font-medium">{post.author_name}</p>
-                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <p className={`${theme.text.primary} font-medium`}>{post.author_name}</p>
+                          <div className={`flex items-center gap-2 text-sm ${theme.text.muted}`}>
                             <Calendar className="w-3 h-3" />
                             {formatDate(post.created_at)}
                           </div>
@@ -457,13 +459,13 @@ const MenteeCommunity = () => {
                       </Badge>
                     </div>
 
-                    <h3 className="text-xl font-semibold text-white mb-2">{post.title}</h3>
-                    <p className="text-gray-400 mb-4 line-clamp-3">{post.content}</p>
+                    <h3 className={`text-xl font-semibold ${theme.text.primary} mb-2`}>{post.title}</h3>
+                    <p className={`${theme.text.secondary} mb-4 line-clamp-3`}>{post.content}</p>
 
                     {post.tags && post.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mb-4">
                         {post.tags.map((tag, index) => (
-                          <Badge key={index} variant="outline" className="text-xs border-[#404040] text-gray-500">
+                          <Badge key={index} variant="outline" className={`text-xs ${theme.border.primary} ${theme.text.muted} border`}>
                             {tag}
                           </Badge>
                         ))}
@@ -472,15 +474,15 @@ const MenteeCommunity = () => {
 
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <button className="flex items-center gap-1 text-gray-500 hover:text-green-400 transition-colors">
+                        <button className={`flex items-center gap-1 ${theme.text.muted} hover:text-green-400 transition-colors`}>
                           <ThumbsUp className="w-4 h-4" />
                           <span className="text-sm">{post.upvotes || 0}</span>
                         </button>
-                        <button className="flex items-center gap-1 text-gray-500 hover:text-red-400 transition-colors">
+                        <button className={`flex items-center gap-1 ${theme.text.muted} hover:text-red-400 transition-colors`}>
                           <ThumbsDown className="w-4 h-4" />
                           <span className="text-sm">{post.downvotes || 0}</span>
                         </button>
-                        <div className="flex items-center gap-1 text-gray-500">
+                        <div className={`flex items-center gap-1 ${theme.text.muted}`}>
                           <MessageCircle className="w-4 h-4" />
                           <span className="text-sm">{post.comment_count || 0} comments</span>
                         </div>

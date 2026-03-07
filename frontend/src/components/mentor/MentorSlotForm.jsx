@@ -166,7 +166,7 @@ const MentorSlotForm = ({ slot, onClose, onSuccess }) => {
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="text-gray-500 hover:text-white"
+              className={`${theme.text.secondary} hover:${theme.text.primary}`}
             >
               <X className="w-5 h-5" />
             </Button>
@@ -251,7 +251,7 @@ const MentorSlotForm = ({ slot, onClose, onSuccess }) => {
                 className={errors.meeting_link ? 'border-red-500' : ''}
               />
               {errors.meeting_link && <p className="text-xs text-red-400 mt-1">{errors.meeting_link}</p>}
-              <p className="text-xs text-gray-500 mt-1">
+              <p className={`text-xs ${theme.text.muted} mt-1`}>
                 Provide your personal Google Meet, Zoom, or Teams link
               </p>
             </div>
@@ -351,7 +351,7 @@ const MentorSlotForm = ({ slot, onClose, onSuccess }) => {
                 rows={3}
                 className="resize-none"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className={`text-xs ${theme.text.muted} mt-1`}>
                 These notes will be shared with mentees when they book this slot
               </p>
             </div>

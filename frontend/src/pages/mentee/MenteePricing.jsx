@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useFoundingSlots } from '../../hooks/useFoundingSlots';
+import UrgencyNotification from '../../components/UrgencyNotification';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
@@ -25,6 +27,7 @@ import api from "../../utils/api";
 const MenteePricing = () => {
   const { theme } = useTheme();
   const { user } = useAuth();
+  const { remaining, total, sold_out } = useFoundingSlots(30000);
   const [loading, setLoading] = useState(true);
   const [processingPlan, setProcessingPlan] = useState(null);
   const [plans, setPlans] = useState([]);
@@ -204,6 +207,16 @@ const MenteePricing = () => {
       <div className="space-y-8">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto">
+          {/* Founding Slots Badge */}
+          {!sold_out && remaining <= 10 && (
+            <div className="inline-flex items-center gap-2 mb-4 px-4 py-2 rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg animate-pulse-glow">
+              <span className="text-lg">🚀</span>
+              <span className="text-sm font-bold">
+                Only {remaining} of {total} Founding Seats Left
+              </span>
+            </div>
+          )}
+          
           <h1 className={`text-4xl font-bold ${theme.text.primary} mb-4`}>
             Choose Your Plan
           </h1>
@@ -467,6 +480,9 @@ const MenteePricing = () => {
           </p>
         </div>
       </div>
+      
+      {/* Urgency Notification */}
+      <UrgencyNotification />
     </DashboardLayout>
   );
 };

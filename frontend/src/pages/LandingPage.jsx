@@ -11,6 +11,8 @@ import PricingSection from '../components/landing/PricingSection';
 import TestimonialsSection from '../components/landing/TestimonialsSection';
 import CTASection from '../components/landing/CTASection';
 import MockInterviewProcessSection from '../components/landing/MockInterviewProcessSection';
+import SocialProofPopup from '../components/SocialProofPopup';
+import UrgencyNotification from '../components/UrgencyNotification';
 
 const LandingPage = () => {
   const { theme } = useTheme();
@@ -30,6 +32,12 @@ const LandingPage = () => {
         <CTASection />
       </main>
       <Footer />
+      
+      {/* Social Proof Popup */}
+      <SocialProofPopup />
+      
+      {/* Urgency Notification */}
+      <UrgencyNotification />
     </div>
   );
 };

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, CheckCircle, Star, Users, Trophy, Zap, Code, Terminal, Sparkles, TrendingUp } from 'lucide-react';
-import { cohortData } from '../../data/mock';
+import { ArrowRight, CheckCircle, Star, Users, Trophy, Code, Terminal, Sparkles, TrendingUp } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useFoundingSlots } from '../../hooks/useFoundingSlots';
 
 const HeroSection = () => {
   const { theme, isDark } = useTheme();
+  const { remaining, total, sold_out, loading } = useFoundingSlots(30000); // Poll every 30 seconds
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -97,85 +98,100 @@ const HeroSection = () => {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left Column - Content */}
             <div className="text-center lg:text-left">
-              {/* Seat Counter Badge */}
-              <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg">
-                <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                <span className="text-sm font-medium">
-                  Only <span className="font-bold">{cohortData.seatsRemaining}</span> of {cohortData.totalSeats} founding seats left
-                </span>
-              </div>
+              {/* Scarcity Badge */}
+              {!loading && (
+                <div className={`inline-flex items-center gap-2 mb-6 px-4 py-2 rounded-full ${
+                  sold_out 
+                    ? 'bg-gradient-to-r from-red-500 to-red-600' 
+                    : 'bg-gradient-to-r from-orange-500 to-red-500'
+                } text-white shadow-lg ${!sold_out && 'animate-pulse-glow'}`}>
+                  <span className="text-lg">🚀</span>
+                  <span className="text-sm font-bold">
+                    {sold_out 
+                      ? 'Founding Batch — SOLD OUT' 
+                      : `Only ${remaining} of ${total} Founding Seats Left`
+                    }
+                  </span>
+                </div>
+              )}
 
               {/* Main Headline */}
-              <h1 className={`display-hero ${theme.text.primary} mb-6 text-balance`}>
-                Real mock interviews with{' '}
+              <h1 className={`display-hero ${theme.text.primary} mb-6 text-balance leading-tight`}>
+                Practice Real Interviews{' '}
                 <span className="gradient-text-animated font-bold">
-                  top engineers
+                  Before Your Dream Company Does
                 </span>
               </h1>
 
-              {/* Subheadline */}
-              <p className={`body-hero ${theme.text.secondary} mb-8 max-w-2xl mx-auto lg:mx-0 text-pretty leading-relaxed`}>
-                Get personalized feedback from engineers at Amazon, Google, Microsoft, and more. 
-                Practice real interviews and land your dream job.
+              {/* Result-focused line */}
+              <p className={`body-large ${theme.text.primary} mb-8 max-w-2xl mx-auto lg:mx-0 font-semibold`}>
+                Engineers fail interviews because they never practiced in a real environment.
               </p>
 
-              {/* Key Benefits */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
-                <div className={`flex items-center gap-3 p-4 ${theme.glass} rounded-xl ${theme.border.primary} border ${theme.shadow}`}>
-                  <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-lg flex items-center justify-center">
-                    <CheckCircle className="w-5 h-5 text-white" />
+              {/* 4 Value Points */}
+              <div className="grid grid-cols-1 gap-3 mb-10 max-w-2xl mx-auto lg:mx-0">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <CheckCircle className="w-4 h-4 text-white" />
                   </div>
-                  <div>
-                    <p className={`ui-medium ${theme.text.primary}`}>1-on-1 Sessions</p>
-                    <p className={`label ${theme.text.secondary}`}>Personal attention</p>
-                  </div>
+                  <p className={`body-medium ${theme.text.primary} text-left`}>
+                    1-on-1 mock interviews with top engineers
+                  </p>
                 </div>
-                <div className={`flex items-center gap-3 p-4 ${theme.glass} rounded-xl ${theme.border.primary} border ${theme.shadow}`}>
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-lg flex items-center justify-center">
-                    <Star className="w-5 h-5 text-white" />
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <CheckCircle className="w-4 h-4 text-white" />
                   </div>
-                  <div>
-                    <p className={`ui-medium ${theme.text.primary}`}>Expert Feedback</p>
-                    <p className={`label ${theme.text.secondary}`}>Detailed reports</p>
-                  </div>
+                  <p className={`body-medium ${theme.text.primary} text-left`}>
+                    Detailed feedback on strengths & weak areas
+                  </p>
                 </div>
-                <div className={`flex items-center gap-3 p-4 ${theme.glass} rounded-xl ${theme.border.primary} border ${theme.shadow}`}>
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-500 rounded-lg flex items-center justify-center">
-                    <Trophy className="w-5 h-5 text-white" />
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <CheckCircle className="w-4 h-4 text-white" />
                   </div>
-                  <div>
-                    <p className={`ui-medium ${theme.text.primary}`}>Proven Results</p>
-                    <p className={`label ${theme.text.secondary}`}>Land top jobs</p>
-                  </div>
+                  <p className={`body-medium ${theme.text.primary} text-left`}>
+                    Resume review to boost shortlist chances
+                  </p>
                 </div>
-                <div className={`flex items-center gap-3 p-4 ${theme.glass} rounded-xl ${theme.border.primary} border ${theme.shadow}`}>
-                  <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-lg flex items-center justify-center">
-                    <Zap className="w-5 h-5 text-white" />
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <CheckCircle className="w-4 h-4 text-white" />
                   </div>
-                  <div>
-                    <p className={`ui-medium ${theme.text.primary}`}>Fast Track</p>
-                    <p className={`label ${theme.text.secondary}`}>From ₹1,999/mo</p>
-                  </div>
+                  <p className={`body-medium ${theme.text.primary} text-left`}>
+                    Actionable roadmap to improve in 2–3 weeks
+                  </p>
                 </div>
               </div>
 
               {/* CTAs */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-12">
+              <div className="flex flex-col sm:flex-row gap-4 mb-6">
                 <Link 
                   to="/register" 
-                  className="group inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-cyan-700 transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:-translate-y-1 animate-pulse-glow"
+                  className="group inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-cyan-700 transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:-translate-y-1"
                 >
-                  Start Free Exploration
+                  Book Your Mock Interview
                   <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                 </Link>
                 <Link 
-                  to="/apply" 
+                  to="/pricing" 
                   className={`group inline-flex items-center justify-center gap-2 px-8 py-4 ${theme.button.secondary} rounded-xl transition-all duration-300 shadow-sm hover:shadow-lg transform hover:-translate-y-1`}
                 >
-                  Skip Trial - Pay Now
-                  <Zap size={18} className="group-hover:rotate-12 transition-transform" />
+                  View Pricing
                 </Link>
               </div>
+
+              {/* Scarcity Note */}
+              {!loading && !sold_out && (
+                <p className={`body-small ${theme.text.muted} italic max-w-2xl mx-auto lg:mx-0`}>
+                  Once {total} slots fill, registrations close & pricing increases.
+                </p>
+              )}
+              {sold_out && (
+                <p className={`body-small text-red-400 font-semibold max-w-2xl mx-auto lg:mx-0`}>
+                  Founding batch is sold out. Regular pricing now applies.
+                </p>
+              )}
             </div>
 
             {/* Right Column - Visual */}
