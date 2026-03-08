@@ -23,10 +23,12 @@ fi
 
 cd /var/www/codementee
 
-# Step 1: Ensure we're on main branch and pull latest code
-echo -e "${YELLOW}Step 1: Ensuring main branch and pulling latest code...${NC}"
-git checkout main
-git pull origin main
+# Step 1: Ensure we're on mainline branch and pull latest code
+echo -e "${YELLOW}Step 1: Ensuring mainline branch and pulling latest code...${NC}"
+git fetch origin
+git checkout mainline
+git reset --hard origin/mainline
+git pull origin mainline
 
 # Step 2: Check what changed
 FRONTEND_CHANGED=$(git diff HEAD@{1} --name-only | grep -c "^frontend/" || true)
@@ -49,10 +51,13 @@ if [ "$FRONTEND_CHANGED" -gt 0 ]; then
         yarn install
     fi
     
-    # Clear cache and old build
+    # Clear cache and old build (aggressive clearing)
     echo "Clearing cache and old build..."
     rm -rf build
     rm -rf node_modules/.cache
+    rm -rf .cache
+    rm -rf dist
+    yarn cache clean
     
     # Build with production environment
     echo "Building frontend with production environment..."
