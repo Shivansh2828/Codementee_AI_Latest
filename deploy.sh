@@ -23,8 +23,9 @@ fi
 
 cd /var/www/codementee
 
-# Step 1: Pull latest code
-echo -e "${YELLOW}Step 1: Pulling latest code...${NC}"
+# Step 1: Ensure we're on main branch and pull latest code
+echo -e "${YELLOW}Step 1: Ensuring main branch and pulling latest code...${NC}"
+git checkout main
 git pull origin main
 
 # Step 2: Check what changed
