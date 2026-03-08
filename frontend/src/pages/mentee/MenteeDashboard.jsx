@@ -50,14 +50,14 @@ const MenteeDashboard = () => {
 
   const isFreeUser = user?.status === 'Free' || !user?.plan_id;
   
-  // Get plan display name (remove any "Plan" or month references)
+  // Get plan display name - Simple tier names only
   const getPlanDisplayName = () => {
     if (isFreeUser) return 'Free Tier';
     const planId = user?.plan_id;
-    if (planId === 'starter') return 'Starter';
-    if (planId === 'pro') return 'Pro';
-    if (planId === 'elite') return 'Elite';
-    return user?.plan_name || 'Free Tier';
+    if (planId === 'starter') return 'Starter Plan';
+    if (planId === 'pro') return 'Pro Plan';
+    if (planId === 'elite') return 'Elite Plan';
+    return 'Free Tier';
   };
   
   const planName = getPlanDisplayName();
@@ -213,7 +213,7 @@ const MenteeDashboard = () => {
           </div>
         )}
 
-        {/* Plan Status Card */}
+        {/* Quick Stats Card - Simplified */}
         <div className={`${theme.glass} rounded-2xl p-6 ${theme.border.primary} border ${theme.shadow}`}>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -221,30 +221,25 @@ const MenteeDashboard = () => {
                 {isFreeUser ? <Lock className="w-6 h-6 text-gray-400" /> : <Crown className="w-6 h-6 text-white" />}
               </div>
               <div>
-                <h2 className={`${theme.text.primary} text-xl font-bold`}>{planName}</h2>
+                <h2 className={`${theme.text.primary} text-xl font-bold`}>Your Progress</h2>
                 <p className={`${theme.text.secondary} text-sm`}>
-                  {isFreeUser ? 'Upgrade to start booking interviews' : 'Active subscription'}
+                  {isFreeUser ? 'Upgrade to unlock all features' : `${planName} - Active`}
                 </p>
               </div>
             </div>
-            {isFreeUser ? (
+            {isFreeUser && (
               <Link to="/mentee/book">
                 <Button className="bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white">
                   <Crown className="w-4 h-4 mr-2" />
-                  Upgrade Now
+                  View Plans
                 </Button>
               </Link>
-            ) : (
-              <Badge className="bg-green-400/20 text-green-400 border-green-400/30 px-4 py-2">
-                <CheckCircle className="w-4 h-4 mr-1" />
-                Active
-              </Badge>
             )}
           </div>
 
-          {/* Plan Quotas Summary */}
+          {/* Usage Summary - Only for Paid Users */}
           {!isFreeUser && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Mock Interviews Quota */}
               <div className={`${theme.bg.secondary} rounded-xl p-4`}>
                 <div className="flex items-center gap-2 mb-2">
@@ -302,28 +297,6 @@ const MenteeDashboard = () => {
                   {user?.plan_features?.offline_profile_creation > 0 ? 'Offline session' : 'Not included'}
                 </p>
               </div>
-            </div>
-          )}
-
-          {/* Interview Quota Progress Bar */}
-          {!isFreeUser && stats.quotaTotal > 0 && (
-            <div className={`${theme.bg.secondary} rounded-xl p-4`}>
-              <div className="flex items-center justify-between mb-2">
-                <span className={`${theme.text.secondary} text-sm`}>Interview Quota Usage</span>
-                <span className={`${theme.text.primary} font-semibold`}>
-                  {Math.round(((stats.quotaTotal - stats.quotaRemaining) / stats.quotaTotal) * 100)}% used
-                </span>
-              </div>
-              <Progress 
-                value={((stats.quotaTotal - stats.quotaRemaining) / stats.quotaTotal) * 100} 
-                className="h-2"
-              />
-              <p className={`${theme.text.muted} text-xs mt-2`}>
-                {stats.quotaRemaining === 0 
-                  ? 'You have used all your interviews. Upgrade to continue.' 
-                  : `You have ${stats.quotaRemaining} interview${stats.quotaRemaining !== 1 ? 's' : ''} left.`
-                }
-              </p>
             </div>
           )}
         </div>
@@ -481,32 +454,7 @@ const MenteeDashboard = () => {
           </div>
         </div>
 
-        {/* Plan Features */}
-        {planFeatures.length > 0 && (
-          <div>
-            <h2 className={`${theme.text.primary} text-2xl font-bold mb-6`}>Your Plan Features</h2>
-            <div className={`${theme.glass} rounded-xl p-6 ${theme.border.primary} border`}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {planFeatures.map((feature, index) => {
-                  const Icon = feature.icon;
-                  return (
-                    <div key={index} className="flex items-start gap-3">
-                      <div className={`w-10 h-10 rounded-lg ${feature.available ? 'bg-green-400/20' : 'bg-gray-600/20'} flex items-center justify-center flex-shrink-0`}>
-                        <Icon className={`w-5 h-5 ${feature.available ? 'text-green-400' : 'text-gray-400'}`} />
-                      </div>
-                      <div>
-                        <p className={`${theme.text.primary} font-medium`}>{feature.name}</p>
-                        <p className={`${feature.available ? theme.text.secondary : theme.text.muted} text-sm`}>
-                          {feature.value}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
+
 
         {/* Upgrade CTA for Free Users */}
         {isFreeUser && (

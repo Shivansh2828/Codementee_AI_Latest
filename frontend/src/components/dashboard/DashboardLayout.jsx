@@ -282,9 +282,9 @@ const DashboardLayout = ({ children, title }) => {
                       </div>
                       <Badge className={`${user?.status === 'Free' || !user?.plan_id ? 'bg-gray-600/20 text-gray-400' : 'bg-[#06b6d4]/20 text-[#06b6d4]'} border-0 text-xs`}>
                         {user?.status === 'Free' || !user?.plan_id ? 'Free Tier' : 
-                         user?.plan_id === 'starter' ? 'Starter' :
-                         user?.plan_id === 'pro' ? 'Pro' :
-                         user?.plan_id === 'elite' ? 'Elite' : user?.plan_name || 'Free Tier'}
+                         user?.plan_id === 'starter' ? 'Starter Plan' :
+                         user?.plan_id === 'pro' ? 'Pro Plan' :
+                         user?.plan_id === 'elite' ? 'Elite Plan' : 'Free Tier'}
                       </Badge>
                     </div>
 
@@ -352,7 +352,7 @@ const DashboardLayout = ({ children, title }) => {
                               <Crown size={16} className="text-[#06b6d4]" />
                               <div className="flex-1 text-left">
                                 <p className="text-sm font-medium">Upgrade to Pro</p>
-                                <p className={`${theme.text.muted} text-xs`}>Get 3 mocks + more features</p>
+                                <p className={`${theme.text.muted} text-xs`}>3 mocks + enhanced features</p>
                               </div>
                             </Link>
                           )}
@@ -367,7 +367,7 @@ const DashboardLayout = ({ children, title }) => {
                               <Crown size={16} className="text-purple-400" />
                               <div className="flex-1 text-left">
                                 <p className="text-sm font-medium">Upgrade to Elite</p>
-                                <p className={`${theme.text.muted} text-xs`}>Get 6 mocks + premium perks</p>
+                                <p className={`${theme.text.muted} text-xs`}>6 mocks + premium features</p>
                               </div>
                             </Link>
                           )}
