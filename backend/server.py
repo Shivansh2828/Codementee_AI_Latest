@@ -2300,6 +2300,8 @@ async def send_new_slot_notification_emails(slot: dict):
     This helps drive engagement and conversions.
     """
     try:
+        logger.info(f"📧 Starting slot notification email process for slot {slot.get('id')}")
+        
         mentor_name = slot.get("mentor_name", "Mentor")
         slot_date = slot.get("date")
         slot_time = f"{slot.get('start_time')} - {slot.get('end_time')}"
@@ -2308,10 +2310,11 @@ async def send_new_slot_notification_emails(slot: dict):
         
         # Format date nicely
         try:
-            date_obj = datetime.fromisoformat(slot_date)
+            date_obj = datetime.strptime(slot_date, "%Y-%m-%d")
             formatted_date = date_obj.strftime("%B %d, %Y")
             day_of_week = date_obj.strftime("%A")
-        except:
+        except Exception as e:
+            logger.warning(f"Date parsing error: {e}, using raw date")
             formatted_date = slot_date
             day_of_week = ""
         
@@ -2319,15 +2322,19 @@ async def send_new_slot_notification_emails(slot: dict):
         all_mentees = await db.users.find({"role": "mentee"}).to_list(1000)
         
         if not all_mentees:
-            logger.info("No mentees found to notify")
+            logger.warning("⚠️ No mentees found in database to notify")
             return None
         
-        logger.info(f"Sending new slot notifications to {len(all_mentees)} mentees")
+        logger.info(f"📨 Found {len(all_mentees)} mentees to notify")
         
         # Send emails in batches to avoid overwhelming the email service
         batch_size = 50
+        sent_count = 0
+        failed_count = 0
+        
         for i in range(0, len(all_mentees), batch_size):
             batch = all_mentees[i:i + batch_size]
+            logger.info(f"Processing batch {i//batch_size + 1} ({len(batch)} mentees)")
             
             for mentee in batch:
                 mentee_name = mentee.get("name", "there")
@@ -2335,6 +2342,7 @@ async def send_new_slot_notification_emails(slot: dict):
                 is_paid = mentee.get("status") == "Active" and mentee.get("plan_id")
                 
                 if not mentee_email:
+                    logger.warning(f"Skipping mentee {mentee.get('id')} - no email")
                     continue
                 
                 # Customize message based on user status
@@ -2424,19 +2432,23 @@ async def send_new_slot_notification_emails(slot: dict):
                 
                 # Send email (don't wait for response to speed up batch processing)
                 try:
-                    await asyncio.to_thread(resend.Emails.send, params)
+                    result = await asyncio.to_thread(resend.Emails.send, params)
+                    sent_count += 1
+                    logger.debug(f"✅ Email sent to {mentee_email}, result: {result}")
                 except Exception as e:
-                    logger.error(f"Failed to send notification to {mentee_email}: {str(e)}")
+                    failed_count += 1
+                    logger.error(f"❌ Failed to send notification to {mentee_email}: {str(e)}")
                     continue
             
             # Small delay between batches to avoid rate limiting
             if i + batch_size < len(all_mentees):
                 await asyncio.sleep(1)
         
-        logger.info(f"New slot notification emails sent to {len(all_mentees)} mentees")
-        return {"sent_count": len(all_mentees)}
+        logger.info(f"✅ Slot notification complete: {sent_count} sent, {failed_count} failed out of {len(all_mentees)} total")
+        return {"sent_count": sent_count, "failed_count": failed_count, "total": len(all_mentees)}
     except Exception as e:
-        logger.error(f"Failed to send new slot notification emails: {str(e)}")
+        logger.error(f"❌ Critical error in send_new_slot_notification_emails: {str(e)}")
+        logger.exception(e)  # This will log the full stack trace
         return None
 
     """
@@ -4159,6 +4171,9 @@ async def create_mentor_slot(slot_data: MentorSlotCreate, user=Depends(get_curre
     }
     
     await db.mentor_slots.insert_one(slot_doc)
+    
+    logger.info(f"✅ Slot created: {slot_doc['id']} by mentor {user['id']}")
+    logger.info(f"📧 Triggering slot notification emails...")
     
     # Send notification emails to all mentees (both free and paid) in the background
     # This runs asynchronously without blocking the response
