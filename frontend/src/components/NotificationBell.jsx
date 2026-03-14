@@ -22,45 +22,30 @@ const NotificationBell = () => {
 
   const fetchNotifications = async () => {
     try {
+      console.log('🔔 Fetching notifications...');
       const response = await api.get('/notifications');
+      console.log('🔔 Raw notifications from API:', response.data);
+      
       const allNotifications = response.data;
       
-      // Filter notifications: show all unread, and for bug reports, only show if bug is not resolved
-      const filteredNotifications = [];
+      // Simplified: Show all notifications, don't filter by bug status
+      // Just show unread ones with higher priority
+      const sortedNotifications = allNotifications.sort((a, b) => {
+        // Unread first
+        if (a.read !== b.read) return a.read ? 1 : -1;
+        // Then by date
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
       
-      for (const notification of allNotifications) {
-        if (notification.type === 'bug_status_update') {
-          // For bug notifications, check if the bug is still unresolved
-          // We'll show the notification if it's unread OR if the bug is not resolved yet
-          if (!notification.read) {
-            filteredNotifications.push(notification);
-          } else {
-            // Check if bug is resolved by fetching bug reports
-            try {
-              const bugReports = await api.get('/bug-reports/my');
-              const relatedBug = bugReports.data.find(bug => 
-                notification.message.includes(bug.title)
-              );
-              
-              // Only show if bug is not resolved
-              if (relatedBug && relatedBug.status !== 'resolved') {
-                filteredNotifications.push(notification);
-              }
-            } catch (error) {
-              // If we can't fetch bug reports, show the notification anyway
-              filteredNotifications.push(notification);
-            }
-          }
-        } else {
-          // For non-bug notifications, show all
-          filteredNotifications.push(notification);
-        }
-      }
+      console.log('🔔 Sorted notifications:', sortedNotifications);
+      const unreadCount = sortedNotifications.filter(n => !n.read).length;
+      console.log('🔔 Unread count:', unreadCount);
       
-      setNotifications(filteredNotifications);
-      setUnreadCount(filteredNotifications.filter(n => !n.read).length);
+      setNotifications(sortedNotifications);
+      setUnreadCount(unreadCount);
     } catch (error) {
-      console.error('Failed to fetch notifications:', error);
+      console.error('❌ Failed to fetch notifications:', error);
+      console.error('❌ Error response:', error.response?.data);
     }
   };
 
@@ -70,18 +55,50 @@ const NotificationBell = () => {
       await api.put(`/notifications/${notification.id}/read`);
       
       // Navigate based on notification type
-      if (notification.type === 'bug_status_update') {
-        if (user.role === 'admin') {
-          navigate('/admin/bug-reports');
-        } else {
+      switch (notification.type) {
+        case 'bug_status_update':
+          if (user.role === 'admin') {
+            navigate('/admin/bug-reports');
+          } else {
+            navigate(`/${user.role}/bug-reports`);
+          }
+          break;
+        case 'booking_confirmed':
+          navigate('/mentee/bookings');
+          break;
+        case 'new_booking':
+          navigate('/mentor/bookings');
+          break;
+        case 'feedback_received':
+          navigate('/mentee/feedbacks');
+          break;
+        default:
           navigate(`/${user.role}/dashboard`);
-        }
       }
       
       setShowDropdown(false);
       fetchNotifications();
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await api.put('/notifications/mark-all-read');
+      fetchNotifications();
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      await api.delete('/notifications/clear-all');
+      setNotifications([]);
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Failed to clear notifications:', error);
     }
   };
 
@@ -107,49 +124,69 @@ const NotificationBell = () => {
             className="fixed inset-0 z-10"
             onClick={() => setShowDropdown(false)}
           />
-          <div className="absolute right-0 mt-2 w-80 bg-[#171717] border border-[#404040] rounded-lg shadow-xl z-20 max-h-96 overflow-y-auto">
-            <div className="p-4 border-b border-[#404040]">
+          <div className="absolute right-0 mt-2 w-80 bg-[#171717] border border-[#404040] rounded-lg shadow-xl z-20 max-h-96 overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-[#404040] flex items-center justify-between">
               <h3 className="text-white font-semibold">Notifications</h3>
-            </div>
-            {notifications.length === 0 ? (
-              <div className="p-4 text-center text-gray-500">
-                No notifications
-              </div>
-            ) : (
-              <div>
-                {notifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    onClick={() => handleNotificationClick(notification)}
-                    className={`p-4 border-b border-[#404040] cursor-pointer hover:bg-[#262626] transition-colors ${
-                      !notification.read ? 'bg-[#06b6d4]/5' : ''
-                    }`}
+              {notifications.length > 0 && (
+                <div className="flex gap-2">
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={handleMarkAllAsRead}
+                      className="text-xs text-[#06b6d4] hover:text-[#0891b2] transition-colors"
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                  <button
+                    onClick={handleClearAll}
+                    className="text-xs text-gray-400 hover:text-white transition-colors"
                   >
-                    <div className="flex items-start gap-3">
-                      <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                        !notification.read ? 'bg-[#06b6d4]' : 'bg-gray-600'
-                      }`} />
-                      <div className="flex-1">
-                        <p className="text-white text-sm font-medium mb-1">
-                          {notification.title}
-                        </p>
-                        <p className="text-gray-400 text-xs">
-                          {notification.message}
-                        </p>
-                        <p className="text-gray-500 text-xs mt-1">
-                          {new Date(notification.created_at).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </p>
+                    Clear all
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="overflow-y-auto flex-1">
+              {notifications.length === 0 ? (
+                <div className="p-4 text-center text-gray-500">
+                  No notifications
+                </div>
+              ) : (
+                <div>
+                  {notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      onClick={() => handleNotificationClick(notification)}
+                      className={`p-4 border-b border-[#404040] cursor-pointer hover:bg-[#262626] transition-colors ${
+                        !notification.read ? 'bg-[#06b6d4]/5' : ''
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                          !notification.read ? 'bg-[#06b6d4]' : 'bg-gray-600'
+                        }`} />
+                        <div className="flex-1">
+                          <p className="text-white text-sm font-medium mb-1">
+                            {notification.title}
+                          </p>
+                          <p className="text-gray-400 text-xs">
+                            {notification.message}
+                          </p>
+                          <p className="text-gray-500 text-xs mt-1">
+                            {new Date(notification.created_at).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}

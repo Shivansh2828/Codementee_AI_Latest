@@ -116,11 +116,11 @@ const AdminBugReports = () => {
 
   if (loading) {
     return (
-      <DashboardLayout title="Bug Reports">
+      <DashboardLayout title="Support Requests">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#06b6d4] mx-auto mb-4"></div>
-            <p className={theme.text.secondary}>Loading...</p>
+            <p className={theme.text.secondary}>Loading support requests...</p>
           </div>
         </div>
       </DashboardLayout>
@@ -128,7 +128,7 @@ const AdminBugReports = () => {
   }
 
   return (
-    <DashboardLayout title="Bug Reports">
+    <DashboardLayout title="Support Requests">
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
