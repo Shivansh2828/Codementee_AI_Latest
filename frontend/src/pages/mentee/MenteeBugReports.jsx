@@ -6,14 +6,16 @@ import { Card, CardContent } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { toast } from "sonner";
-import { Bug, CheckCircle, Clock, AlertCircle, RefreshCw } from "lucide-react";
+import { Bug, CheckCircle, Clock, AlertCircle, RefreshCw, Plus, Headphones, Mail, Phone } from "lucide-react";
 import api from "../../utils/api";
+import SupportRequestModal from "../../components/SupportRequestModal";
 
 const MenteeBugReports = () => {
   const { theme } = useTheme();
   const { user } = useAuth();
   const [bugReports, setBugReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [supportModalOpen, setSupportModalOpen] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     open: 0,
@@ -70,26 +72,66 @@ const MenteeBugReports = () => {
 
   if (loading) {
     return (
-      <DashboardLayout title="My Bug Reports">
+      <DashboardLayout title="Support & Help">
         <div className={`text-center py-12 ${theme.text.secondary}`}>
           <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
-          <p>Loading your bug reports...</p>
+          <p>Loading your support requests...</p>
         </div>
       </DashboardLayout>
     );
   }
 
   return (
-    <DashboardLayout title="My Bug Reports">
+    <DashboardLayout title="Support & Help">
       <div className="space-y-6">
+        {/* Info Banner with Quick Actions */}
+        <div className={`${theme.bg.secondary} rounded-xl p-6 border ${theme.border.primary}`}>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4 flex-1">
+              <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Headphones className="w-6 h-6 text-blue-400" />
+              </div>
+              <div>
+                <h3 className={`${theme.text.primary} font-semibold mb-2`}>
+                  Need Help? We're Here for You!
+                </h3>
+                <p className={`${theme.text.secondary} text-sm mb-4`}>
+                  Submit bug reports, ask questions, request features, or get help with bookings and payments. Our team responds within 24 hours.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    onClick={() => setSupportModalOpen(true)}
+                    className="bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Submit Support Request
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      const phone = '919731842807';
+                      const message = encodeURIComponent('Hi Codementee Team! I need help with...');
+                      window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+                    }}
+                    variant="outline"
+                    className="border-green-500/30 text-green-400 hover:bg-green-500/10"
+                  >
+                    <Phone className="w-4 h-4 mr-2" />
+                    WhatsApp
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className={`text-3xl font-bold ${theme.text.primary} mb-2`}>
-              My Bug Reports
+              My Support Requests
             </h1>
             <p className={theme.text.secondary}>
-              Track the status of issues you've reported
+              Track the status of your support tickets and bug reports
             </p>
           </div>
           <Button
@@ -165,13 +207,20 @@ const MenteeBugReports = () => {
         {bugReports.length === 0 ? (
           <Card className={`${theme.glass} border ${theme.border.primary}`}>
             <CardContent className="flex flex-col items-center justify-center py-16">
-              <Bug className={`w-16 h-16 ${theme.text.muted} mb-4`} />
+              <Headphones className={`w-16 h-16 ${theme.text.muted} mb-4`} />
               <h3 className={`${theme.text.primary} text-xl font-semibold mb-2`}>
-                No bug reports yet
+                No support requests yet
               </h3>
-              <p className={`${theme.text.secondary} text-center max-w-md`}>
-                Found an issue? Use the "Report Bug" button in the header to submit a bug report and help us improve the platform.
+              <p className={`${theme.text.secondary} text-center max-w-md mb-6`}>
+                Need help? Submit a support request using the button above. We're here to assist with bugs, questions, bookings, payments, and feature requests.
               </p>
+              <Button
+                onClick={() => setSupportModalOpen(true)}
+                className="bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Submit Your First Request
+              </Button>
             </CardContent>
           </Card>
         ) : (
@@ -198,7 +247,13 @@ const MenteeBugReports = () => {
 
                   {/* Bug Details */}
                   <div className={`${theme.bg.secondary} rounded-lg p-4`}>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div>
+                        <p className={`${theme.text.muted} text-xs mb-1`}>Category</p>
+                        <p className={`${theme.text.primary} font-semibold capitalize`}>
+                          {bug.category || 'Bug Report'}
+                        </p>
+                      </div>
                       <div>
                         <p className={`${theme.text.muted} text-xs mb-1`}>Severity</p>
                         <p className={`${getSeverityColor(bug.severity)} font-semibold capitalize`}>
@@ -254,6 +309,15 @@ const MenteeBugReports = () => {
             ))}
           </div>
         )}
+
+        {/* Support Request Modal */}
+        <SupportRequestModal 
+          isOpen={supportModalOpen} 
+          onClose={() => {
+            setSupportModalOpen(false);
+            fetchBugReports(); // Refresh list after submission
+          }} 
+        />
       </div>
     </DashboardLayout>
   );

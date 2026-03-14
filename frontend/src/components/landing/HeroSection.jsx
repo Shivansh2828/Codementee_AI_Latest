@@ -168,10 +168,20 @@ const HeroSection = () => {
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
                 <Link 
                   to="/register" 
-                  className="group inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-cyan-700 transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:-translate-y-1"
+                  className="group relative inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-cyan-700 transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:-translate-y-1 overflow-hidden"
                 >
-                  Book Your Mock Interview
-                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                  {/* Shimmer effect */}
+                  <span className="absolute inset-0 w-full h-full">
+                    <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></span>
+                  </span>
+                  
+                  {/* Sparkle dots */}
+                  <span className="absolute top-2 right-4 w-1 h-1 bg-white rounded-full animate-sparkle"></span>
+                  <span className="absolute top-4 right-8 w-1 h-1 bg-white rounded-full animate-sparkle" style={{ animationDelay: '0.3s' }}></span>
+                  <span className="absolute bottom-3 left-6 w-1 h-1 bg-white rounded-full animate-sparkle" style={{ animationDelay: '0.6s' }}></span>
+                  
+                  <span className="relative z-10">Book Your Mock Interview</span>
+                  <ArrowRight size={20} className="relative z-10 group-hover:translate-x-1 transition-transform" />
                 </Link>
                 <Link 
                   to="/pricing" 

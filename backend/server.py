@@ -54,6 +54,22 @@ security = HTTPBearer()
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+# Add validation error handler for better debugging
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    logger.error(f"Validation error on {request.method} {request.url.path}")
+    logger.error(f"Validation errors: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": exc.errors(),
+            "message": "Validation error - check request data format"
+        }
+    )
+
 # Health check endpoint (outside /api prefix for Docker health check)
 @app.get("/health")
 async def health_check():
@@ -188,13 +204,6 @@ class CompanyCreate(BaseModel):
     category: Optional[str] = "product"  # "product", "service", "startup", "unicorn"
     interview_tracks: Optional[List[str]] = []  # Available interview tracks for this company
     difficulty_levels: Optional[List[str]] = ["junior", "mid", "senior"]  # Supported levels
-
-class TimeSlotCreate(BaseModel):
-    date: str  # YYYY-MM-DD
-    start_time: str  # HH:MM
-    end_time: str  # HH:MM
-    mentor_id: Optional[str] = None  # If None, any mentor can take it
-    interview_types: Optional[List[str]] = ["coding", "system_design", "behavioral", "hr_round"]  # Supported types
 
 class MeetLinkCreate(BaseModel):
     link: str
@@ -359,7 +368,10 @@ class BugReportCreate(BaseModel):
     title: str
     description: str
     severity: str  # low, medium, high, critical
+    priority: Optional[str] = "medium"  # low, medium, high, critical
+    category: Optional[str] = "bug"  # bug, general, booking, payment, feature
     page: str
+    screenshot_url: Optional[str] = None
     user_id: Optional[str] = None
     user_name: Optional[str] = None
     user_email: Optional[str] = None
@@ -712,7 +724,7 @@ async def send_booking_confirmed_email(recipient_name: str, recipient_email: str
         return None
 
 async def send_bug_report_email(bug_report: dict):
-    """Send email notification to admin when a bug is reported"""
+    """Send email notification to admin when a bug/support request is reported"""
     try:
         severity_colors = {
             "low": "#10b981",
@@ -721,6 +733,17 @@ async def send_bug_report_email(bug_report: dict):
             "critical": "#dc2626"
         }
         severity_color = severity_colors.get(bug_report["severity"], "#6b7280")
+        
+        category_icons = {
+            "bug": "🐛",
+            "general": "❓",
+            "booking": "📅",
+            "payment": "💳",
+            "feature": "💡"
+        }
+        category = bug_report.get("category", "bug")
+        category_icon = category_icons.get(category, "📝")
+        category_name = category.replace("_", " ").title()
         
         html_content = f"""
         <!DOCTYPE html>
@@ -732,7 +755,8 @@ async def send_bug_report_email(bug_report: dict):
                 .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
                 .content {{ background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }}
                 .bug-card {{ background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid {severity_color}; }}
-                .severity-badge {{ display: inline-block; padding: 5px 15px; border-radius: 20px; background: {severity_color}; color: white; font-weight: bold; text-transform: uppercase; font-size: 12px; }}
+                .severity-badge {{ display: inline-block; padding: 5px 15px; border-radius: 20px; background: {severity_color}; color: white; font-weight: bold; text-transform: uppercase; font-size: 12px; margin-right: 10px; }}
+                .category-badge {{ display: inline-block; padding: 5px 15px; border-radius: 20px; background: #06b6d4; color: white; font-weight: bold; text-transform: uppercase; font-size: 12px; }}
                 .info-row {{ margin: 10px 0; padding: 10px; background: #f3f4f6; border-radius: 5px; }}
                 .label {{ font-weight: bold; color: #4b5563; }}
                 .footer {{ text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px; }}
@@ -741,19 +765,20 @@ async def send_bug_report_email(bug_report: dict):
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>🐛 New Bug Report</h1>
-                    <p>A user has reported an issue on the platform</p>
+                    <h1>{category_icon} New Support Request</h1>
+                    <p>A user has submitted a {category_name} request</p>
                 </div>
                 <div class="content">
                     <div class="bug-card">
                         <div style="margin-bottom: 15px;">
+                            <span class="category-badge">{category_name}</span>
                             <span class="severity-badge">{bug_report["severity"]} Priority</span>
                         </div>
                         
                         <h2 style="color: #1f2937; margin: 15px 0;">{bug_report["title"]}</h2>
                         
                         <div class="info-row">
-                            <span class="label">Page:</span> {bug_report["page"]}
+                            <span class="label">Page:</span> {bug_report.get("page_url", "Not specified")}
                         </div>
                         
                         <div class="info-row">
@@ -762,25 +787,26 @@ async def send_bug_report_email(bug_report: dict):
                         </div>
                         
                         <div class="info-row">
-                            <span class="label">Reporter:</span> {bug_report.get("user_name", "Anonymous")} ({bug_report.get("user_role", "Unknown")})<br/>
-                            <span class="label">Email:</span> {bug_report.get("user_email", "Not provided")}
+                            <span class="label">Reporter:</span> {bug_report.get("reporter_name", "Anonymous")} ({bug_report.get("reporter_role", "Unknown")})<br/>
+                            <span class="label">Email:</span> {bug_report.get("reporter_email", "Not provided")}
                         </div>
                         
                         <div class="info-row">
-                            <span class="label">Reported At:</span> {bug_report["created_at"].strftime("%Y-%m-%d %H:%M:%S UTC")}
+                            <span class="label">Reported At:</span> {bug_report["created_at"]}
                         </div>
                         
                         <div class="info-row">
-                            <span class="label">Bug ID:</span> {bug_report["id"]}
+                            <span class="label">Request ID:</span> {bug_report["id"]}
                         </div>
                     </div>
                     
                     <div style="text-align: center; margin-top: 30px;">
-                        <p style="color: #6b7280;">Please review and address this issue in the admin dashboard.</p>
+                        <p style="color: #6b7280;">Please review and respond to this request in the admin dashboard.</p>
+                        <a href="https://codementee.com/admin/bug-reports" style="display: inline-block; margin-top: 15px; padding: 12px 30px; background: #06b6d4; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">View in Admin Panel</a>
                     </div>
                 </div>
                 <div class="footer">
-                    <p>Codementee Bug Tracking System</p>
+                    <p>Codementee Support System</p>
                     <p>This is an automated notification</p>
                 </div>
             </div>
@@ -788,15 +814,24 @@ async def send_bug_report_email(bug_report: dict):
         </html>
         """
         
+        # Update subject based on category
+        subject_prefix = {
+            "bug": "🐛 Bug Report",
+            "general": "❓ General Query",
+            "booking": "📅 Booking Help",
+            "payment": "💳 Payment Issue",
+            "feature": "💡 Feature Request"
+        }.get(category, "📝 Support Request")
+        
         params = {
             "from": SENDER_EMAIL,
-            "to": [BCC_EMAIL],  # Send to admin email
-            "subject": f"🐛 [{bug_report['severity'].upper()}] Bug Report: {bug_report['title']}",
+            "to": [BCC_EMAIL],  # Send to admin email (support@codementee.com)
+            "subject": f"{subject_prefix} [{bug_report['severity'].upper()}]: {bug_report['title']}",
             "html": html_content
         }
         
         result = await asyncio.to_thread(resend.Emails.send, params)
-        logger.info(f"Bug report email sent to admin")
+        logger.info(f"Support request email sent to admin: {category} - {bug_report['title']}")
         return result
     except Exception as e:
         logger.error(f"Failed to send bug report email: {str(e)}")
@@ -878,14 +913,265 @@ async def send_resume_request_email(request: dict):
             "from": SENDER_EMAIL,
             "to": [BCC_EMAIL],  # Send to admin email
             "subject": f"📄 New Resume Review Request - {request['mentee_name']}",
+            "html": html_content,
+            "attachments": [
+                {
+                    "filename": request["resume_filename"],
+                    "content": request["resume_data"]  # Base64 encoded content
+                }
+            ]
+        }
+        
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Resume request email sent to admin with attachment")
+        return result
+    except Exception as e:
+        logger.error(f"Failed to send resume request email: {str(e)}")
+        return None
+
+async def send_resume_booking_request_email(booking: dict, resume_request: dict):
+    """Send email notification to admin when a resume review call is requested"""
+    try:
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                .content {{ background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }}
+                .booking-card {{ background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #8b5cf6; }}
+                .info-row {{ margin: 10px 0; padding: 10px; background: #f3f4f6; border-radius: 5px; }}
+                .label {{ font-weight: bold; color: #4b5563; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>📞 New Resume Review Call Request</h1>
+                    <p>A mentee wants to book a 30-min resume review call</p>
+                </div>
+                <div class="content">
+                    <div class="booking-card">
+                        <h2 style="color: #1f2937;">Resume Review Call Booking</h2>
+                        
+                        <div class="info-row">
+                            <span class="label">Mentee:</span> {booking["mentee_name"]}<br/>
+                            <span class="label">Email:</span> {booking["mentee_email"]}
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="label">Target Role:</span> {resume_request["target_role"]}<br/>
+                            {f'<span class="label">Target Companies:</span> {resume_request["target_companies"]}<br/>' if resume_request.get("target_companies") else ''}
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="label">Preferred Slots:</span><br/>
+                            {'<br/>'.join([f"• {slot['date']} at {slot['start_time']} - {slot['end_time']}" for slot in booking["preferred_slots"]])}
+                        </div>
+                        
+                        {f'<div class="info-row"><span class="label">Additional Notes:</span><br/>{booking["additional_notes"]}</div>' if booking.get("additional_notes") else ''}
+                        
+                        <div class="info-row">
+                            <span class="label">Resume File:</span> {resume_request["resume_filename"]}
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                        <p style="color: #6b7280;">Please assign a mentor and confirm the booking in the admin dashboard.</p>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        params = {
+            "from": SENDER_EMAIL,
+            "to": [BCC_EMAIL],
+            "subject": f"📞 Resume Review Call Request - {booking['mentee_name']}",
             "html": html_content
         }
         
         result = await asyncio.to_thread(resend.Emails.send, params)
-        logger.info(f"Resume request email sent to admin")
+        logger.info(f"Resume booking request email sent to admin")
         return result
     except Exception as e:
-        logger.error(f"Failed to send resume request email: {str(e)}")
+        logger.error(f"Failed to send resume booking email: {str(e)}")
+        return None
+
+async def send_slot_request_email(mentee_name: str, mentee_email: str, resume_request: dict):
+    """Send email to admin and mentors when mentee requests more resume review slots"""
+    try:
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                .content {{ background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }}
+                .alert-card {{ background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b; }}
+                .info-row {{ margin: 10px 0; padding: 10px; background: #fef3c7; border-radius: 5px; }}
+                .label {{ font-weight: bold; color: #92400e; }}
+                .cta-button {{ display: inline-block; margin-top: 20px; padding: 14px 32px; background: #f59e0b; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>⚠️ More Resume Review Slots Needed!</h1>
+                    <p>A mentee is waiting for available slots</p>
+                </div>
+                <div class="content">
+                    <div class="alert-card">
+                        <h2 style="color: #92400e; margin: 15px 0;">Slot Request Details</h2>
+                        
+                        <div class="info-row">
+                            <span class="label">Mentee:</span> {mentee_name}<br/>
+                            <span class="label">Email:</span> {mentee_email}
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="label">Target Role:</span> {resume_request["target_role"]}<br/>
+                            {f'<span class="label">Target Companies:</span> {resume_request["target_companies"]}<br/>' if resume_request.get("target_companies") else ''}
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="label">Resume File:</span> {resume_request["resume_filename"]}
+                        </div>
+                        
+                        <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                            <p style="margin: 0; color: #92400e; font-weight: bold;">
+                                ⏰ Action Required: Please create more 30-minute resume review slots
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                        <p style="color: #6b7280; margin-bottom: 15px;">
+                            <strong>For Mentors:</strong> Please create resume review slots in your dashboard<br/>
+                            <strong>For Admin:</strong> Please coordinate with mentors to add more availability
+                        </p>
+                        <a href="https://codementee.com/login" class="cta-button">Go to Dashboard</a>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Get all mentors
+        mentors = await db.users.find({"role": "mentor"}).to_list(1000)
+        mentor_emails = [m["email"] for m in mentors]
+        
+        # Send to admin
+        params = {
+            "from": SENDER_EMAIL,
+            "to": [BCC_EMAIL],  # Admin email
+            "cc": mentor_emails,  # CC all mentors
+            "subject": f"⚠️ More Resume Review Slots Needed - {mentee_name}",
+            "html": html_content
+        }
+        
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Slot request email sent to admin and {len(mentor_emails)} mentors")
+        return result
+    except Exception as e:
+        logger.error(f"Failed to send slot request email: {str(e)}")
+        return None
+
+async def send_resume_booking_confirmed_email(recipient_name: str, recipient_email: str, slot_time: str, meeting_link: str, is_mentor: bool = False, mentor_name: str = None, mentee_name: str = None, resume_details: dict = None):
+    """Send confirmation email for resume review call booking"""
+    try:
+        if is_mentor:
+            title = "Resume Review Call Confirmed"
+            message = f"You have a resume review call scheduled with {mentee_name}"
+            details_section = f"""
+                <div class="info-row">
+                    <span class="label">Mentee:</span> {mentee_name}<br/>
+                    <span class="label">Target Role:</span> {resume_details.get('target_role', 'N/A')}<br/>
+                    {f'<span class="label">Target Companies:</span> {resume_details.get("target_companies")}<br/>' if resume_details.get("target_companies") else ''}
+                </div>
+                <div class="info-row">
+                    <span class="label">Resume File:</span> {resume_details.get('resume_filename', 'N/A')}<br/>
+                    <span class="label">Note:</span> Please review the resume before the call
+                </div>
+            """
+        else:
+            title = "Resume Review Call Confirmed!"
+            message = f"Your 30-minute resume review call with {mentor_name} is confirmed"
+            details_section = f"""
+                <div class="info-row">
+                    <span class="label">Mentor:</span> {mentor_name}<br/>
+                    <span class="label">Duration:</span> 30 minutes
+                </div>
+            """
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                .content {{ background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }}
+                .info-card {{ background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }}
+                .info-row {{ margin: 10px 0; padding: 10px; background: #f3f4f6; border-radius: 5px; }}
+                .label {{ font-weight: bold; color: #4b5563; }}
+                .meeting-link {{ display: inline-block; margin-top: 20px; padding: 14px 32px; background: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>✅ {title}</h1>
+                    <p>{message}</p>
+                </div>
+                <div class="content">
+                    <div class="info-card">
+                        <h2 style="color: #1f2937;">Call Details</h2>
+                        
+                        <div class="info-row">
+                            <span class="label">Date & Time:</span> {slot_time}
+                        </div>
+                        
+                        {details_section}
+                        
+                        <div style="text-align: center;">
+                            <a href="{meeting_link}" class="meeting-link">Join Meeting</a>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 20px; padding: 15px; background: #dbeafe; border-radius: 8px;">
+                        <p style="margin: 0; color: #1e40af; font-size: 14px;">
+                            <strong>Reminder:</strong> Please join the call on time. The meeting link will be active 5 minutes before the scheduled time.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        params = {
+            "from": SENDER_EMAIL,
+            "to": [recipient_email],
+            "subject": f"✅ Resume Review Call Confirmed - {slot_time}",
+            "html": html_content
+        }
+        
+        if BCC_EMAIL:
+            params["bcc"] = [BCC_EMAIL]
+        
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Resume booking confirmation email sent to {recipient_email}")
+        return result
+    except Exception as e:
+        logger.error(f"Failed to send resume booking confirmation email: {str(e)}")
         return None
 
 async def send_resume_feedback_email(request: dict, feedback: str, is_update: bool = False):
@@ -1839,6 +2125,322 @@ async def check_and_send_reminder_emails():
 async def send_feedback_request_emails(booking: dict):
     """
     Send feedback request emails 1 hour after session end time.
+    Sent to both mentor and mentee.
+    """
+    try:
+        mentee_name = booking.get("mentee_name", "Mentee")
+        mentee_email = booking.get("mentee_email")
+        mentor_name = booking.get("mentor_name", "Mentor")
+        mentor_email = booking.get("mentor_email")
+        company_name = booking.get("company_name", "Company")
+        slot_date = booking.get("slot_date")
+        slot_time = f"{booking.get('slot_start_time')} - {booking.get('slot_end_time')}"
+        
+        if not mentee_email or not mentor_email:
+            logger.error("Missing email addresses for feedback request")
+            return None
+        
+        # Format date nicely
+        try:
+            date_obj = datetime.fromisoformat(slot_date.replace('Z', '+00:00'))
+            formatted_date = date_obj.strftime("%B %d, %Y")
+        except:
+            formatted_date = slot_date
+        
+        # Mentee email
+        mentee_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #1a202c; margin: 0; padding: 0; background-color: #f7fafc; }}
+                .container {{ max-width: 600px; margin: 40px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }}
+                .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; }}
+                .header h1 {{ color: white; margin: 0; font-size: 28px; font-weight: 700; }}
+                .content {{ padding: 40px 30px; }}
+                .content h2 {{ color: #2d3748; font-size: 22px; margin-bottom: 20px; }}
+                .content p {{ color: #4a5568; margin-bottom: 16px; font-size: 16px; }}
+                .session-details {{ background: #f7fafc; border-left: 4px solid #667eea; padding: 20px; margin: 24px 0; border-radius: 8px; }}
+                .session-details p {{ margin: 8px 0; color: #2d3748; }}
+                .session-details strong {{ color: #1a202c; }}
+                .cta-button {{ display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 24px 0; transition: transform 0.2s; }}
+                .cta-button:hover {{ transform: translateY(-2px); }}
+                .footer {{ background: #f7fafc; padding: 30px; text-align: center; color: #718096; font-size: 14px; }}
+                .footer a {{ color: #667eea; text-decoration: none; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>📝 Share Your Feedback</h1>
+                </div>
+                <div class="content">
+                    <h2>Hi {mentee_name},</h2>
+                    <p>Thank you for completing your mock interview session! We hope it was valuable for your preparation.</p>
+                    
+                    <div class="session-details">
+                        <p><strong>Company:</strong> {company_name}</p>
+                        <p><strong>Date:</strong> {formatted_date}</p>
+                        <p><strong>Time:</strong> {slot_time}</p>
+                        <p><strong>Mentor:</strong> {mentor_name}</p>
+                    </div>
+                    
+                    <p>Your feedback helps us improve our service and helps other mentees make informed decisions. Please take a moment to share your experience.</p>
+                    
+                    <center>
+                        <a href="https://codementee.io/mentee/feedbacks" class="cta-button">Submit Feedback</a>
+                    </center>
+                    
+                    <p style="margin-top: 24px; font-size: 14px; color: #718096;">Your honest feedback is greatly appreciated and will help us maintain the quality of our mentorship program.</p>
+                </div>
+                <div class="footer">
+                    <p>Best regards,<br><strong>Team Codementee</strong></p>
+                    <p style="margin-top: 16px;">
+                        <a href="https://codementee.io">Visit Dashboard</a> | 
+                        <a href="mailto:support@codementee.io">Contact Support</a>
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Mentor email
+        mentor_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #1a202c; margin: 0; padding: 0; background-color: #f7fafc; }}
+                .container {{ max-width: 600px; margin: 40px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }}
+                .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; }}
+                .header h1 {{ color: white; margin: 0; font-size: 28px; font-weight: 700; }}
+                .content {{ padding: 40px 30px; }}
+                .content h2 {{ color: #2d3748; font-size: 22px; margin-bottom: 20px; }}
+                .content p {{ color: #4a5568; margin-bottom: 16px; font-size: 16px; }}
+                .session-details {{ background: #f7fafc; border-left: 4px solid #667eea; padding: 20px; margin: 24px 0; border-radius: 8px; }}
+                .session-details p {{ margin: 8px 0; color: #2d3748; }}
+                .session-details strong {{ color: #1a202c; }}
+                .cta-button {{ display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 24px 0; transition: transform 0.2s; }}
+                .cta-button:hover {{ transform: translateY(-2px); }}
+                .footer {{ background: #f7fafc; padding: 30px; text-align: center; color: #718096; font-size: 14px; }}
+                .footer a {{ color: #667eea; text-decoration: none; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>📝 Provide Feedback</h1>
+                </div>
+                <div class="content">
+                    <h2>Hi {mentor_name},</h2>
+                    <p>Thank you for conducting the mock interview session! Your expertise and guidance are invaluable to our mentees.</p>
+                    
+                    <div class="session-details">
+                        <p><strong>Mentee:</strong> {mentee_name}</p>
+                        <p><strong>Company:</strong> {company_name}</p>
+                        <p><strong>Date:</strong> {formatted_date}</p>
+                        <p><strong>Time:</strong> {slot_time}</p>
+                    </div>
+                    
+                    <p>Please provide detailed feedback on the mentee's performance. Your insights will help them improve and succeed in their interviews.</p>
+                    
+                    <center>
+                        <a href="https://codementee.io/mentor/feedbacks" class="cta-button">Submit Feedback</a>
+                    </center>
+                    
+                    <p style="margin-top: 24px; font-size: 14px; color: #718096;">Your detailed feedback helps mentees understand their strengths and areas for improvement.</p>
+                </div>
+                <div class="footer">
+                    <p>Best regards,<br><strong>Team Codementee</strong></p>
+                    <p style="margin-top: 16px;">
+                        <a href="https://codementee.io">Visit Dashboard</a> | 
+                        <a href="mailto:support@codementee.io">Contact Support</a>
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Send mentee email
+        mentee_params = {
+            "from": f"Codementee <{SENDER_EMAIL}>",
+            "to": [mentee_email],
+            "subject": f"Share Your Feedback - {company_name} Mock Interview",
+            "html": mentee_html
+        }
+        
+        # Send mentor email
+        mentor_params = {
+            "from": f"Codementee <{SENDER_EMAIL}>",
+            "to": [mentor_email],
+            "subject": f"Provide Feedback - {mentee_name}'s Mock Interview",
+            "html": mentor_html
+        }
+        
+        # Add BCC if configured
+        if BCC_EMAIL:
+            mentee_params["bcc"] = [BCC_EMAIL]
+            mentor_params["bcc"] = [BCC_EMAIL]
+        
+        # Send both emails
+        mentee_result = await asyncio.to_thread(resend.Emails.send, mentee_params)
+        mentor_result = await asyncio.to_thread(resend.Emails.send, mentor_params)
+        
+        logger.info(f"Feedback request emails sent - Mentee: {mentee_result.get('id')}, Mentor: {mentor_result.get('id')}")
+        return {"mentee": mentee_result, "mentor": mentor_result}
+    except Exception as e:
+        logger.error(f"Failed to send feedback request emails: {str(e)}")
+        return None
+
+async def send_new_slot_notification_emails(slot: dict):
+    """
+    Send notification emails to all users (free and paid) when a new slot is created.
+    This helps drive engagement and conversions.
+    """
+    try:
+        mentor_name = slot.get("mentor_name", "Mentor")
+        slot_date = slot.get("date")
+        slot_time = f"{slot.get('start_time')} - {slot.get('end_time')}"
+        interview_types = ", ".join([t.replace("_", " ").title() for t in slot.get("interview_types", [])])
+        experience_levels = ", ".join([l.replace("_", " ").title() for l in slot.get("experience_levels", [])])
+        
+        # Format date nicely
+        try:
+            date_obj = datetime.fromisoformat(slot_date)
+            formatted_date = date_obj.strftime("%B %d, %Y")
+            day_of_week = date_obj.strftime("%A")
+        except:
+            formatted_date = slot_date
+            day_of_week = ""
+        
+        # Get all mentee users (both free and paid)
+        all_mentees = await db.users.find({"role": "mentee"}).to_list(1000)
+        
+        if not all_mentees:
+            logger.info("No mentees found to notify")
+            return None
+        
+        logger.info(f"Sending new slot notifications to {len(all_mentees)} mentees")
+        
+        # Send emails in batches to avoid overwhelming the email service
+        batch_size = 50
+        for i in range(0, len(all_mentees), batch_size):
+            batch = all_mentees[i:i + batch_size]
+            
+            for mentee in batch:
+                mentee_name = mentee.get("name", "there")
+                mentee_email = mentee.get("email")
+                is_paid = mentee.get("status") == "Active" and mentee.get("plan_id")
+                
+                if not mentee_email:
+                    continue
+                
+                # Customize message based on user status
+                if is_paid:
+                    cta_text = "Book This Slot Now"
+                    cta_url = "https://codementee.io/mentee/slots"
+                    message = "A new mock interview slot is now available! Book it before it fills up."
+                else:
+                    cta_text = "Upgrade & Book Slot"
+                    cta_url = "https://codementee.io/register"
+                    message = "A new mock interview slot is available! Upgrade to a paid plan to book your session with expert mentors."
+                
+                html = f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #1a202c; margin: 0; padding: 0; background-color: #f7fafc; }}
+                        .container {{ max-width: 600px; margin: 40px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }}
+                        .header {{ background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); padding: 40px 30px; text-align: center; }}
+                        .header h1 {{ color: white; margin: 0; font-size: 28px; font-weight: 700; }}
+                        .badge {{ display: inline-block; background: rgba(255, 255, 255, 0.2); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-top: 8px; }}
+                        .content {{ padding: 40px 30px; }}
+                        .content h2 {{ color: #2d3748; font-size: 22px; margin-bottom: 20px; }}
+                        .content p {{ color: #4a5568; margin-bottom: 16px; font-size: 16px; }}
+                        .slot-details {{ background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #06b6d4; padding: 24px; margin: 24px 0; border-radius: 8px; }}
+                        .slot-details p {{ margin: 10px 0; color: #0c4a6e; font-size: 15px; }}
+                        .slot-details strong {{ color: #075985; }}
+                        .slot-details .highlight {{ background: white; padding: 12px; border-radius: 6px; margin-top: 12px; }}
+                        .cta-button {{ display: inline-block; background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 24px 0; transition: transform 0.2s; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3); }}
+                        .cta-button:hover {{ transform: translateY(-2px); box-shadow: 0 6px 16px rgba(6, 182, 212, 0.4); }}
+                        .urgency {{ background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 8px; }}
+                        .urgency p {{ color: #92400e; margin: 0; font-size: 14px; font-weight: 500; }}
+                        .footer {{ background: #f7fafc; padding: 30px; text-align: center; color: #718096; font-size: 14px; }}
+                        .footer a {{ color: #06b6d4; text-decoration: none; }}
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>🎯 New Slot Available!</h1>
+                            <span class="badge">LIMITED AVAILABILITY</span>
+                        </div>
+                        <div class="content">
+                            <h2>Hi {mentee_name},</h2>
+                            <p>{message}</p>
+                            
+                            <div class="slot-details">
+                                <p><strong>📅 Date:</strong> {day_of_week}, {formatted_date}</p>
+                                <p><strong>🕐 Time:</strong> {slot_time}</p>
+                                <p><strong>👨‍💼 Mentor:</strong> {mentor_name}</p>
+                                <div class="highlight">
+                                    <p><strong>💼 Interview Types:</strong> {interview_types}</p>
+                                    <p><strong>📊 Experience Levels:</strong> {experience_levels}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="urgency">
+                                <p>⚡ Slots fill up fast! Book now to secure your spot with an expert mentor.</p>
+                            </div>
+                            
+                            <center>
+                                <a href="{cta_url}" class="cta-button">{cta_text}</a>
+                            </center>
+                            
+                            <p style="margin-top: 24px; font-size: 14px; color: #718096;">Don't miss this opportunity to practice with industry experts and ace your interviews!</p>
+                        </div>
+                        <div class="footer">
+                            <p>Best regards,<br><strong>Team Codementee</strong></p>
+                            <p style="margin-top: 16px;">
+                                <a href="https://codementee.io">Visit Dashboard</a> | 
+                                <a href="https://codementee.io/pricing">View Pricing</a> |
+                                <a href="mailto:support@codementee.io">Contact Support</a>
+                            </p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                params = {
+                    "from": f"Codementee <{SENDER_EMAIL}>",
+                    "to": [mentee_email],
+                    "subject": f"🎯 New Mock Interview Slot Available - {formatted_date}",
+                    "html": html
+                }
+                
+                # Send email (don't wait for response to speed up batch processing)
+                try:
+                    await asyncio.to_thread(resend.Emails.send, params)
+                except Exception as e:
+                    logger.error(f"Failed to send notification to {mentee_email}: {str(e)}")
+                    continue
+            
+            # Small delay between batches to avoid rate limiting
+            if i + batch_size < len(all_mentees):
+                await asyncio.sleep(1)
+        
+        logger.info(f"New slot notification emails sent to {len(all_mentees)} mentees")
+        return {"sent_count": len(all_mentees)}
+    except Exception as e:
+        logger.error(f"Failed to send new slot notification emails: {str(e)}")
+        return None
+
+    """
+    Send feedback request emails 1 hour after session end time.
     Includes direct link to feedback form and session details.
     Skip if feedback already submitted.
     Requirements: 15.1, 15.2, 15.3, 15.4, 15.5
@@ -2271,6 +2873,7 @@ async def register_free_user(data: FreeUserCreate):
         "plan_features": {
             "mock_interviews": 0,
             "resume_reviews": 0,
+            "resume_review_type": "none",
             "offline_profile_creation": 0,
             "ai_tools_access": "none",
             "community_access": False,
@@ -2312,17 +2915,17 @@ async def login(credentials: UserLogin):
         # Determine quota based on plan
         plan_configs = {
             "starter": {"quota": 1, "features": {
-                "mock_interviews": 1, "resume_reviews": 1, "offline_profile_creation": 0,
+                "mock_interviews": 1, "resume_reviews": 1, "resume_review_type": "email", "offline_profile_creation": 0,
                 "ai_tools_access": "limited", "community_access": False, "priority_support": False,
                 "strategy_calls": 0, "referral_guidance": False
             }},
             "pro": {"quota": 3, "features": {
-                "mock_interviews": 3, "resume_reviews": 1, "offline_profile_creation": 0,
+                "mock_interviews": 3, "resume_reviews": 1, "resume_review_type": "call", "offline_profile_creation": 0,
                 "ai_tools_access": "full", "community_access": True, "priority_support": False,
                 "strategy_calls": 1, "referral_guidance": False
             }},
             "elite": {"quota": 6, "features": {
-                "mock_interviews": 6, "resume_reviews": 1, "offline_profile_creation": 1,
+                "mock_interviews": 6, "resume_reviews": 1, "resume_review_type": "call", "offline_profile_creation": 1,
                 "ai_tools_access": "full", "community_access": True, "priority_support": True,
                 "strategy_calls": 0, "referral_guidance": True
             }}
@@ -2355,7 +2958,7 @@ async def login(credentials: UserLogin):
             user["interview_quota_total"] = 0
             user["interview_quota_remaining"] = 0
             user["plan_features"] = {
-                "mock_interviews": 0, "resume_reviews": 0, "offline_profile_creation": 0,
+                "mock_interviews": 0, "resume_reviews": 0, "resume_review_type": "none", "offline_profile_creation": 0,
                 "ai_tools_access": "none", "community_access": False, "priority_support": False,
                 "strategy_calls": 0, "referral_guidance": False
             }
@@ -2508,35 +3111,7 @@ async def delete_company(company_id: str, user=Depends(get_current_user)):
     await db.companies.delete_one({"id": company_id})
     return {"message": "Company deleted"}
 
-@api_router.get("/admin/time-slots")
-async def get_all_time_slots(user=Depends(get_current_user)):
-    if user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Admin only")
-    slots = await db.time_slots.find().sort("date", 1).to_list(1000)
-    return [serialize_doc(dict(s)) for s in slots]
-
-@api_router.post("/admin/time-slots")
-async def create_time_slot(data: TimeSlotCreate, user=Depends(get_current_user)):
-    if user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Admin only")
-    slot_doc = {
-        "id": str(uuid.uuid4()),
-        "date": data.date,
-        "start_time": data.start_time,
-        "end_time": data.end_time,
-        "mentor_id": data.mentor_id,
-        "status": "available",  # available, booked
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.time_slots.insert_one(slot_doc)
-    return serialize_doc(slot_doc)
-
-@api_router.delete("/admin/time-slots/{slot_id}")
-async def delete_time_slot(slot_id: str, user=Depends(get_current_user)):
-    if user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Admin only")
-    await db.time_slots.delete_one({"id": slot_id})
-    return {"message": "Time slot deleted"}
+# ============ ADMIN BOOKING REQUESTS ============
 
 @api_router.get("/admin/booking-requests")
 async def get_all_booking_requests(user=Depends(get_current_user)):
@@ -2795,7 +3370,7 @@ async def assign_meet_link(link_id: str, booking_id: str):
         {"$set": {"status": "in_use", "current_booking_id": booking_id}}
     )
 
-# ============ BUG REPORT SYSTEM ============
+# ============ BUG REPORT / SUPPORT REQUEST SYSTEM ============
 @api_router.post("/bug-reports")
 async def create_bug_report(data: BugReportCreate):
     """Create a bug report - accessible to all users (authenticated or not)"""
@@ -2805,6 +3380,7 @@ async def create_bug_report(data: BugReportCreate):
         "description": data.description,
         "severity": data.severity,
         "priority": data.priority if hasattr(data, 'priority') else "medium",
+        "category": data.category if hasattr(data, 'category') else "bug",
         "page_url": data.page,
         "screenshot_url": data.screenshot_url if hasattr(data, 'screenshot_url') else None,
         "reporter_id": data.user_id,
@@ -2825,6 +3401,12 @@ async def create_bug_report(data: BugReportCreate):
         logger.error(f"Failed to send bug report email: {str(e)}")
     
     return {"message": "Bug report submitted successfully", "id": bug_report["id"]}
+
+# Alias for support requests (uses same endpoint)
+@api_router.post("/support-requests")
+async def create_support_request(data: BugReportCreate):
+    """Create a support request - accessible to all users (authenticated or not)"""
+    return await create_bug_report(data)
 
 @api_router.get("/admin/bug-reports")
 async def get_bug_reports(user=Depends(get_current_user)):
@@ -2891,6 +3473,21 @@ async def mark_notification_read(notification_id: str, user=Depends(get_current_
         {"$set": {"read": True}}
     )
     return {"message": "Notification marked as read"}
+
+@api_router.put("/notifications/mark-all-read")
+async def mark_all_notifications_read(user=Depends(get_current_user)):
+    """Mark all notifications as read for current user"""
+    result = await db.notifications.update_many(
+        {"user_id": user["id"], "read": False},
+        {"$set": {"read": True}}
+    )
+    return {"message": f"Marked {result.modified_count} notifications as read"}
+
+@api_router.delete("/notifications/clear-all")
+async def clear_all_notifications(user=Depends(get_current_user)):
+    """Delete all notifications for current user"""
+    result = await db.notifications.delete_many({"user_id": user["id"]})
+    return {"message": f"Cleared {result.deleted_count} notifications"}
 
 @api_router.get("/notifications/unread/count")
 async def get_unread_count(user=Depends(get_current_user)):
@@ -3388,8 +3985,110 @@ async def submit_feedback(feedback: FeedbackCreate, user=Depends(get_current_use
 async def get_mentor_feedbacks(user=Depends(get_current_user)):
     if user["role"] != "mentor":
         raise HTTPException(status_code=403, detail="Mentor only")
-    feedbacks = await db.feedbacks.find({"mentor_id": user["id"]}).to_list(1000)
+    feedbacks = await db.feedbacks.find({"mentor_id": user["id"]}).sort("created_at", -1).to_list(1000)
     return [serialize_doc(dict(f)) for f in feedbacks]
+
+@api_router.post("/mentor/feedbacks")
+async def create_mentor_feedback(
+    rating: int = Form(...),
+    technical_skills: str = Form(...),
+    communication: str = Form(...),
+    problem_solving: str = Form(...),
+    areas_of_improvement: str = Form(...),
+    overall_feedback: str = Form(...),
+    booking_id: str = Form(...),
+    mentee_id: str = Form(...),
+    mentee_name: str = Form(...),
+    user=Depends(get_current_user)
+):
+    """Create new feedback for a mentee"""
+    if user["role"] != "mentor":
+        raise HTTPException(status_code=403, detail="Mentor only")
+    
+    # Validate rating
+    if rating < 1 or rating > 5:
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
+    
+    feedback_doc = {
+        "id": str(uuid.uuid4()),
+        "booking_id": booking_id,
+        "mentor_id": user["id"],
+        "mentor_name": user["name"],
+        "mentee_id": mentee_id,
+        "mentee_name": mentee_name,
+        "rating": rating,
+        "technical_skills": technical_skills,
+        "communication": communication,
+        "problem_solving": problem_solving,
+        "areas_of_improvement": areas_of_improvement,
+        "overall_feedback": overall_feedback,
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc)
+    }
+    
+    await db.feedbacks.insert_one(feedback_doc)
+    
+    # Update booking status to indicate feedback submitted
+    await db.bookings.update_one(
+        {"id": booking_id},
+        {"$set": {"feedback_submitted": True, "feedback_id": feedback_doc["id"]}}
+    )
+    
+    # Create notification for mentee
+    mentee_notification = {
+        "id": str(uuid.uuid4()),
+        "user_id": mentee_id,
+        "type": "feedback_received",
+        "title": "Feedback Received",
+        "message": f"{user['name']} has submitted feedback for your mock interview. Rating: {rating}/5 stars",
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.notifications.insert_one(mentee_notification)
+    
+    return serialize_doc(feedback_doc)
+
+@api_router.put("/mentor/feedbacks/{feedback_id}")
+async def update_mentor_feedback(
+    feedback_id: str,
+    rating: int = Form(...),
+    technical_skills: str = Form(...),
+    communication: str = Form(...),
+    problem_solving: str = Form(...),
+    areas_of_improvement: str = Form(...),
+    overall_feedback: str = Form(...),
+    user=Depends(get_current_user)
+):
+    """Update existing feedback"""
+    if user["role"] != "mentor":
+        raise HTTPException(status_code=403, detail="Mentor only")
+    
+    # Validate rating
+    if rating < 1 or rating > 5:
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
+    
+    # Check if feedback exists and belongs to this mentor
+    existing = await db.feedbacks.find_one({"id": feedback_id, "mentor_id": user["id"]})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+    
+    update_data = {
+        "rating": rating,
+        "technical_skills": technical_skills,
+        "communication": communication,
+        "problem_solving": problem_solving,
+        "areas_of_improvement": areas_of_improvement,
+        "overall_feedback": overall_feedback,
+        "updated_at": datetime.now(timezone.utc)
+    }
+    
+    await db.feedbacks.update_one(
+        {"id": feedback_id},
+        {"$set": update_data}
+    )
+    
+    updated_feedback = await db.feedbacks.find_one({"id": feedback_id})
+    return serialize_doc(updated_feedback)
 
 # ============ MENTOR SLOT MANAGEMENT ROUTES ============
 
@@ -3460,6 +4159,11 @@ async def create_mentor_slot(slot_data: MentorSlotCreate, user=Depends(get_curre
     }
     
     await db.mentor_slots.insert_one(slot_doc)
+    
+    # Send notification emails to all mentees (both free and paid) in the background
+    # This runs asynchronously without blocking the response
+    asyncio.create_task(send_new_slot_notification_emails(slot_doc))
+    
     return serialize_doc(slot_doc)
 
 @api_router.get("/mentor/slots")
@@ -3577,6 +4281,34 @@ async def delete_mentor_slot(slot_id: str, user=Depends(get_current_user)):
     
     await db.mentor_slots.delete_one({"id": slot_id})
     return {"message": "Slot deleted successfully"}
+
+@api_router.patch("/mentor/slots/{slot_id}")
+async def update_slot(slot_id: str, data: dict, user=Depends(get_current_user)):
+    """Update slot details (date, time, meeting link)"""
+    if user["role"] != "mentor":
+        raise HTTPException(status_code=403, detail="Mentor only")
+    
+    slot = await db.mentor_slots.find_one({"id": slot_id, "mentor_id": user["id"]})
+    if not slot:
+        raise HTTPException(status_code=404, detail="Slot not found")
+    
+    if slot["status"] != "available":
+        raise HTTPException(status_code=400, detail="Can only edit available slots")
+    
+    update_data = {}
+    if "date" in data:
+        update_data["date"] = data["date"]
+    if "start_time" in data:
+        update_data["start_time"] = data["start_time"]
+    if "end_time" in data:
+        update_data["end_time"] = data["end_time"]
+    if "meeting_link" in data:
+        update_data["meeting_link"] = data["meeting_link"]
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.mentor_slots.update_one({"id": slot_id}, {"$set": update_data})
+    return {"message": "Slot updated successfully"}
 
 @api_router.patch("/mentor/slots/{slot_id}/availability")
 async def toggle_slot_availability(slot_id: str, available: bool, user=Depends(get_current_user)):
@@ -3714,6 +4446,9 @@ async def create_booking(booking_data: BookingCreate, user=Depends(get_current_u
     Validates tier, quota, company selection, and slot availability.
     Implements slot locking for concurrent access prevention.
     """
+    # Log incoming request for debugging
+    logger.info(f"Booking request from user {user['id']}: {booking_data.dict()}")
+    
     if user["role"] != "mentee":
         raise HTTPException(status_code=403, detail="Mentee only")
     
@@ -3779,17 +4514,19 @@ async def create_booking(booking_data: BookingCreate, user=Depends(get_current_u
     try:
         slot = dict(slot_lock_result)
         
-        # Validate company is in slot's specializations
-        if booking_data.company_id not in slot["company_specializations"]:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "validation_error",
-                    "message": "Selected company is not in slot's specializations",
-                    "field": "company_id",
-                    "code": "INVALID_COMPANY_SELECTION"
-                }
-            )
+        # Validate company is in slot's specializations (if specializations are specified)
+        # If company_specializations is empty or not set, allow any company
+        if slot.get("company_specializations") and len(slot["company_specializations"]) > 0:
+            if booking_data.company_id not in slot["company_specializations"]:
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error": "validation_error",
+                        "message": "Selected company is not in slot's specializations",
+                        "field": "company_id",
+                        "code": "INVALID_COMPANY_SELECTION"
+                    }
+                )
         
         # Get company details
         company = await db.companies.find_one({"id": booking_data.company_id})
@@ -3835,6 +4572,31 @@ async def create_booking(booking_data: BookingCreate, user=Depends(get_current_u
         }
         
         await db.bookings.insert_one(booking_doc)
+        
+        # Create notifications for mentee and mentor
+        mentee_notification = {
+            "id": str(uuid.uuid4()),
+            "user_id": user["id"],
+            "type": "booking_confirmed",
+            "title": "Mock Interview Booked!",
+            "message": f"Your mock interview with {slot['mentor_name']} for {company['name']} is confirmed on {slot['date']} at {slot['start_time']}",
+            "read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.notifications.insert_one(mentee_notification)
+        logger.info(f"✅ Created mentee notification: {mentee_notification['id']} for user {user['id']}")
+        
+        mentor_notification = {
+            "id": str(uuid.uuid4()),
+            "user_id": slot["mentor_id"],
+            "type": "new_booking",
+            "title": "New Booking Received",
+            "message": f"{user['name']} booked your slot for {company['name']} on {slot['date']} at {slot['start_time']}",
+            "read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.notifications.insert_one(mentor_notification)
+        logger.info(f"✅ Created mentor notification: {mentor_notification['id']} for user {slot['mentor_id']}")
         
         # Update slot status to "booked" and remove lock
         await db.mentor_slots.update_one(
@@ -4135,6 +4897,368 @@ async def download_resume(request_id: str, user=Depends(get_current_user)):
         media_type=request["resume_content_type"],
         headers={"Content-Disposition": f"attachment; filename={request['resume_filename']}"}
     )
+
+# ============ RESUME REVIEW CALL BOOKING SYSTEM ============
+
+class ResumeReviewBookingCreate(BaseModel):
+    resume_request_id: str  # Link to the uploaded resume
+    preferred_slot_ids: List[str]  # Up to 2 preferred slots
+    additional_notes: Optional[str] = ""
+
+@api_router.post("/mentee/resume-review-booking")
+async def create_resume_review_booking(data: ResumeReviewBookingCreate, user=Depends(get_current_user)):
+    """Create a resume review call booking request"""
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    # Check if user has call-based resume review
+    review_type = user.get("plan_features", {}).get("resume_review_type")
+    if review_type != "call":
+        raise HTTPException(
+            status_code=403,
+            detail="Your plan includes email review only. Upgrade to Pro or Elite for 30-min calls."
+        )
+    
+    # Verify resume request exists and belongs to user
+    resume_request = await db.resume_requests.find_one({
+        "id": data.resume_request_id,
+        "mentee_id": user["id"]
+    })
+    if not resume_request:
+        raise HTTPException(status_code=404, detail="Resume request not found")
+    
+    # Check if booking already exists for this resume
+    existing_booking = await db.resume_review_bookings.find_one({
+        "resume_request_id": data.resume_request_id,
+        "status": {"$in": ["pending", "confirmed"]}
+    })
+    if existing_booking:
+        raise HTTPException(
+            status_code=400,
+            detail="A booking already exists for this resume review"
+        )
+    
+    # Verify slots exist and are available
+    if len(data.preferred_slot_ids) == 0 or len(data.preferred_slot_ids) > 2:
+        raise HTTPException(status_code=400, detail="Please select 1-2 preferred slots")
+    
+    preferred_slots = []
+    for slot_id in data.preferred_slot_ids:
+        slot = await db.resume_review_slots.find_one({"id": slot_id, "status": "available"})
+        if not slot:
+            raise HTTPException(status_code=404, detail=f"Slot {slot_id} not found or not available")
+        preferred_slots.append({
+            "id": slot["id"],
+            "date": slot["date"],
+            "start_time": slot["start_time"],
+            "end_time": slot["end_time"]
+        })
+    
+    # Create booking request
+    booking = {
+        "id": str(uuid.uuid4()),
+        "resume_request_id": data.resume_request_id,
+        "mentee_id": user["id"],
+        "mentee_name": user["name"],
+        "mentee_email": user["email"],
+        "mentor_id": None,  # Assigned by admin
+        "mentor_name": None,
+        "mentor_email": None,
+        "preferred_slots": preferred_slots,
+        "confirmed_slot": None,
+        "meeting_link": None,
+        "status": "pending",  # pending, confirmed, completed, cancelled
+        "additional_notes": data.additional_notes,
+        "confirmed_by": None,
+        "confirmed_at": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.resume_review_bookings.insert_one(booking)
+    
+    # Send email notification to admin
+    try:
+        await send_resume_booking_request_email(booking, resume_request)
+    except Exception as e:
+        logger.error(f"Failed to send resume booking email: {str(e)}")
+    
+    return {
+        "message": "Resume review call booking request submitted successfully",
+        "booking_id": booking["id"],
+        "status": "pending"
+    }
+
+@api_router.get("/mentee/resume-review-bookings")
+async def get_resume_review_bookings(user=Depends(get_current_user)):
+    """Get all resume review bookings for the mentee"""
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    bookings = await db.resume_review_bookings.find({"mentee_id": user["id"]}).sort("created_at", -1).to_list(1000)
+    return [serialize_doc(dict(b)) for b in bookings]
+
+# ============ MENTOR RESUME REVIEW SLOT MANAGEMENT ============
+
+class ResumeReviewSlotCreate(BaseModel):
+    date: str  # YYYY-MM-DD
+    start_time: str  # HH:MM
+    end_time: str  # HH:MM
+    meeting_link: str
+
+@api_router.post("/mentor/resume-review-slots")
+async def create_resume_review_slot(data: ResumeReviewSlotCreate, user=Depends(get_current_user)):
+    """Create a resume review slot (30-min slots only)"""
+    if user["role"] != "mentor":
+        raise HTTPException(status_code=403, detail="Mentor only")
+    
+    # Validate time slot is 30 minutes
+    from datetime import datetime as dt
+    start = dt.strptime(data.start_time, "%H:%M")
+    end = dt.strptime(data.end_time, "%H:%M")
+    duration = (end - start).seconds / 60
+    
+    if duration != 30:
+        raise HTTPException(status_code=400, detail="Resume review slots must be exactly 30 minutes")
+    
+    # Create slot
+    slot = {
+        "id": str(uuid.uuid4()),
+        "mentor_id": user["id"],
+        "mentor_name": user["name"],
+        "mentor_email": user["email"],
+        "date": data.date,
+        "start_time": data.start_time,
+        "end_time": data.end_time,
+        "meeting_link": data.meeting_link,
+        "status": "available",  # available, booked, completed
+        "booking_id": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.resume_review_slots.insert_one(slot)
+    
+    return {
+        "message": "Resume review slot created successfully",
+        "slot_id": slot["id"]
+    }
+
+@api_router.get("/mentor/resume-review-slots")
+async def get_mentor_resume_slots(user=Depends(get_current_user)):
+    """Get all resume review slots for the mentor"""
+    if user["role"] != "mentor":
+        raise HTTPException(status_code=403, detail="Mentor only")
+    
+    slots = await db.resume_review_slots.find({"mentor_id": user["id"]}).sort("date", 1).to_list(1000)
+    return [serialize_doc(dict(s)) for s in slots]
+
+@api_router.get("/mentor/resume-review-bookings")
+async def get_mentor_resume_bookings(user=Depends(get_current_user)):
+    """Get all resume review bookings assigned to the mentor"""
+    if user["role"] != "mentor":
+        raise HTTPException(status_code=403, detail="Mentor only")
+    
+    bookings = await db.resume_review_bookings.find({"mentor_id": user["id"]}).sort("created_at", -1).to_list(1000)
+    return [serialize_doc(dict(b)) for b in bookings]
+
+@api_router.delete("/mentor/resume-review-slots/{slot_id}")
+async def delete_resume_review_slot(slot_id: str, user=Depends(get_current_user)):
+    """Delete a resume review slot"""
+    if user["role"] != "mentor":
+        raise HTTPException(status_code=403, detail="Mentor only")
+    
+    slot = await db.resume_review_slots.find_one({"id": slot_id, "mentor_id": user["id"]})
+    if not slot:
+        raise HTTPException(status_code=404, detail="Slot not found")
+    
+    if slot["status"] == "booked":
+        raise HTTPException(status_code=400, detail="Cannot delete a booked slot")
+    
+    await db.resume_review_slots.delete_one({"id": slot_id})
+    return {"message": "Slot deleted successfully"}
+
+@api_router.patch("/mentor/resume-review-slots/{slot_id}")
+async def update_resume_review_slot(slot_id: str, data: dict, user=Depends(get_current_user)):
+    """Update resume review slot details"""
+    if user["role"] != "mentor":
+        raise HTTPException(status_code=403, detail="Mentor only")
+    
+    slot = await db.resume_review_slots.find_one({"id": slot_id, "mentor_id": user["id"]})
+    if not slot:
+        raise HTTPException(status_code=404, detail="Slot not found")
+    
+    if slot["status"] != "available":
+        raise HTTPException(status_code=400, detail="Can only edit available slots")
+    
+    update_data = {}
+    if "date" in data:
+        update_data["date"] = data["date"]
+    if "start_time" in data:
+        update_data["start_time"] = data["start_time"]
+    if "end_time" in data:
+        update_data["end_time"] = data["end_time"]
+    if "meeting_link" in data:
+        update_data["meeting_link"] = data["meeting_link"]
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.resume_review_slots.update_one({"id": slot_id}, {"$set": update_data})
+    return {"message": "Slot updated successfully"}
+
+# ============ ADMIN RESUME REVIEW BOOKING MANAGEMENT ============
+
+@api_router.get("/admin/resume-review-bookings")
+async def get_all_resume_review_bookings(user=Depends(get_current_user)):
+    """Get all resume review booking requests - admin only"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    bookings = await db.resume_review_bookings.find().sort("created_at", -1).to_list(1000)
+    return [serialize_doc(dict(b)) for b in bookings]
+
+@api_router.post("/admin/confirm-resume-review-booking")
+async def confirm_resume_review_booking(data: dict, user=Depends(get_current_user)):
+    """Confirm a resume review booking with mentor assignment"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    booking_id = data.get("booking_id")
+    mentor_id = data.get("mentor_id")
+    confirmed_slot_id = data.get("confirmed_slot_id")
+    
+    if not all([booking_id, mentor_id, confirmed_slot_id]):
+        raise HTTPException(status_code=400, detail="Missing required fields")
+    
+    # Get booking
+    booking = await db.resume_review_bookings.find_one({"id": booking_id})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    # Get mentor
+    mentor = await db.users.find_one({"id": mentor_id, "role": "mentor"})
+    if not mentor:
+        raise HTTPException(status_code=404, detail="Mentor not found")
+    
+    # Get confirmed slot
+    confirmed_slot = next((s for s in booking["preferred_slots"] if s["id"] == confirmed_slot_id), None)
+    if not confirmed_slot:
+        raise HTTPException(status_code=404, detail="Confirmed slot not found in preferred slots")
+    
+    # Get the actual slot from database
+    slot = await db.resume_review_slots.find_one({"id": confirmed_slot_id})
+    if not slot:
+        raise HTTPException(status_code=404, detail="Slot not found")
+    
+    if slot["status"] != "available":
+        raise HTTPException(status_code=400, detail="Slot is no longer available")
+    
+    # Update booking
+    await db.resume_review_bookings.update_one(
+        {"id": booking_id},
+        {"$set": {
+            "mentor_id": mentor_id,
+            "mentor_name": mentor["name"],
+            "mentor_email": mentor["email"],
+            "confirmed_slot": confirmed_slot,
+            "meeting_link": slot["meeting_link"],
+            "status": "confirmed",
+            "confirmed_by": user["id"],
+            "confirmed_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Update slot status
+    await db.resume_review_slots.update_one(
+        {"id": confirmed_slot_id},
+        {"$set": {
+            "status": "booked",
+            "booking_id": booking_id,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Get updated booking
+    updated_booking = await db.resume_review_bookings.find_one({"id": booking_id})
+    
+    # Send confirmation emails
+    try:
+        # Get resume request details
+        resume_request = await db.resume_requests.find_one({"id": updated_booking["resume_request_id"]})
+        
+        # Email to mentee
+        await send_resume_booking_confirmed_email(
+            recipient_name=updated_booking["mentee_name"],
+            recipient_email=updated_booking["mentee_email"],
+            mentor_name=mentor["name"],
+            slot_time=f"{confirmed_slot['date']} at {confirmed_slot['start_time']}",
+            meeting_link=slot["meeting_link"],
+            is_mentor=False
+        )
+        
+        # Email to mentor
+        await send_resume_booking_confirmed_email(
+            recipient_name=mentor["name"],
+            recipient_email=mentor["email"],
+            mentee_name=updated_booking["mentee_name"],
+            slot_time=f"{confirmed_slot['date']} at {confirmed_slot['start_time']}",
+            meeting_link=slot["meeting_link"],
+            is_mentor=True,
+            resume_details=resume_request
+        )
+    except Exception as e:
+        logger.error(f"Failed to send confirmation emails: {str(e)}")
+    
+    return {
+        "message": "Resume review booking confirmed successfully",
+        "booking": serialize_doc(dict(updated_booking))
+    }
+
+@api_router.get("/mentee/available-resume-review-slots")
+async def get_available_resume_slots(user=Depends(get_current_user)):
+    """Get all available resume review slots for booking"""
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    # Get available slots (anonymized - no mentor info)
+    slots = await db.resume_review_slots.find({"status": "available"}).sort("date", 1).to_list(1000)
+    
+    # Remove mentor identifying information
+    anonymized_slots = []
+    for slot in slots:
+        anonymized_slots.append({
+            "id": slot["id"],
+            "date": slot["date"],
+            "start_time": slot["start_time"],
+            "end_time": slot["end_time"],
+            # Don't include mentor_id, mentor_name, mentor_email, meeting_link
+        })
+    
+    return anonymized_slots
+
+@api_router.post("/mentee/request-resume-review-slots")
+async def request_more_resume_slots(data: dict, user=Depends(get_current_user)):
+    """Request more resume review slots when none are available"""
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+    
+    resume_request_id = data.get("resume_request_id")
+    mentee_name = data.get("mentee_name", user["name"])
+    mentee_email = data.get("mentee_email", user["email"])
+    
+    # Get resume request details
+    resume_request = await db.resume_requests.find_one({"id": resume_request_id})
+    if not resume_request:
+        raise HTTPException(status_code=404, detail="Resume request not found")
+    
+    # Send email to admin and all mentors
+    try:
+        await send_slot_request_email(mentee_name, mentee_email, resume_request)
+    except Exception as e:
+        logger.error(f"Failed to send slot request email: {str(e)}")
+    
+    return {"message": "Slot request sent successfully"}
 
 # ============ USERS LOOKUP ============
 @api_router.get("/users/{user_id}")
@@ -4703,6 +5827,7 @@ async def verify_payment(data: VerifyPaymentRequest):
                 "plan_features": {
                     "mock_interviews": 1,
                     "resume_reviews": 1,
+                    "resume_review_type": "email",
                     "offline_profile_creation": 0,
                     "ai_tools_access": "limited",
                     "community_access": False,
@@ -4716,6 +5841,7 @@ async def verify_payment(data: VerifyPaymentRequest):
                 "plan_features": {
                     "mock_interviews": 3,
                     "resume_reviews": 1,
+                    "resume_review_type": "call",
                     "offline_profile_creation": 0,
                     "ai_tools_access": "full",
                     "community_access": True,
@@ -4729,6 +5855,7 @@ async def verify_payment(data: VerifyPaymentRequest):
                 "plan_features": {
                     "mock_interviews": 6,
                     "resume_reviews": 1,
+                    "resume_review_type": "call",
                     "offline_profile_creation": 1,
                     "ai_tools_access": "full",
                     "community_access": True,
@@ -4787,6 +5914,7 @@ async def verify_payment(data: VerifyPaymentRequest):
                 "plan_features": {
                     "mock_interviews": 1,
                     "resume_reviews": 1,
+                    "resume_review_type": "email",
                     "offline_profile_creation": 0,
                     "ai_tools_access": "limited",
                     "community_access": False,
@@ -4800,6 +5928,7 @@ async def verify_payment(data: VerifyPaymentRequest):
                 "plan_features": {
                     "mock_interviews": 3,
                     "resume_reviews": 1,
+                    "resume_review_type": "call",
                     "offline_profile_creation": 0,
                     "ai_tools_access": "full",
                     "community_access": True,
@@ -4813,6 +5942,7 @@ async def verify_payment(data: VerifyPaymentRequest):
                 "plan_features": {
                     "mock_interviews": 6,
                     "resume_reviews": 1,
+                    "resume_review_type": "call",
                     "offline_profile_creation": 1,
                     "ai_tools_access": "full",
                     "community_access": True,

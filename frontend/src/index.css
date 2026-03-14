@@ -615,3 +615,32 @@ textarea::placeholder {
   color: #6b7280 !important;
   opacity: 0.7 !important;
 }
+
+/* Shimmer and Sparkle Animations for CTA Button */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 3s infinite;
+}
+
+.animate-sparkle {
+  animation: sparkle 2s infinite;
+}

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus, Video, DollarSign, Brain, FileText, MessageCircle, BarChart3, TrendingUp, ChevronDown, Bug, Briefcase, Target, Crown } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus, Video, DollarSign, FileText, MessageCircle, BarChart3, TrendingUp, ChevronDown, Bug, Briefcase, Target, Crown, Headphones, Search } from 'lucide-react';
 import ThemeToggle from '../ui/ThemeToggle';
 import { Badge } from '../ui/badge';
 import BugReportModal from '../BugReportModal';
@@ -55,14 +55,13 @@ const DashboardLayout = ({ children, title }) => {
     if (user?.role === 'admin') {
       return [
         { path: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-        { path: '/admin/bug-reports', label: 'Bug Reports', icon: Bug },
+        { path: '/admin/bug-reports', label: 'Support Requests', icon: Headphones },
         { path: '/admin/orders', label: 'Orders', icon: ShoppingCart },
         { path: '/admin/pricing', label: 'Pricing', icon: DollarSign },
         { path: '/admin/bookings', label: 'Bookings', icon: ClipboardList },
         { path: '/admin/resume-reviews', label: 'Resume Reviews', icon: FileText },
         { path: '/admin/payouts', label: 'Mentor Payouts', icon: DollarSign },
         { path: '/admin/companies', label: 'Companies', icon: Building2 },
-        { path: '/admin/time-slots', label: 'Time Slots', icon: Clock },
         { path: '/admin/meet-links', label: 'Meet Links', icon: Video },
         { path: '/admin/mentees', label: 'Mentees', icon: Users },
         { path: '/admin/mentors', label: 'Mentors', icon: Users },
@@ -83,12 +82,13 @@ const DashboardLayout = ({ children, title }) => {
     } else if (user?.role === 'mentor') {
       return [
         { path: '/mentor', label: 'Dashboard', icon: LayoutDashboard },
-        { path: '/mentor/slots', label: 'My Availability', icon: Clock },
+        { path: '/mentor/slots', label: 'Manage Slots', icon: Clock },
+        { path: '/mentor/bookings', label: 'My Bookings', icon: Calendar },
         { path: '/mentor/mocks', label: 'My Sessions', icon: Calendar },
         { path: '/mentor/mentees', label: 'My Mentees', icon: Users },
         { path: '/mentor/payouts', label: 'My Payouts', icon: DollarSign },
         { path: '/mentor/feedbacks', label: 'Feedbacks', icon: MessageSquare },
-        { path: '/mentor/bug-reports', label: 'My Bug Reports', icon: Bug },
+        { path: '/mentor/bug-reports', label: 'Support & Help', icon: Headphones },
       ];
     } else {
       // Check if user is free or paid
@@ -99,16 +99,8 @@ const DashboardLayout = ({ children, title }) => {
         { path: isFreeUser ? '/mentee/book' : '/mentee/slots', label: isFreeUser ? 'Upgrade Plan' : 'Book Interview', icon: CalendarPlus },
         { path: '/mentee/mocks', label: 'My Interviews', icon: Calendar },
         { path: '/mentee/feedbacks', label: 'My Feedbacks', icon: MessageSquare },
-        { path: '/mentee/bug-reports', label: 'My Bug Reports', icon: Bug },
-        { 
-          label: 'AI Tools', 
-          icon: Brain, 
-          isSection: true,
-          items: [
-            { path: '/mentee/resume-analyzer', label: 'Resume Analyzer', icon: FileText },
-            { path: '/mentee/interview-prep', label: 'Interview Prep', icon: Brain },
-          ]
-        },
+        { path: '/mentee/resume-review', label: 'Resume Review', icon: FileText },
+        { path: '/mentee/bug-reports', label: 'Support & Help', icon: Headphones },
         { path: '/mentee/community', label: 'Community', icon: MessageCircle },
       ];
     }

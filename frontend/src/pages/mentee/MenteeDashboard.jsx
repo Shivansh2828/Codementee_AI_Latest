@@ -28,15 +28,25 @@ import {
   Network,
   MessageCircle,
   Briefcase,
-  Bug
+  Bug,
+  Mail,
+  Phone as PhoneIcon,
+  Headphones,
+  X,
+  Send
 } from "lucide-react";
 import api from "../../utils/api";
 import { Link } from "react-router-dom";
+import SupportRequestModal from "../../components/SupportRequestModal";
 
 const MenteeDashboard = () => {
   const { theme } = useTheme();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [supportModalOpen, setSupportModalOpen] = useState(false);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailQuery, setEmailQuery] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [stats, setStats] = useState({
     totalBookings: 0,
     upcomingBookings: 0,
@@ -112,29 +122,58 @@ const MenteeDashboard = () => {
     }
   };
 
+  const handleSendEmail = async () => {
+    if (!emailQuery.trim()) {
+      toast.error('Please enter your query');
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      await api.post('/support-requests', {
+        title: `Email Query from ${user?.name}`,
+        description: emailQuery,
+        severity: 'medium',
+        priority: 'medium',
+        category: 'general',
+        page: window.location.pathname,
+        user_id: user?.id,
+        user_name: user?.name,
+        user_email: user?.email,
+        user_role: user?.role
+      });
+
+      toast.success('Your query has been sent! We\'ll respond via email within 24 hours.');
+      setEmailQuery('');
+      setEmailModalOpen(false);
+    } catch (error) {
+      console.error('Failed to send email:', error);
+      toast.error('Failed to send query. Please try again.');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
   const getPlanFeatures = (planId) => {
     const featureMap = {
       'starter': [
         { name: 'Mock Interviews', value: '1 mock interview', available: true, icon: Calendar },
-        { name: 'Resume Review', value: '1 email review (on request)', available: true, icon: FileText, description: 'Submit your resume via email for expert feedback' },
+        { name: 'Resume Review', value: 'Email review', available: true, icon: FileText, description: 'Upload resume for written feedback via email' },
         { name: 'Offline Profile Creation', value: 'Not included', available: false, icon: Target },
-        { name: 'AI Tools', value: 'Limited access', available: true, icon: Sparkles },
         { name: 'Community Access', value: 'Not included', available: false, icon: Users },
         { name: 'Priority Support', value: 'Not included', available: false, icon: MessageSquare }
       ],
       'pro': [
         { name: 'Mock Interviews', value: '3 mock interviews', available: true, icon: Calendar },
-        { name: 'Resume Review', value: '1 call with MAANG engineer (on request)', available: true, icon: FileText, description: 'Schedule a call with a MAANG engineer for live resume review' },
+        { name: 'Resume Review', value: '30-min call', available: true, icon: FileText, description: 'Live 1:1 call with MAANG engineer for resume review' },
         { name: 'Offline Profile Creation', value: 'Not included', available: false, icon: Target },
-        { name: 'AI Tools', value: 'Full access', available: true, icon: Sparkles },
         { name: 'Strategy Call', value: '1 session', available: true, icon: MessageSquare },
         { name: 'Community Access', value: 'Full access', available: true, icon: Users }
       ],
       'elite': [
         { name: 'Mock Interviews', value: '6 mock interviews', available: true, icon: Calendar },
-        { name: 'Resume Review', value: '1 live call session (on request)', available: true, icon: FileText, description: 'Book a live call session for comprehensive resume review' },
+        { name: 'Resume Review', value: '30-min call', available: true, icon: FileText, description: 'Live 1:1 call with MAANG engineer for resume review' },
         { name: 'Offline Profile Creation', value: '1 session included', available: true, icon: Target },
-        { name: 'AI Tools', value: 'Full access', available: true, icon: Sparkles },
         { name: 'Referral Guidance', value: 'Best effort', available: true, icon: Award },
         { name: 'Priority Support', value: 'WhatsApp', available: true, icon: MessageSquare },
         { name: 'Community Access', value: 'Full access', available: true, icon: Users }
@@ -144,35 +183,54 @@ const MenteeDashboard = () => {
     return featureMap[planId] || [];
   };
 
-  const QuickActionCard = ({ title, description, icon: Icon, to, locked, badge }) => (
-    <Link to={locked ? '#' : to} className={locked ? 'cursor-not-allowed' : ''}>
-      <div className={`${theme.glass} rounded-xl p-6 ${theme.border.primary} border ${theme.shadow} transition-all hover:scale-105 ${locked ? 'opacity-60' : 'hover:border-[#06b6d4]'}`}>
-        <div className="flex items-start justify-between mb-4">
-          <div className={`w-12 h-12 rounded-xl ${locked ? 'bg-gray-600' : 'bg-gradient-to-br from-[#06b6d4] to-[#0891b2]'} flex items-center justify-center`}>
-            {locked ? <Lock className="w-6 h-6 text-gray-400" /> : <Icon className="w-6 h-6 text-white" />}
+  const QuickActionCard = ({ title, description, icon: Icon, to, locked, badge }) => {
+    const isBookingCard = title === "Book Mock Interview";
+    
+    return (
+      <Link to={locked ? '#' : to} className={locked ? 'cursor-not-allowed' : ''}>
+        <div className={`relative ${theme.glass} rounded-xl p-6 ${theme.border.primary} border ${theme.shadow} transition-all hover:scale-105 ${locked ? 'opacity-60' : 'hover:border-[#06b6d4]'} ${isBookingCard && !locked ? 'overflow-hidden' : ''}`}>
+          {/* Sparkle effect for Book Mock Interview card */}
+          {isBookingCard && !locked && (
+            <>
+              <span className="absolute top-3 right-6 w-1.5 h-1.5 bg-[#06b6d4] rounded-full animate-sparkle"></span>
+              <span className="absolute top-6 right-10 w-1 h-1 bg-cyan-400 rounded-full animate-sparkle" style={{ animationDelay: '0.3s' }}></span>
+              <span className="absolute bottom-4 left-8 w-1 h-1 bg-blue-400 rounded-full animate-sparkle" style={{ animationDelay: '0.6s' }}></span>
+            </>
+          )}
+          
+          <div className="flex items-start justify-between mb-4">
+            <div className={`w-12 h-12 rounded-xl ${locked ? 'bg-gray-600' : 'bg-gradient-to-br from-[#06b6d4] to-[#0891b2]'} flex items-center justify-center ${isBookingCard && !locked ? 'relative overflow-hidden' : ''}`}>
+              {/* Shimmer effect for icon */}
+              {isBookingCard && !locked && (
+                <span className="absolute inset-0 w-full h-full">
+                  <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></span>
+                </span>
+              )}
+              {locked ? <Lock className="w-6 h-6 text-gray-400" /> : <Icon className="w-6 h-6 text-white relative z-10" />}
+            </div>
+            {badge && (
+              <Badge className="bg-yellow-400/20 text-yellow-400 border-yellow-400/30 text-xs">
+                {badge}
+              </Badge>
+            )}
           </div>
-          {badge && (
-            <Badge className="bg-yellow-400/20 text-yellow-400 border-yellow-400/30 text-xs">
-              {badge}
-            </Badge>
+          <h3 className={`${theme.text.primary} font-semibold mb-2`}>{title}</h3>
+          <p className={`${theme.text.secondary} text-sm mb-4`}>{description}</p>
+          {locked ? (
+            <div className="flex items-center gap-2 text-yellow-400 text-sm">
+              <Crown className="w-4 h-4" />
+              <span>Upgrade to unlock</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-[#06b6d4] text-sm font-medium">
+              <span>Get started</span>
+              <ArrowRight className="w-4 h-4" />
+            </div>
           )}
         </div>
-        <h3 className={`${theme.text.primary} font-semibold mb-2`}>{title}</h3>
-        <p className={`${theme.text.secondary} text-sm mb-4`}>{description}</p>
-        {locked ? (
-          <div className="flex items-center gap-2 text-yellow-400 text-sm">
-            <Crown className="w-4 h-4" />
-            <span>Upgrade to unlock</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 text-[#06b6d4] text-sm font-medium">
-            <span>Get started</span>
-            <ArrowRight className="w-4 h-4" />
-          </div>
-        )}
-      </div>
-    </Link>
-  );
+      </Link>
+    );
+  };
 
   if (loading) {
     return (
@@ -263,21 +321,23 @@ const MenteeDashboard = () => {
                   </div>
                 </div>
                 <p className={`${theme.text.primary} text-2xl font-bold mb-1`}>
-                  {stats.resumeReviewsTotal - stats.resumeReviewsUsed} / {stats.resumeReviewsTotal}
+                  {stats.resumeReviewsTotal >= 999 
+                    ? '∞ Unlimited' 
+                    : `${stats.resumeReviewsTotal - stats.resumeReviewsUsed} / ${stats.resumeReviewsTotal}`
+                  }
                 </p>
                 <p className={`${theme.text.muted} text-xs mb-3`}>
-                  {user?.plan_id === 'starter' && 'Email review'}
-                  {user?.plan_id === 'pro' && 'Call with MAANG engineer'}
-                  {user?.plan_id === 'elite' && '1:1 Live call session'}
+                  {user?.plan_id === 'starter' && '📧 Email review - Upload resume for written feedback'}
+                  {(user?.plan_id === 'pro' || user?.plan_id === 'elite') && '📞 30-min call with MAANG engineer'}
                 </p>
-                {stats.resumeReviewsTotal > 0 && stats.resumeReviewsUsed < stats.resumeReviewsTotal && (
+                {(stats.resumeReviewsTotal > 0 && (stats.resumeReviewsUsed < stats.resumeReviewsTotal || stats.resumeReviewsTotal >= 999)) && (
                   <Link to="/mentee/resume-review" className="block">
                     <Button className="w-full bg-purple-500 hover:bg-purple-600 text-white text-xs font-medium py-2 px-4">
-                      Request Review
+                      {user?.plan_id === 'starter' ? '📧 Upload Resume' : '📞 Book Call'}
                     </Button>
                   </Link>
                 )}
-                {stats.resumeReviewsUsed >= stats.resumeReviewsTotal && stats.resumeReviewsTotal > 0 && (
+                {stats.resumeReviewsUsed >= stats.resumeReviewsTotal && stats.resumeReviewsTotal < 999 && stats.resumeReviewsTotal > 0 && (
                   <div className={`text-center py-2 px-3 rounded-md ${theme.bg.tertiary}`}>
                     <p className={`${theme.text.muted} text-xs`}>All reviews used</p>
                   </div>
@@ -342,27 +402,23 @@ const MenteeDashboard = () => {
             />
             
             <QuickActionCard
+              title="Resume Review"
+              description={user?.plan_id === 'starter' 
+                ? "Get expert feedback on your resume via email"
+                : "Book a 30-min call with a MAANG engineer for resume review"
+              }
+              icon={FileText}
+              to="/mentee/resume-review"
+              locked={isFreeUser}
+              badge={stats.resumeReviewsTotal >= 999 ? '∞ Unlimited' : (stats.resumeReviewsTotal > 0 && stats.resumeReviewsUsed < stats.resumeReviewsTotal) ? `${stats.resumeReviewsTotal - stats.resumeReviewsUsed} left` : null}
+            />
+            
+            <QuickActionCard
               title="My Interviews"
               description="View your upcoming and past interview sessions"
               icon={BookOpen}
               to="/mentee/mocks"
               locked={false}
-            />
-            
-            <QuickActionCard
-              title="Resume Analyzer"
-              description="Get AI-powered feedback on your resume with ATS optimization"
-              icon={FileText}
-              to="/mentee/resume-analyzer"
-              locked={isFreeUser}
-            />
-            
-            <QuickActionCard
-              title="Interview Prep"
-              description="Access AI-powered interview preparation tools and resources"
-              icon={Sparkles}
-              to="/mentee/interview-prep"
-              locked={isFreeUser}
             />
             
             <QuickActionCard
@@ -455,6 +511,154 @@ const MenteeDashboard = () => {
         </div>
 
 
+
+        {/* Quick Contact / Support Section */}
+        <div>
+          <h2 className={`${theme.text.primary} text-2xl font-bold mb-6`}>Need Help?</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Support Request */}
+            <Card className={`${theme.glass} ${theme.border.primary} border ${theme.shadow} hover:scale-105 transition-all cursor-pointer`}
+              onClick={() => setSupportModalOpen(true)}>
+              <CardContent className="p-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4">
+                  <Headphones className="w-6 h-6 text-white" />
+                </div>
+                <h3 className={`${theme.text.primary} font-semibold mb-2`}>Contact Support</h3>
+                <p className={`${theme.text.secondary} text-sm mb-4`}>
+                  Submit a support request and we'll get back to you within 24 hours
+                </p>
+                <div className="flex items-center gap-2 text-[#06b6d4] text-sm font-medium">
+                  <span>Open Ticket</span>
+                  <ArrowRight className="w-4 h-4" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* WhatsApp */}
+            <Card className={`${theme.glass} ${theme.border.primary} border ${theme.shadow} hover:scale-105 transition-all cursor-pointer`}
+              onClick={() => {
+                const phone = '919731842807';
+                const message = encodeURIComponent('Hi Codementee Team! I need help with...');
+                window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+              }}>
+              <CardContent className="p-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4">
+                  <PhoneIcon className="w-6 h-6 text-white" />
+                </div>
+                <h3 className={`${theme.text.primary} font-semibold mb-2`}>WhatsApp Chat</h3>
+                <p className={`${theme.text.secondary} text-sm mb-4`}>
+                  Quick response for urgent queries via WhatsApp
+                </p>
+                <div className="flex items-center gap-2 text-green-400 text-sm font-medium">
+                  <span>Chat Now</span>
+                  <ArrowRight className="w-4 h-4" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Email */}
+            <Card 
+              className={`${theme.glass} ${theme.border.primary} border ${theme.shadow} hover:scale-105 transition-all cursor-pointer`}
+              onClick={() => setEmailModalOpen(true)}
+            >
+              <CardContent className="p-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-4">
+                  <Mail className="w-6 h-6 text-white" />
+                </div>
+                <h3 className={`${theme.text.primary} font-semibold mb-2`}>Email Support</h3>
+                <p className={`${theme.text.secondary} text-sm mb-4`}>
+                  Send us an email at support@codementee.com
+                </p>
+                <div className="flex items-center gap-2 text-purple-400 text-sm font-medium">
+                  <span>Compose Email</span>
+                  <ArrowRight className="w-4 h-4" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Support Request Modal */}
+        <SupportRequestModal 
+          isOpen={supportModalOpen} 
+          onClose={() => setSupportModalOpen(false)} 
+        />
+
+        {/* Email Query Modal */}
+        {emailModalOpen && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+            <div className={`${theme.bg.card} rounded-xl ${theme.border.primary} border max-w-lg w-full ${theme.shadow}`}>
+              {/* Header */}
+              <div className={`flex items-center justify-between p-6 border-b ${theme.border.primary}`}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                    <Mail className="w-5 h-5 text-purple-500" />
+                  </div>
+                  <div>
+                    <h2 className={`text-xl font-bold ${theme.text.primary}`}>Email Support</h2>
+                    <p className={`text-sm ${theme.text.secondary}`}>We'll respond within 24 hours</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setEmailModalOpen(false)}
+                  className={`${theme.text.secondary} hover:${theme.text.primary} transition-colors`}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {/* Form */}
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className={`block ${theme.text.primary} text-sm font-medium mb-2`}>
+                    Your Query *
+                  </label>
+                  <textarea
+                    value={emailQuery}
+                    onChange={(e) => setEmailQuery(e.target.value)}
+                    placeholder="Please describe your question or issue in detail..."
+                    required
+                    rows={8}
+                    className={`w-full px-4 py-3 rounded-lg ${theme.input.base} transition-colors resize-none`}
+                  />
+                  <p className={`${theme.text.muted} text-xs mt-2`}>
+                    Your details (Name: {user?.name}, Email: {user?.email}) will be automatically included
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    type="button"
+                    onClick={() => setEmailModalOpen(false)}
+                    variant="secondary"
+                    className="flex-1"
+                    disabled={sendingEmail}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSendEmail}
+                    className="flex-1 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
+                    disabled={sendingEmail || !emailQuery.trim()}
+                  >
+                    {sendingEmail ? (
+                      <>
+                        <Clock className="w-4 h-4 mr-2 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Send Email
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Upgrade CTA for Free Users */}
         {isFreeUser && (
