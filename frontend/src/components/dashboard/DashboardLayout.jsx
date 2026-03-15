@@ -55,6 +55,7 @@ const DashboardLayout = ({ children, title }) => {
     if (user?.role === 'admin') {
       return [
         { path: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+        { path: '/admin/users', label: 'User Management', icon: Users },
         { path: '/admin/bug-reports', label: 'Support Requests', icon: Headphones },
         { path: '/admin/orders', label: 'Orders', icon: ShoppingCart },
         { path: '/admin/pricing', label: 'Pricing', icon: DollarSign },
@@ -62,7 +63,7 @@ const DashboardLayout = ({ children, title }) => {
         { path: '/admin/resume-reviews', label: 'Resume Reviews', icon: FileText },
         { path: '/admin/payouts', label: 'Mentor Payouts', icon: DollarSign },
         { path: '/admin/companies', label: 'Companies', icon: Building2 },
-        { path: '/admin/meet-links', label: 'Meet Links', icon: Video },
+        { path: '/admin/slots', label: 'Slot Management', icon: Clock },
         { path: '/admin/mentees', label: 'Mentees', icon: Users },
         { path: '/admin/mentors', label: 'Mentors', icon: Users },
         { path: '/admin/mocks', label: 'Mock Interviews', icon: Calendar },
