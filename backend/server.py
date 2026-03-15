@@ -2300,6 +2300,8 @@ async def send_new_slot_notification_emails(slot: dict):
     This helps drive engagement and conversions.
     """
     try:
+        logger.info(f"📧 Starting slot notification email process for slot {slot.get('id')}")
+        
         mentor_name = slot.get("mentor_name", "Mentor")
         slot_date = slot.get("date")
         slot_time = f"{slot.get('start_time')} - {slot.get('end_time')}"
@@ -2308,10 +2310,11 @@ async def send_new_slot_notification_emails(slot: dict):
         
         # Format date nicely
         try:
-            date_obj = datetime.fromisoformat(slot_date)
+            date_obj = datetime.strptime(slot_date, "%Y-%m-%d")
             formatted_date = date_obj.strftime("%B %d, %Y")
             day_of_week = date_obj.strftime("%A")
-        except:
+        except Exception as e:
+            logger.warning(f"Date parsing error: {e}, using raw date")
             formatted_date = slot_date
             day_of_week = ""
         
@@ -2319,15 +2322,19 @@ async def send_new_slot_notification_emails(slot: dict):
         all_mentees = await db.users.find({"role": "mentee"}).to_list(1000)
         
         if not all_mentees:
-            logger.info("No mentees found to notify")
+            logger.warning("⚠️ No mentees found in database to notify")
             return None
         
-        logger.info(f"Sending new slot notifications to {len(all_mentees)} mentees")
+        logger.info(f"📨 Found {len(all_mentees)} mentees to notify")
         
         # Send emails in batches to avoid overwhelming the email service
         batch_size = 50
+        sent_count = 0
+        failed_count = 0
+        
         for i in range(0, len(all_mentees), batch_size):
             batch = all_mentees[i:i + batch_size]
+            logger.info(f"Processing batch {i//batch_size + 1} ({len(batch)} mentees)")
             
             for mentee in batch:
                 mentee_name = mentee.get("name", "there")
@@ -2335,6 +2342,7 @@ async def send_new_slot_notification_emails(slot: dict):
                 is_paid = mentee.get("status") == "Active" and mentee.get("plan_id")
                 
                 if not mentee_email:
+                    logger.warning(f"Skipping mentee {mentee.get('id')} - no email")
                     continue
                 
                 # Customize message based on user status
@@ -2424,19 +2432,23 @@ async def send_new_slot_notification_emails(slot: dict):
                 
                 # Send email (don't wait for response to speed up batch processing)
                 try:
-                    await asyncio.to_thread(resend.Emails.send, params)
+                    result = await asyncio.to_thread(resend.Emails.send, params)
+                    sent_count += 1
+                    logger.debug(f"✅ Email sent to {mentee_email}, result: {result}")
                 except Exception as e:
-                    logger.error(f"Failed to send notification to {mentee_email}: {str(e)}")
+                    failed_count += 1
+                    logger.error(f"❌ Failed to send notification to {mentee_email}: {str(e)}")
                     continue
             
             # Small delay between batches to avoid rate limiting
             if i + batch_size < len(all_mentees):
                 await asyncio.sleep(1)
         
-        logger.info(f"New slot notification emails sent to {len(all_mentees)} mentees")
-        return {"sent_count": len(all_mentees)}
+        logger.info(f"✅ Slot notification complete: {sent_count} sent, {failed_count} failed out of {len(all_mentees)} total")
+        return {"sent_count": sent_count, "failed_count": failed_count, "total": len(all_mentees)}
     except Exception as e:
-        logger.error(f"Failed to send new slot notification emails: {str(e)}")
+        logger.error(f"❌ Critical error in send_new_slot_notification_emails: {str(e)}")
+        logger.exception(e)  # This will log the full stack trace
         return None
 
     """
@@ -2983,6 +2995,200 @@ async def get_me(user=Depends(get_current_user)):
     return serialize_doc(dict(user))
 
 # ============ ADMIN ROUTES ============
+
+# Admin User Management
+@api_router.get("/admin/users")
+async def get_all_users(user=Depends(get_current_user)):
+    """Get all users for admin management"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    users = await db.users.find({}).sort("created_at", -1).to_list(10000)
+    return [serialize_doc(dict(u)) for u in users]
+
+@api_router.put("/admin/users/{user_id}")
+async def update_user(user_id: str, updates: dict, user=Depends(get_current_user)):
+    """Update user details - admin only"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    # Validate updates
+    allowed_fields = ["name", "email", "role", "status", "plan_id", "plan_name", 
+                     "interview_quota_remaining", "resume_review_quota"]
+    update_data = {k: v for k, v in updates.items() if k in allowed_fields}
+    
+    # Handle password update separately (hash it)
+    if "password" in updates and updates["password"]:
+        update_data["password"] = hash_password(updates["password"])
+    
+    # Auto-update plan_name when plan_id changes
+    if "plan_id" in update_data and update_data["plan_id"]:
+        plan = await db.pricing_plans.find_one({"plan_id": update_data["plan_id"]})
+        if plan:
+            update_data["plan_name"] = plan["name"]
+    elif "plan_id" in update_data and not update_data["plan_id"]:
+        # If plan_id is None/null, clear plan_name too
+        update_data["plan_name"] = None
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.users.update_one(
+        {"id": user_id},
+        {"$set": update_data}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    updated_user = await db.users.find_one({"id": user_id})
+    return serialize_doc(updated_user)
+
+@api_router.post("/admin/users/{user_id}/increase-quota")
+async def increase_user_quota(user_id: str, data: dict, user=Depends(get_current_user)):
+    """Increase user quota - admin only"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    quota_type = data.get("quota_type")  # "interview_quota_remaining" or "resume_review_quota"
+    amount = data.get("amount", 0)
+    
+    if quota_type not in ["interview_quota_remaining", "resume_review_quota"]:
+        raise HTTPException(status_code=400, detail="Invalid quota type")
+    
+    result = await db.users.update_one(
+        {"id": user_id},
+        {"$inc": {quota_type: amount}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    updated_user = await db.users.find_one({"id": user_id})
+    return serialize_doc(updated_user)
+
+# Admin Slot Management
+@api_router.get("/admin/all-slots")
+async def get_all_slots(user=Depends(get_current_user)):
+    """Get all mock interview slots across all mentors"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    slots = await db.time_slots.find({}).sort("date", 1).to_list(10000)
+    return [serialize_doc(dict(s)) for s in slots]
+
+@api_router.get("/admin/all-resume-slots")
+async def get_all_resume_slots(user=Depends(get_current_user)):
+    """Get all resume review slots across all mentors"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    slots = await db.resume_review_slots.find({}).sort("date", 1).to_list(10000)
+    return [serialize_doc(dict(s)) for s in slots]
+
+@api_router.get("/admin/bookings")
+async def get_all_bookings(user=Depends(get_current_user)):
+    """Get all bookings across all mentees"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    bookings = await db.bookings.find({}).sort("created_at", -1).to_list(10000)
+    return [serialize_doc(dict(b)) for b in bookings]
+
+@api_router.patch("/admin/slots/{slot_id}")
+async def admin_update_slot(slot_id: str, data: dict, user=Depends(get_current_user)):
+    """Admin can update any slot"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    # Prepare update data
+    update_data = {}
+    allowed_fields = ["date", "start_time", "end_time", "meeting_link", "status", 
+                     "interview_types", "experience_levels", "company_specializations", 
+                     "preparation_notes"]
+    
+    for field in allowed_fields:
+        if field in data:
+            update_data[field] = data[field]
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.time_slots.update_one(
+        {"id": slot_id},
+        {"$set": update_data}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Slot not found")
+    
+    return {"message": "Slot updated successfully"}
+
+@api_router.patch("/admin/resume-slots/{slot_id}")
+async def admin_update_resume_slot(slot_id: str, data: dict, user=Depends(get_current_user)):
+    """Admin can update any resume review slot"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    # Prepare update data
+    update_data = {}
+    allowed_fields = ["date", "start_time", "end_time", "meeting_link", "status"]
+    
+    for field in allowed_fields:
+        if field in data:
+            update_data[field] = data[field]
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.resume_review_slots.update_one(
+        {"id": slot_id},
+        {"$set": update_data}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Slot not found")
+    
+    return {"message": "Resume slot updated successfully"}
+
+@api_router.post("/admin/create-slot")
+async def admin_create_slot(data: dict, user=Depends(get_current_user)):
+    """Admin can create slots on behalf of mentors"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    mentor_id = data.get("mentor_id")
+    slot_type = data.get("slot_type", "mock")  # mock or resume
+    
+    # Get mentor details
+    mentor = await db.users.find_one({"id": mentor_id, "role": "mentor"})
+    if not mentor:
+        raise HTTPException(status_code=404, detail="Mentor not found")
+    
+    slot_doc = {
+        "id": str(uuid.uuid4()),
+        "mentor_id": mentor_id,
+        "mentor_name": mentor["name"],
+        "mentor_email": mentor["email"],
+        "date": data.get("date"),
+        "start_time": data.get("start_time"),
+        "end_time": data.get("end_time"),
+        "meeting_link": data.get("meeting_link"),
+        "status": "available",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    if slot_type == "mock":
+        slot_doc["interview_types"] = data.get("interview_types", [])
+        slot_doc["experience_levels"] = data.get("experience_levels", [])
+        slot_doc["company_specializations"] = data.get("company_specializations", [])
+        slot_doc["preparation_notes"] = data.get("preparation_notes", "")
+        await db.time_slots.insert_one(slot_doc)
+    else:
+        await db.resume_review_slots.insert_one(slot_doc)
+    
+    return {"message": "Slot created successfully", "slot_id": slot_doc["id"]}
+
 @api_router.get("/admin/mentees")
 async def get_mentees(user=Depends(get_current_user)):
     if user["role"] != "admin":
@@ -4159,6 +4365,9 @@ async def create_mentor_slot(slot_data: MentorSlotCreate, user=Depends(get_curre
     }
     
     await db.mentor_slots.insert_one(slot_doc)
+    
+    logger.info(f"✅ Slot created: {slot_doc['id']} by mentor {user['id']}")
+    logger.info(f"📧 Triggering slot notification emails...")
     
     # Send notification emails to all mentees (both free and paid) in the background
     # This runs asynchronously without blocking the response

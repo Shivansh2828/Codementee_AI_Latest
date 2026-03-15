@@ -35,6 +35,7 @@ const ContactUs = lazy(() => import("./pages/ContactUs"));
 // Admin pages - Lazy load (not needed for initial load)
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminMentees = lazy(() => import("./pages/admin/AdminMentees"));
+const AdminUserManagement = lazy(() => import("./pages/admin/AdminUserManagement"));
 const AdminMentors = lazy(() => import("./pages/admin/AdminMentors"));
 const AdminMocks = lazy(() => import("./pages/admin/AdminMocks"));
 const AdminFeedbacks = lazy(() => import("./pages/admin/AdminFeedbacks"));
@@ -42,11 +43,11 @@ const AdminPayments = lazy(() => import("./pages/admin/AdminPayments"));
 const AdminPayouts = lazy(() => import("./pages/admin/AdminPayouts"));
 const AdminCompanies = lazy(() => import("./pages/admin/AdminCompanies"));
 const AdminBookings = lazy(() => import("./pages/admin/AdminBookings"));
-const AdminMeetLinks = lazy(() => import("./pages/admin/AdminMeetLinks"));
 const AdminPricing = lazy(() => import("./pages/admin/AdminPricing"));
 const AdminResumeReviews = lazy(() => import("./pages/admin/AdminResumeReviews"));
 const AdminSessionMonitor = lazy(() => import("./pages/admin/AdminSessionMonitor"));
 const AdminMentorAnalytics = lazy(() => import("./pages/admin/AdminMentorAnalytics"));
+const AdminSlots = lazy(() => import("./pages/admin/AdminSlots"));
 const AdminBugReports = lazy(() => import("./pages/admin/AdminBugReports"));
 const AdminBookingAnalytics = lazy(() => import("./pages/admin/AdminBookingAnalytics"));
 const AdminRevenueTracker = lazy(() => import("./pages/admin/AdminRevenueTracker"));
@@ -108,6 +109,7 @@ function App() {
 
             {/* Admin Routes */}
             <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUserManagement /></ProtectedRoute>} />
             <Route path="/admin/mentees" element={<ProtectedRoute allowedRoles={['admin']}><AdminMentees /></ProtectedRoute>} />
             <Route path="/admin/mentors" element={<ProtectedRoute allowedRoles={['admin']}><AdminMentors /></ProtectedRoute>} />
             <Route path="/admin/mocks" element={<ProtectedRoute allowedRoles={['admin']}><AdminMocks /></ProtectedRoute>} />
@@ -118,12 +120,12 @@ function App() {
             <Route path="/admin/resume-reviews" element={<ProtectedRoute allowedRoles={['admin']}><AdminResumeReviews /></ProtectedRoute>} />
             <Route path="/admin/companies" element={<ProtectedRoute allowedRoles={['admin']}><AdminCompanies /></ProtectedRoute>} />
             <Route path="/admin/bookings" element={<ProtectedRoute allowedRoles={['admin']}><AdminBookings /></ProtectedRoute>} />
-            <Route path="/admin/meet-links" element={<ProtectedRoute allowedRoles={['admin']}><AdminMeetLinks /></ProtectedRoute>} />
             <Route path="/admin/sessions" element={<ProtectedRoute allowedRoles={['admin']}><AdminSessionMonitor /></ProtectedRoute>} />
             <Route path="/admin/mentor-analytics" element={<ProtectedRoute allowedRoles={['admin']}><AdminMentorAnalytics /></ProtectedRoute>} />
             <Route path="/admin/booking-analytics" element={<ProtectedRoute allowedRoles={['admin']}><AdminBookingAnalytics /></ProtectedRoute>} />
             <Route path="/admin/revenue" element={<ProtectedRoute allowedRoles={['admin']}><AdminRevenueTracker /></ProtectedRoute>} />
             <Route path="/admin/bug-reports" element={<ProtectedRoute allowedRoles={['admin']}><AdminBugReports /></ProtectedRoute>} />
+            <Route path="/admin/slots" element={<ProtectedRoute allowedRoles={['admin']}><AdminSlots /></ProtectedRoute>} />
 
             {/* Mentor Routes */}
             <Route path="/mentor" element={<ProtectedRoute allowedRoles={['mentor']}><MentorDashboard /></ProtectedRoute>} />
