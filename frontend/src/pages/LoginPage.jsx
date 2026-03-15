@@ -74,6 +74,7 @@ const LoginPage = () => {
                 value={formData.email}
                 onChange={handleChange}
                 required
+                autoComplete="email"
                 className={`w-full px-4 py-3 rounded-lg ${theme.input.base} transition-colors`}
                 placeholder="you@example.com"
               />
@@ -88,6 +89,7 @@ const LoginPage = () => {
                   value={formData.password}
                   onChange={handleChange}
                   required
+                  autoComplete="current-password"
                   className={`w-full px-4 py-3 pr-12 rounded-lg ${theme.input.base} transition-colors`}
                   placeholder="Enter your password"
                 />

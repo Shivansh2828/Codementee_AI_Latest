@@ -183,12 +183,12 @@ const HeroSection = () => {
                   <span className="relative z-10">Book Your Mock Interview</span>
                   <ArrowRight size={20} className="relative z-10 group-hover:translate-x-1 transition-transform" />
                 </Link>
-                <Link 
-                  to="/pricing" 
+                <a 
+                  href="#pricing" 
                   className={`group inline-flex items-center justify-center gap-2 px-8 py-4 ${theme.button.secondary} rounded-xl transition-all duration-300 shadow-sm hover:shadow-lg transform hover:-translate-y-1`}
                 >
                   View Pricing
-                </Link>
+                </a>
               </div>
 
               {/* Scarcity Note */}

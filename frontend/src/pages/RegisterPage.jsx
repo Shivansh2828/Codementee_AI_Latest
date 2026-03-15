@@ -128,6 +128,7 @@ const RegisterPage = () => {
                       value={formData.email}
                       onChange={handleInputChange}
                       required
+                      autoComplete="email"
                       className={`w-full px-4 py-3 rounded-lg focus:outline-none transition-colors ${theme.input.base}`}
                       placeholder="Enter your email"
                     />
@@ -145,6 +146,7 @@ const RegisterPage = () => {
                         value={formData.password}
                         onChange={handleInputChange}
                         required
+                        autoComplete="new-password"
                         className={`w-full px-4 py-3 rounded-lg focus:outline-none transition-colors pr-12 ${theme.input.base}`}
                         placeholder="Create a password"
                       />
