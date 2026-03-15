@@ -7,7 +7,6 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { toast } from "sonner";
 import { 
   Calendar, 
@@ -20,7 +19,6 @@ import {
   Filter,
   Plus,
   CheckCircle,
-  XCircle,
   Users,
   TrendingUp
 } from "lucide-react";
@@ -50,7 +48,6 @@ const AdminSlots = () => {
   const [mentorFilter, setMentorFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [mentors, setMentors] = useState([]);
-  const [companies, setCompanies] = useState([]);
 
   useEffect(() => {
     fetchData();
@@ -61,11 +58,10 @@ const AdminSlots = () => {
     try {
       console.log('🔍 Fetching admin slots data...');
       
-      const [mockRes, resumeRes, mentorsRes, companiesRes] = await Promise.all([
+      const [mockRes, resumeRes, mentorsRes] = await Promise.all([
         api.get('/admin/all-slots'),
         api.get('/admin/all-resume-slots'),
-        api.get('/admin/mentors'),
-        api.get('/companies')
+        api.get('/admin/mentors')
       ]);
       
       console.log('✅ Mock slots:', mockRes.data?.length || 0);
@@ -75,7 +71,6 @@ const AdminSlots = () => {
       setMockSlots(mockRes.data || []);
       setResumeSlots(resumeRes.data || []);
       setMentors(mentorsRes.data || []);
-      setCompanies(companiesRes.data || []);
       
       // Fetch bookings separately to avoid blocking if it fails
       try {
@@ -199,18 +194,18 @@ const AdminSlots = () => {
     const booking = getBookingForSlot(slot.id);
     
     return (
-      <div key={slot.id} className={`${theme.glass} rounded-xl p-6 ${theme.border.primary} border`}>
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex items-center gap-3">
-            <User className="w-5 h-5 text-[#06b6d4]" />
-            <div>
-              <p className={`${theme.text.primary} font-semibold`}>{slot.mentor_name}</p>
-              <p className={`${theme.text.muted} text-sm`}>{slot.mentor_email}</p>
+      <div key={slot.id} className={`${theme.glass} rounded-xl p-4 md:p-6 ${theme.border.primary} border`}>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <User className="w-5 h-5 text-[#06b6d4] flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className={`${theme.text.primary} font-semibold truncate`}>{slot.mentor_name}</p>
+              <p className={`${theme.text.muted} text-sm truncate`}>{slot.mentor_email}</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Badge className={slot.type === 'mock' ? 'bg-blue-400/20 text-blue-400' : 'bg-purple-400/20 text-purple-400'}>
-              {slot.type === 'mock' ? 'Mock Interview' : 'Resume Review'}
+              {slot.type === 'mock' ? 'Mock' : 'Resume'}
             </Badge>
             <Badge className={getStatusBadge(slot.status)}>
               {slot.status}
@@ -220,18 +215,18 @@ const AdminSlots = () => {
 
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-gray-400" />
-            <span className={theme.text.secondary}>{slot.date}</span>
+            <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            <span className={`${theme.text.secondary} text-sm`}>{slot.date}</span>
           </div>
           
           <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-gray-400" />
-            <span className={theme.text.secondary}>{slot.start_time} - {slot.end_time}</span>
+            <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            <span className={`${theme.text.secondary} text-sm`}>{slot.start_time} - {slot.end_time}</span>
           </div>
           
-          <div className="flex items-center gap-2">
-            <Video className="w-4 h-4 text-gray-400" />
-            <span className={`${theme.text.secondary} text-sm truncate`}>{slot.meeting_link}</span>
+          <div className="flex items-start gap-2">
+            <Video className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+            <span className={`${theme.text.secondary} text-xs break-all`}>{slot.meeting_link}</span>
           </div>
 
           {slot.type === 'mock' && slot.interview_types && slot.interview_types.length > 0 && (
@@ -394,13 +389,13 @@ const AdminSlots = () => {
         </div>
 
         {/* Slots Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Main Slots List */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="xl:col-span-2 space-y-4">
             <h3 className={`${theme.text.primary} font-semibold text-lg mb-4`}>
               All Slots ({filterSlots(allSlots).length})
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {filterSlots(allSlots).map(slot => renderSlotCard(slot))}
             </div>
             {filterSlots(allSlots).length === 0 && (
@@ -414,15 +409,15 @@ const AdminSlots = () => {
           {/* Sidebar - Mentor Activity & Recent Slots */}
           <div className="space-y-6">
             {/* Mentor Activity */}
-            <div className={`${theme.glass} rounded-xl p-6 ${theme.border.primary} border`}>
-              <h3 className={`${theme.text.primary} font-semibold mb-4`}>Mentor Activity</h3>
+            <div className={`${theme.glass} rounded-xl p-4 md:p-6 ${theme.border.primary} border`}>
+              <h3 className={`${theme.text.primary} font-semibold mb-4 text-sm md:text-base`}>Mentor Activity</h3>
               <div className="space-y-3">
                 {mentorStats.slice(0, 5).map(mentor => (
                   <div key={mentor.id} className={`p-3 rounded-lg ${theme.bg.secondary}`}>
-                    <div className="flex justify-between items-start mb-2">
-                      <p className={`${theme.text.primary} font-medium text-sm`}>{mentor.name}</p>
-                      <Badge className="bg-[#06b6d4]/20 text-[#06b6d4] text-xs">
-                        {mentor.utilizationRate}% booked
+                    <div className="flex justify-between items-start mb-2 gap-2">
+                      <p className={`${theme.text.primary} font-medium text-sm truncate flex-1`}>{mentor.name}</p>
+                      <Badge className="bg-[#06b6d4]/20 text-[#06b6d4] text-xs flex-shrink-0">
+                        {mentor.utilizationRate}%
                       </Badge>
                     </div>
                     <div className="flex justify-between text-xs">
@@ -435,15 +430,15 @@ const AdminSlots = () => {
             </div>
 
             {/* Recent Slot Activity */}
-            <div className={`${theme.glass} rounded-xl p-6 ${theme.border.primary} border`}>
-              <h3 className={`${theme.text.primary} font-semibold mb-4`}>Recent Activity</h3>
+            <div className={`${theme.glass} rounded-xl p-4 md:p-6 ${theme.border.primary} border`}>
+              <h3 className={`${theme.text.primary} font-semibold mb-4 text-sm md:text-base`}>Recent Activity</h3>
               <div className="space-y-3">
                 {recentSlots.map(slot => (
                   <div key={slot.id} className={`p-3 rounded-lg ${theme.bg.secondary} border-l-2 ${
                     slot.type === 'mock' ? 'border-blue-400' : 'border-purple-400'
                   }`}>
-                    <div className="flex items-start justify-between mb-1">
-                      <p className={`${theme.text.primary} text-sm font-medium`}>{slot.mentor_name}</p>
+                    <div className="flex items-start justify-between mb-1 gap-2">
+                      <p className={`${theme.text.primary} text-sm font-medium truncate flex-1`}>{slot.mentor_name}</p>
                       <Badge className={getStatusBadge(slot.status)} style={{fontSize: '10px', padding: '2px 6px'}}>
                         {slot.status}
                       </Badge>
