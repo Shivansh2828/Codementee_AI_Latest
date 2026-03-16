@@ -11,6 +11,7 @@ const Header = () => {
   const { theme } = useTheme();
 
   const navLinks = [
+    { href: '/#ai-features', label: 'AI Features' },
     { href: '/#pricing', label: 'Pricing' },
     { href: '/login', label: 'Login' },
     { href: '/register', label: 'Get Started' }

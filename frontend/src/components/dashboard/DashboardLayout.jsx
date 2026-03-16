@@ -102,6 +102,15 @@ const DashboardLayout = ({ children, title }) => {
         { path: '/mentee/feedbacks', label: 'My Feedbacks', icon: MessageSquare },
         { path: '/mentee/resume-review', label: 'Resume Review', icon: FileText },
         { path: '/mentee/bug-reports', label: 'Support & Help', icon: Headphones },
+        { 
+          label: 'AI Tools', 
+          icon: Search, 
+          isSection: true,
+          items: [
+            { path: '/mentee/job-search', label: 'AI Job Search', icon: Briefcase },
+            { path: '/mentee/referral-finder', label: 'Referral Finder', icon: Target },
+          ]
+        },
         { path: '/mentee/community', label: 'Community', icon: MessageCircle },
       ];
     }

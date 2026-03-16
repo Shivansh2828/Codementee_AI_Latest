@@ -11,6 +11,7 @@ import PricingSection from '../components/landing/PricingSection';
 import TestimonialsSection from '../components/landing/TestimonialsSection';
 import CTASection from '../components/landing/CTASection';
 import MockInterviewProcessSection from '../components/landing/MockInterviewProcessSection';
+import AIFeaturesSection from '../components/landing/AIFeaturesSection';
 import SocialProofPopup from '../components/SocialProofPopup';
 import UrgencyNotification from '../components/UrgencyNotification';
 
@@ -27,6 +28,7 @@ const LandingPage = () => {
         <ProblemSection />
         <SolutionSection />
         <WhoSection />
+        <AIFeaturesSection />
         <PricingSection />
         <TestimonialsSection />
         <CTASection />

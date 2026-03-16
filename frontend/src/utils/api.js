@@ -9,7 +9,7 @@ console.log('🚀 API.JS: API URL:', API);
 
 const api = axios.create({ 
   baseURL: API,
-  timeout: 10000 // 10 second timeout
+  timeout: 120000 // 2 minute timeout (AI agent calls can take 30-60s)
 });
 
 api.interceptors.request.use((config) => {
