@@ -171,7 +171,9 @@ const PricingSection = () => {
             'Referral Guidance (Best Effort)',
             'Priority WhatsApp Support',
             'Proven Resume Templates',
-            'Free AI ATS Resume Checker Access'
+            'Free AI ATS Resume Checker Access',
+            '🤖 AI Job Search Agent (Daily Matches)',
+            '🤖 AI Referral Finder Agent'
           ],
           icon: Crown,
           iconColor: 'text-amber-400',

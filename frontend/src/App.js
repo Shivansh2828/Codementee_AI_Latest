@@ -74,6 +74,8 @@ const MenteeCommunity = lazy(() => import("./pages/mentee/MenteeCommunity"));
 const MenteeBugReports = lazy(() => import("./pages/mentee/MenteeBugReports"));
 const MenteeMentorSelection = lazy(() => import("./pages/mentee/MenteeMentorSelection"));
 const MenteeSlotBrowsing = lazy(() => import("./pages/mentee/MenteeSlotBrowsing"));
+const MenteeJobSearch = lazy(() => import("./pages/mentee/MenteeJobSearch"));
+const MenteeReferralFinder = lazy(() => import("./pages/mentee/MenteeReferralFinder"));
 
 console.log('🚀 APP.JS: All imports loaded successfully');
 
@@ -148,6 +150,8 @@ function App() {
             <Route path="/mentee/interview-prep" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeInterviewPrep /></ProtectedRoute>} />
             <Route path="/mentee/community" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeCommunity /></ProtectedRoute>} />
             <Route path="/mentee/bug-reports" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeBugReports /></ProtectedRoute>} />
+            <Route path="/mentee/job-search" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeJobSearch /></ProtectedRoute>} />
+            <Route path="/mentee/referral-finder" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeReferralFinder /></ProtectedRoute>} />
 
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/" replace />} />

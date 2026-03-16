@@ -107,6 +107,8 @@ const DashboardLayout = ({ children, title }) => {
           items: [
             { path: '/mentee/resume-analyzer', label: 'Resume Analyzer', icon: FileText },
             { path: '/mentee/interview-prep', label: 'Interview Prep', icon: Brain },
+            { path: '/mentee/job-search', label: 'AI Job Search', icon: Briefcase },
+            { path: '/mentee/referral-finder', label: 'Referral Finder', icon: Target },
           ]
         },
         { path: '/mentee/community', label: 'Community', icon: MessageCircle },

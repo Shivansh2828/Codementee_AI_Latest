@@ -20,8 +20,15 @@ import asyncio
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+# Import AI Agents
+# NOTE: imported after load_dotenv below so env vars are available at module level
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
+
+from agents.job_application_agent import JobApplicationAgent
+from agents.referral_finder_agent import ReferralFinderAgent
+import agents.api_routes as agent_routes
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -2175,6 +2182,118 @@ async def update_completed_slot_statuses():
         logger.error(f"Failed to update completed slot statuses: {str(e)}")
         return None
 
+# ============ DAILY AI JOB SEARCH ============
+async def run_daily_job_search_all_users():
+    """Run AI job search for all mentees who have set job preferences, then email results."""
+    try:
+        preferences = await db.job_preferences.find({}).to_list(length=None)
+        logger.info(f"Daily job search: found {len(preferences)} users with preferences")
+        
+        for pref in preferences:
+            user_id = pref.get("user_id")
+            if user_id and job_agent:
+                try:
+                    await job_agent.run_daily_search(user_id)
+                    # Send email digest
+                    await send_job_digest_email(user_id)
+                except Exception as e:
+                    logger.error(f"Daily search failed for user {user_id}: {e}")
+        
+        logger.info("Daily job search completed for all users")
+    except Exception as e:
+        logger.error(f"Daily job search scheduler error: {e}")
+
+
+async def send_job_digest_email(user_id: str):
+    """Send daily job matches email to a mentee."""
+    try:
+        user = await db.users.find_one({"id": user_id})
+        if not user or not user.get("email"):
+            return
+
+        # Get today's top matches
+        matches = await db.job_matches.find(
+            {"user_id": user_id}
+        ).sort("score", -1).limit(10).to_list(length=10)
+
+        if not matches:
+            return
+
+        name = user.get("name", "there")
+        email = user.get("email")
+
+        # Build job cards HTML
+        job_rows = ""
+        for job in matches:
+            score = job.get("score", 0)
+            score_color = "#22c55e" if score >= 80 else "#3b82f6" if score >= 60 else "#eab308"
+            reasoning = job.get("reasoning", [])
+            reasons_html = "".join(f"<li style='color:#94a3b8;font-size:13px;'>{r}</li>" for r in reasoning[:2])
+
+            job_rows += f"""
+            <tr>
+              <td style="padding:16px;border-bottom:1px solid #1e293b;">
+                <div style="display:flex;justify-content:space-between;">
+                  <div>
+                    <h3 style="color:#e2e8f0;margin:0 0 4px 0;font-size:16px;">{job.get('title','')}</h3>
+                    <p style="color:#06b6d4;margin:0 0 4px 0;font-size:14px;">{job.get('company','')} &bull; {job.get('location','')}</p>
+                    <p style="color:#64748b;margin:0;font-size:13px;">{job.get('salary','')}</p>
+                    {f'<ul style="margin:8px 0 0 0;padding-left:16px;">{reasons_html}</ul>' if reasons_html else ''}
+                  </div>
+                  <div style="text-align:right;min-width:60px;">
+                    <span style="background:{score_color};color:white;padding:4px 10px;border-radius:20px;font-weight:bold;font-size:14px;">{score}/100</span>
+                  </div>
+                </div>
+                {f'<a href="{job.get("url","")}" style="display:inline-block;margin-top:10px;padding:6px 16px;background:#06b6d4;color:white;text-decoration:none;border-radius:6px;font-size:13px;">Apply Now →</a>' if job.get('url') else ''}
+              </td>
+            </tr>"""
+
+        html_content = f"""
+        <div style="background:#0f172a;padding:40px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+          <div style="max-width:600px;margin:0 auto;background:#1e293b;border-radius:16px;overflow:hidden;border:1px solid #334155;">
+            <div style="background:linear-gradient(135deg,#0891b2,#06b6d4);padding:30px 40px;">
+              <h1 style="color:white;margin:0;font-size:24px;">🎯 Your Daily Job Matches</h1>
+              <p style="color:rgba(255,255,255,0.8);margin:8px 0 0 0;font-size:14px;">
+                {len(matches)} new matches found for you today
+              </p>
+            </div>
+            <div style="padding:24px 40px;">
+              <p style="color:#e2e8f0;font-size:16px;margin:0 0 20px 0;">
+                Hi {name}, here are your top job matches scored by AI:
+              </p>
+              <table style="width:100%;border-collapse:collapse;">
+                {job_rows}
+              </table>
+              <div style="text-align:center;margin-top:24px;">
+                <a href="{os.environ.get('FRONTEND_URL', 'https://codementee.com')}/mentee/job-search"
+                   style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#0891b2,#06b6d4);color:white;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">
+                  View All Matches →
+                </a>
+              </div>
+            </div>
+            <div style="padding:20px 40px;border-top:1px solid #334155;text-align:center;">
+              <p style="color:#64748b;font-size:12px;margin:0;">
+                Codementee AI Job Search Agent &bull; Powered by AI
+              </p>
+            </div>
+          </div>
+        </div>"""
+
+        params = {
+            "from": SENDER_EMAIL,
+            "to": [email],
+            "subject": f"🎯 {len(matches)} New Job Matches for You — Codementee",
+            "html": html_content
+        }
+        if BCC_EMAIL:
+            params["bcc"] = [BCC_EMAIL]
+
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Job digest email sent to {email}, id: {result.get('id')}")
+
+    except Exception as e:
+        logger.error(f"Failed to send job digest email to user {user_id}: {e}")
+
 # ============ SCHEDULER SETUP ============
 scheduler = AsyncIOScheduler()
 
@@ -2214,12 +2333,22 @@ def start_scheduler():
             replace_existing=True
         )
         
+        # Daily AI job search for all users with preferences — runs at 7 AM IST (1:30 UTC)
+        scheduler.add_job(
+            run_daily_job_search_all_users,
+            CronTrigger(hour=1, minute=30),
+            id='daily_job_search',
+            name='Daily AI job search for all mentees',
+            replace_existing=True
+        )
+        
         scheduler.start()
         logger.info("Background scheduler started successfully")
         logger.info("Scheduled jobs:")
         logger.info("  - Update slot statuses: Every hour at :00")
         logger.info("  - Send reminder emails: Every hour at :15")
         logger.info("  - Send feedback requests: Every hour at :30")
+        logger.info("  - Daily AI job search: Every day at 7:00 AM IST")
         
     except Exception as e:
         logger.error(f"Failed to start scheduler: {str(e)}")
@@ -5492,6 +5621,33 @@ async def root():
 # Include router
 app.include_router(api_router)
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# Initialize AI Agents
+job_agent = None
+referral_agent = None
+
+try:
+    # Initialize Job Application Agent (uses Groq LLM internally)
+    job_agent = JobApplicationAgent(db=db)
+    
+    # Initialize Referral Finder Agent (uses Groq LLM internally)
+    referral_agent = ReferralFinderAgent(db=db)
+    
+    # Inject agents and dependencies into routes module
+    agent_routes.job_agent = job_agent
+    agent_routes.referral_agent = referral_agent
+    agent_routes.inject_dependencies(db, get_current_user)
+    agent_routes.inject_email_callback(send_job_digest_email)
+    
+    # Include agent routes (before CORS middleware is applied)
+    app.include_router(agent_routes.router, prefix="/api")
+    
+    logger.info("✅ AI Agents initialized successfully")
+except Exception as e:
+    logger.error(f"❌ Failed to initialize AI Agents: {e}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -5499,9 +5655,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
 @app.on_event("startup")
 async def startup_scheduler():
