@@ -107,6 +107,8 @@ export default function MenteeReferralFinder() {
   const [employees, setEmployees] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [messages, setMessages] = useState(null);
+  const [messageVisible, setMessageVisible] = useState(false);
+  const [draftingFor, setDraftingFor] = useState(null);
   const messageSectionRef = useRef(null);
 
   const handleFindReferrals = async (e) => {
@@ -139,19 +141,25 @@ export default function MenteeReferralFinder() {
   const scrollToMessages = () => {
     setTimeout(() => {
       messageSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
+    }, 300);
   };
 
   const handleDraftMessage = async (employee) => {
     if (employee.messages) {
       setSelectedEmployee(employee.employee);
       setMessages(employee.messages);
-      scrollToMessages();
+      setMessageVisible(false);
+      requestAnimationFrame(() => {
+        setMessageVisible(true);
+        scrollToMessages();
+      });
       return;
     }
 
     setSelectedEmployee(employee.employee);
-    setLoading(true);
+    setDraftingFor(employee.employee.id);
+    setMessages(null);
+    setMessageVisible(false);
 
     try {
       const response = await api.post('/ai-agents/draft-message', {
@@ -160,12 +168,15 @@ export default function MenteeReferralFinder() {
       });
 
       setMessages(response.data.messages);
-      scrollToMessages();
+      requestAnimationFrame(() => {
+        setMessageVisible(true);
+        scrollToMessages();
+      });
     } catch (error) {
       toast.error('Failed to draft message');
       console.error(error);
     } finally {
-      setLoading(false);
+      setDraftingFor(null);
     }
   };
 
@@ -214,9 +225,9 @@ export default function MenteeReferralFinder() {
                   />
                 </div>
               </div>
-              <Button type="submit" disabled={loading && !selectedEmployee} className="flex items-center gap-2">
-                {loading && !selectedEmployee ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                {loading && !selectedEmployee ? 'Finding employees...' : 'Find Referrals'}
+              <Button type="submit" disabled={loading} className="flex items-center gap-2">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                {loading ? 'Finding employees...' : 'Find Referrals'}
               </Button>
             </form>
           </CardContent>
@@ -270,9 +281,9 @@ export default function MenteeReferralFinder() {
                             onClick={() => handleDraftMessage(emp)}
                             size="sm"
                             className="flex-1"
-                            disabled={loading && selectedEmployee?.id === emp.employee.id}
+                            disabled={draftingFor === emp.employee.id}
                           >
-                            {loading && selectedEmployee?.id === emp.employee.id
+                            {draftingFor === emp.employee.id
                               ? <><Loader2 className="w-4 h-4 animate-spin mr-1" /> Drafting...</>
                               : emp.messages ? '✉️ View Messages' : 'Draft Message'}
                           </Button>
@@ -296,9 +307,29 @@ export default function MenteeReferralFinder() {
           </div>
         )}
 
+        {/* Drafting indicator */}
+        {draftingFor && !messages && (
+          <Card className="border-cyan-500/30 overflow-hidden">
+            <CardContent className="py-8 text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-cyan-500 mx-auto mb-3" />
+              <p className="text-sm text-gray-500 dark:text-slate-400">
+                ✍️ AI is drafting personalized messages for {selectedEmployee?.name}...
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Message Drafts */}
         {messages && selectedEmployee && (
-          <Card ref={messageSectionRef} className="border-2 border-cyan-500">
+          <div
+            ref={messageSectionRef}
+            className="transition-all duration-500 ease-out"
+            style={{
+              opacity: messageVisible ? 1 : 0,
+              transform: messageVisible ? 'translateY(0)' : 'translateY(20px)',
+            }}
+          >
+          <Card className="border-2 border-cyan-500">
             <CardHeader>
               <CardTitle>Draft Messages for {selectedEmployee.name}</CardTitle>
               <CardDescription>
@@ -339,7 +370,7 @@ export default function MenteeReferralFinder() {
               )}
 
               <Button
-                onClick={() => { setMessages(null); setSelectedEmployee(null); }}
+                onClick={() => { setMessages(null); setSelectedEmployee(null); setMessageVisible(false); }}
                 variant="outline"
                 className="w-full"
               >
@@ -347,6 +378,7 @@ export default function MenteeReferralFinder() {
               </Button>
             </CardContent>
           </Card>
+          </div>
         )}
       </div>
     </DashboardLayout>
