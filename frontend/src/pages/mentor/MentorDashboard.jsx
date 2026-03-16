@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { toast } from "sonner";
@@ -20,11 +19,18 @@ import {
   Award,
   Target,
   BookOpen,
-  BarChart3,
-  Bug
+  Bug,
+  Video,
+  AlertCircle,
+  MessageSquare,
+  Edit
 } from "lucide-react";
 import api from "../../utils/api";
 import { Link } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import { Textarea } from "../../components/ui/textarea";
+import { Label } from "../../components/ui/label";
+import { Input } from "../../components/ui/input";
 
 const MentorDashboard = () => {
   const { theme } = useTheme();
@@ -39,6 +45,18 @@ const MentorDashboard = () => {
     averageRating: 0,
     totalEarnings: 0,
     pendingPayout: 0
+  });
+  const [upcomingSessions, setUpcomingSessions] = useState([]);
+  const [todaySessions, setTodaySessions] = useState([]);
+  const [recentFeedbacks, setRecentFeedbacks] = useState([]);
+  const [feedbackDialog, setFeedbackDialog] = useState(null);
+  const [feedbackForm, setFeedbackForm] = useState({
+    rating: 5,
+    technical_skills: '',
+    communication: '',
+    problem_solving: '',
+    areas_of_improvement: '',
+    overall_feedback: ''
   });
 
   useEffect(() => {
@@ -58,7 +76,29 @@ const MentorDashboard = () => {
       // Fetch bookings
       const bookingsRes = await api.get('/mentor/bookings');
       const bookings = bookingsRes.data;
-      const upcoming = bookings.upcoming?.length || 0;
+      const upcoming = bookingsRes.data.upcoming || [];
+      
+      // Get today's sessions
+      const today = new Date().toISOString().split('T')[0];
+      const todayBookings = upcoming.filter(b => b.date === today);
+      
+      // Sort upcoming by date/time
+      const sortedUpcoming = upcoming
+        .sort((a, b) => {
+          const dateA = new Date(`${a.date}T${a.start_time}`);
+          const dateB = new Date(`${b.date}T${b.start_time}`);
+          return dateA - dateB;
+        })
+        .slice(0, 3);
+      
+      // Fetch recent feedbacks
+      const feedbacksRes = await api.get('/mentor/feedbacks');
+      const recentFeedback = (feedbacksRes.data || []).slice(0, 5);
+      
+      // Calculate average rating from feedbacks
+      const avgRating = recentFeedback.length > 0
+        ? recentFeedback.reduce((sum, f) => sum + (f.rating || 0), 0) / recentFeedback.length
+        : 0;
       
       // Calculate earnings (₹800 per session)
       const totalEarnings = completed * 800;
@@ -69,17 +109,96 @@ const MentorDashboard = () => {
         availableSlots: available,
         bookedSlots: booked,
         completedSessions: completed,
-        upcomingBookings: upcoming,
-        averageRating: 4.8, // TODO: Calculate from feedbacks
+        upcomingBookings: upcoming.length,
+        averageRating: avgRating,
         totalEarnings,
         pendingPayout
       });
+      
+      setUpcomingSessions(sortedUpcoming);
+      setTodaySessions(todayBookings);
+      setRecentFeedbacks(recentFeedback);
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
       toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAddFeedback = (booking) => {
+    setFeedbackDialog(booking);
+    setFeedbackForm({
+      rating: 5,
+      technical_skills: '',
+      communication: '',
+      problem_solving: '',
+      areas_of_improvement: '',
+      overall_feedback: ''
+    });
+  };
+
+  const handleEditFeedback = async (feedback) => {
+    setFeedbackDialog({ ...feedback, isEdit: true });
+    setFeedbackForm({
+      rating: feedback.rating || 5,
+      technical_skills: feedback.technical_skills || '',
+      communication: feedback.communication || '',
+      problem_solving: feedback.problem_solving || '',
+      areas_of_improvement: feedback.areas_of_improvement || '',
+      overall_feedback: feedback.overall_feedback || ''
+    });
+  };
+
+  const handleSubmitFeedback = async () => {
+    try {
+      const formData = new FormData();
+      formData.append('rating', feedbackForm.rating);
+      formData.append('technical_skills', feedbackForm.technical_skills);
+      formData.append('communication', feedbackForm.communication);
+      formData.append('problem_solving', feedbackForm.problem_solving);
+      formData.append('areas_of_improvement', feedbackForm.areas_of_improvement);
+      formData.append('overall_feedback', feedbackForm.overall_feedback);
+      
+      if (feedbackDialog.isEdit) {
+        // Update existing feedback
+        await api.put(`/mentor/feedbacks/${feedbackDialog.id}`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        toast.success('Feedback updated successfully');
+      } else {
+        // Create new feedback
+        formData.append('booking_id', feedbackDialog.id);
+        formData.append('mentee_id', feedbackDialog.mentee_id);
+        formData.append('mentee_name', feedbackDialog.mentee_name);
+        
+        await api.post('/mentor/feedbacks', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        toast.success('Feedback submitted successfully');
+      }
+      setFeedbackDialog(null);
+      fetchDashboardData();
+    } catch (error) {
+      console.error('Failed to submit feedback:', error);
+      toast.error('Failed to submit feedback');
+    }
+  };
+
+  const getTimeUntil = (date, time) => {
+    const sessionDate = new Date(`${date}T${time}`);
+    const now = new Date();
+    const diff = sessionDate - now;
+    
+    if (diff < 0) return 'Started';
+    
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours === 0) return `in ${minutes}m`;
+    if (hours < 24) return `in ${hours}h ${minutes}m`;
+    const days = Math.floor(hours / 24);
+    return `in ${days}d`;
   };
 
   const QuickActionCard = ({ title, description, icon: Icon, to, color, badge }) => (
@@ -128,6 +247,99 @@ const MentorDashboard = () => {
             Here's your mentoring activity overview
           </p>
         </div>
+
+        {/* Next Session Alert (if upcoming session exists) */}
+        {upcomingSessions.length > 0 && (
+          <div className={`${theme.glass} rounded-2xl p-6 ${theme.border.accent} border-2 border-[#06b6d4]`}>
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 bg-[#06b6d4]/20 rounded-xl flex items-center justify-center">
+                    <Video className="w-6 h-6 text-[#06b6d4]" />
+                  </div>
+                  <div>
+                    <h3 className={`${theme.text.primary} text-lg font-bold`}>Next Session</h3>
+                    <p className={`${theme.text.muted} text-sm`}>
+                      {getTimeUntil(upcomingSessions[0].date, upcomingSessions[0].start_time)}
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className={`${theme.text.muted} text-xs mb-1`}>Mentee</p>
+                    <p className={`${theme.text.primary} font-semibold`}>{upcomingSessions[0].mentee_name}</p>
+                  </div>
+                  <div>
+                    <p className={`${theme.text.muted} text-xs mb-1`}>Company</p>
+                    <p className={`${theme.text.primary} font-semibold`}>{upcomingSessions[0].company_name}</p>
+                  </div>
+                  <div>
+                    <p className={`${theme.text.muted} text-xs mb-1`}>Date & Time</p>
+                    <p className={`${theme.text.primary} font-semibold`}>
+                      {upcomingSessions[0].date} at {upcomingSessions[0].start_time}
+                    </p>
+                  </div>
+                  <div>
+                    <p className={`${theme.text.muted} text-xs mb-1`}>Type</p>
+                    <Badge className="bg-blue-400/20 text-blue-400 border-blue-400/30">
+                      {upcomingSessions[0].interview_type}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 ml-4">
+                <a href={upcomingSessions[0].meeting_link} target="_blank" rel="noopener noreferrer">
+                  <Button className="bg-[#06b6d4] hover:bg-[#0891b2] text-white">
+                    <Video className="w-4 h-4 mr-2" />
+                    Join Meeting
+                  </Button>
+                </a>
+                <Button
+                  variant="outline"
+                  className={theme.button.secondary}
+                  onClick={() => handleAddFeedback(upcomingSessions[0])}
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Add Feedback
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Today's Schedule */}
+        {todaySessions.length > 0 && (
+          <div className={`${theme.glass} rounded-2xl p-6 ${theme.border.primary} border`}>
+            <h2 className={`${theme.text.primary} text-xl font-bold mb-4`}>Today's Schedule</h2>
+            <div className="space-y-3">
+              {todaySessions.map((session) => (
+                <div key={session.id} className={`${theme.bg.secondary} rounded-xl p-4 flex items-center justify-between`}>
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-purple-400/20 rounded-lg flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div>
+                      <p className={`${theme.text.primary} font-semibold`}>{session.mentee_name}</p>
+                      <p className={`${theme.text.muted} text-sm`}>
+                        {session.start_time} - {session.end_time} • {session.company_name}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-blue-400/20 text-blue-400 border-blue-400/30">
+                      {session.interview_type}
+                    </Badge>
+                    <a href={session.meeting_link} target="_blank" rel="noopener noreferrer">
+                      <Button size="sm" className="bg-[#06b6d4] hover:bg-[#0891b2] text-white">
+                        Join
+                      </Button>
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Key Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -269,13 +481,110 @@ const MentorDashboard = () => {
           </div>
         </div>
 
+        {/* Upcoming Sessions Widget */}
+        {upcomingSessions.length > 1 && (
+          <div className={`${theme.glass} rounded-2xl p-6 ${theme.border.primary} border`}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className={`${theme.text.primary} text-xl font-bold`}>Upcoming Sessions</h2>
+              <Link to="/mentor/bookings">
+                <Button variant="outline" size="sm" className={theme.button.secondary}>
+                  View All
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
+            </div>
+            <div className="space-y-3">
+              {upcomingSessions.slice(1).map((session) => (
+                <div key={session.id} className={`${theme.bg.secondary} rounded-xl p-4`}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className={`${theme.text.primary} font-semibold mb-1`}>{session.mentee_name}</p>
+                      <p className={`${theme.text.muted} text-sm`}>{session.company_name}</p>
+                    </div>
+                    <Badge className="bg-purple-400/20 text-purple-400 border-purple-400/30">
+                      {getTimeUntil(session.date, session.start_time)}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className={theme.text.secondary}>
+                        <Calendar className="w-4 h-4 inline mr-1" />
+                        {session.date}
+                      </span>
+                      <span className={theme.text.secondary}>
+                        <Clock className="w-4 h-4 inline mr-1" />
+                        {session.start_time}
+                      </span>
+                    </div>
+                    <Badge className="bg-blue-400/20 text-blue-400 border-blue-400/30 text-xs">
+                      {session.interview_type}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Recent Feedbacks */}
+        {recentFeedbacks.length > 0 && (
+          <div className={`${theme.glass} rounded-2xl p-6 ${theme.border.primary} border`}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className={`${theme.text.primary} text-xl font-bold`}>Recent Feedback</h2>
+              <Link to="/mentor/mentees">
+                <Button variant="outline" size="sm" className={theme.button.secondary}>
+                  View All
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {recentFeedbacks.slice(0, 4).map((feedback) => (
+                <div key={feedback.id} className={`${theme.bg.secondary} rounded-xl p-4`}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className={`${theme.text.primary} font-semibold mb-1`}>{feedback.mentee_name}</p>
+                      <div className="flex items-center gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`w-4 h-4 ${
+                              i < feedback.rating
+                                ? 'text-yellow-400 fill-yellow-400'
+                                : 'text-gray-600'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditFeedback(feedback)}
+                      className="text-[#06b6d4] hover:text-[#0891b2]"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <p className={`${theme.text.muted} text-sm line-clamp-2`}>
+                    {feedback.overall_feedback}
+                  </p>
+                  <p className={`${theme.text.muted} text-xs mt-2`}>
+                    {new Date(feedback.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Quick Actions */}
         <div>
           <h2 className={`${theme.text.primary} text-2xl font-bold mb-6`}>Quick Actions</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <QuickActionCard
-              title="Create Slot"
-              description="Add new availability slots for mentees to book"
+              title="Manage Availability"
+              description="Create and manage mock interview & resume review slots"
               icon={Plus}
               to="/mentor/slots"
               color="from-blue-400 to-cyan-500"
@@ -284,20 +593,11 @@ const MentorDashboard = () => {
             
             <QuickActionCard
               title="My Bookings"
-              description="View and manage your upcoming interview sessions"
+              description="View and manage your upcoming sessions"
               icon={BookOpen}
               to="/mentor/bookings"
-              color="from-purple-400 to-pink-500"
-              badge={stats.upcomingBookings > 0 ? `${stats.upcomingBookings} upcoming` : null}
-            />
-            
-            <QuickActionCard
-              title="Manage Slots"
-              description="Edit or delete your existing availability slots"
-              icon={Calendar}
-              to="/mentor/slots"
               color="from-green-400 to-emerald-500"
-              badge={`${stats.totalSlots} total`}
+              badge={stats.upcomingBookings > 0 ? `${stats.upcomingBookings} upcoming` : null}
             />
             
             <QuickActionCard
@@ -310,20 +610,28 @@ const MentorDashboard = () => {
             />
             
             <QuickActionCard
-              title="Performance"
-              description="View detailed analytics and feedback ratings"
-              icon={BarChart3}
-              to="/mentor/analytics"
-              color="from-orange-400 to-red-500"
-              badge={`${stats.averageRating.toFixed(1)} ★`}
+              title="My Sessions"
+              description="View completed and upcoming mock interviews"
+              icon={Calendar}
+              to="/mentor/mocks"
+              color="from-cyan-400 to-blue-500"
+              badge={`${stats.completedSessions} completed`}
+            />
+            
+            <QuickActionCard
+              title="My Mentees"
+              description="View all mentees you've helped"
+              icon={Users}
+              to="/mentor/mentees"
+              color="from-purple-400 to-pink-500"
             />
             
             <QuickActionCard
               title="Help & Support"
               description="Get help with mentoring or technical issues"
-              icon={Users}
-              to="/mentor/support"
-              color="from-cyan-400 to-blue-500"
+              icon={Bug}
+              to="/mentor/bug-reports"
+              color="from-orange-400 to-red-500"
             />
           </div>
         </div>
@@ -350,6 +658,139 @@ const MentorDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Feedback Dialog */}
+      {feedbackDialog && (
+        <Dialog open={!!feedbackDialog} onOpenChange={() => setFeedbackDialog(null)}>
+          <DialogContent className={`${theme.glass} ${theme.border.primary} border max-w-2xl`}>
+            <DialogHeader>
+              <DialogTitle className={theme.text.primary}>
+                {feedbackDialog.isEdit ? 'Edit Feedback' : 'Add Feedback'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              {/* Mentee Info */}
+              <div className={`${theme.bg.secondary} rounded-lg p-4`}>
+                <p className={`${theme.text.muted} text-sm mb-1`}>Mentee</p>
+                <p className={`${theme.text.primary} font-semibold`}>
+                  {feedbackDialog.mentee_name}
+                </p>
+                {!feedbackDialog.isEdit && (
+                  <>
+                    <p className={`${theme.text.muted} text-sm mt-2 mb-1`}>Company</p>
+                    <p className={`${theme.text.primary} font-semibold`}>
+                      {feedbackDialog.company_name}
+                    </p>
+                  </>
+                )}
+              </div>
+
+              {/* Rating */}
+              <div>
+                <Label className={theme.text.primary}>Overall Rating</Label>
+                <div className="flex items-center gap-2 mt-2">
+                  {[1, 2, 3, 4, 5].map((rating) => (
+                    <button
+                      key={rating}
+                      type="button"
+                      onClick={() => setFeedbackForm({ ...feedbackForm, rating })}
+                      className="focus:outline-none"
+                    >
+                      <Star
+                        className={`w-8 h-8 cursor-pointer transition-colors ${
+                          rating <= feedbackForm.rating
+                            ? 'text-yellow-400 fill-yellow-400'
+                            : 'text-gray-600 hover:text-yellow-300'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                  <span className={`${theme.text.secondary} ml-2`}>
+                    {feedbackForm.rating}/5
+                  </span>
+                </div>
+              </div>
+
+              {/* Technical Skills */}
+              <div>
+                <Label className={theme.text.primary}>Technical Skills</Label>
+                <Textarea
+                  value={feedbackForm.technical_skills}
+                  onChange={(e) => setFeedbackForm({ ...feedbackForm, technical_skills: e.target.value })}
+                  placeholder="Assess coding ability, problem-solving approach, data structures knowledge..."
+                  className={`${theme.input} mt-2`}
+                  rows={3}
+                />
+              </div>
+
+              {/* Communication */}
+              <div>
+                <Label className={theme.text.primary}>Communication</Label>
+                <Textarea
+                  value={feedbackForm.communication}
+                  onChange={(e) => setFeedbackForm({ ...feedbackForm, communication: e.target.value })}
+                  placeholder="Evaluate clarity of thought, explanation skills, asking clarifying questions..."
+                  className={`${theme.input} mt-2`}
+                  rows={3}
+                />
+              </div>
+
+              {/* Problem Solving */}
+              <div>
+                <Label className={theme.text.primary}>Problem Solving</Label>
+                <Textarea
+                  value={feedbackForm.problem_solving}
+                  onChange={(e) => setFeedbackForm({ ...feedbackForm, problem_solving: e.target.value })}
+                  placeholder="Analyze approach to problems, edge case handling, optimization thinking..."
+                  className={`${theme.input} mt-2`}
+                  rows={3}
+                />
+              </div>
+
+              {/* Areas of Improvement */}
+              <div>
+                <Label className={theme.text.primary}>Areas of Improvement</Label>
+                <Textarea
+                  value={feedbackForm.areas_of_improvement}
+                  onChange={(e) => setFeedbackForm({ ...feedbackForm, areas_of_improvement: e.target.value })}
+                  placeholder="Specific areas where the mentee can improve..."
+                  className={`${theme.input} mt-2`}
+                  rows={3}
+                />
+              </div>
+
+              {/* Overall Feedback */}
+              <div>
+                <Label className={theme.text.primary}>Overall Feedback</Label>
+                <Textarea
+                  value={feedbackForm.overall_feedback}
+                  onChange={(e) => setFeedbackForm({ ...feedbackForm, overall_feedback: e.target.value })}
+                  placeholder="Summary of the session, key takeaways, and recommendations..."
+                  className={`${theme.input} mt-2`}
+                  rows={4}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setFeedbackDialog(null)}
+                  className={theme.button.secondary}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSubmitFeedback}
+                  className="bg-[#06b6d4] hover:bg-[#0891b2] text-white"
+                >
+                  {feedbackDialog.isEdit ? 'Update Feedback' : 'Submit Feedback'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </DashboardLayout>
   );
 };

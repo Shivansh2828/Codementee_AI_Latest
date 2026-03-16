@@ -38,14 +38,29 @@ const MenteeResumeReview = () => {
 
   const reviewQuota = user?.plan_features?.resume_reviews || 0;
   const usedReviews = requests.filter(r => r.status !== 'cancelled').length;
-  const remainingReviews = Math.max(0, reviewQuota - usedReviews);
+  const remainingReviews = reviewQuota >= 999 ? 999 : Math.max(0, reviewQuota - usedReviews);
+  const isUnlimited = reviewQuota >= 999;
+  const reviewType = user?.plan_features?.resume_review_type || 'email'; // 'email' or 'call'
 
   const getReviewType = () => {
-    if (user?.plan_id === 'starter') return 'Email Review';
-    if (user?.plan_id === 'pro') return 'Call with MAANG Engineer';
-    if (user?.plan_id === 'elite') return 'Live Call Session';
+    if (reviewType === 'email') return 'Email Review';
+    if (reviewType === 'call') return '30-Min Call with MAANG Engineer';
     return 'Not Available';
   };
+
+  const getReviewDescription = () => {
+    if (reviewType === 'email') {
+      return 'Upload your resume and receive detailed written feedback via email within 2-3 business days.';
+    }
+    if (reviewType === 'call') {
+      return 'Book a 30-minute 1:1 call with a MAANG engineer for live resume review and personalized feedback.';
+    }
+    return '';
+  };
+
+  // Determine if this is a call-based review
+  const isCallReview = reviewType === 'call';
+  const isEmailReview = reviewType === 'email';
 
   useEffect(() => {
     fetchResumeRequests();
@@ -92,7 +107,7 @@ const MenteeResumeReview = () => {
       return;
     }
 
-    if (remainingReviews <= 0) {
+    if (remainingReviews <= 0 && !isUnlimited) {
       toast.error('You have used all your resume reviews. Please upgrade your plan.');
       return;
     }
@@ -114,7 +129,17 @@ const MenteeResumeReview = () => {
         }
       });
 
-      toast.success('Resume review request submitted successfully!');
+      // For call-based reviews, redirect to slot booking immediately
+      if (isCallReview) {
+        toast.success('Resume uploaded! Now select your preferred time slot');
+        setTimeout(() => {
+          window.location.href = `/mentee/resume-review-slots?request_id=${response.data.request_id}`;
+        }, 1000);
+        return;
+      }
+      
+      // For email reviews, just refresh the list
+      toast.success('Resume submitted! You will receive feedback via email within 2-3 business days');
       
       // Reset form
       setSelectedFile(null);
@@ -189,14 +214,16 @@ const MenteeResumeReview = () => {
                 Resume Review Service
               </h2>
               <p className={theme.text.secondary}>
-                Get expert feedback on your resume from industry professionals
+                {getReviewDescription()}
               </p>
             </div>
             <div className="text-right">
               <div className={`${theme.text.primary} text-3xl font-bold`}>
-                {remainingReviews}
+                {isUnlimited ? '∞' : remainingReviews}
               </div>
-              <p className={theme.text.muted}>Reviews Remaining</p>
+              <p className={theme.text.muted}>
+                {isUnlimited ? 'Unlimited Reviews' : 'Reviews Remaining'}
+              </p>
               <Badge className="mt-2 bg-purple-500/20 text-purple-400 border-purple-500/30">
                 {getReviewType()}
               </Badge>
@@ -227,8 +254,12 @@ const MenteeResumeReview = () => {
                   <Clock className="w-5 h-5 text-green-400" />
                 </div>
                 <div>
-                  <p className={`${theme.text.primary} font-semibold`}>Turnaround</p>
-                  <p className={`${theme.text.muted} text-sm`}>2-3 business days</p>
+                  <p className={`${theme.text.primary} font-semibold`}>
+                    {isCallReview ? 'Duration' : 'Turnaround'}
+                  </p>
+                  <p className={`${theme.text.muted} text-sm`}>
+                    {isCallReview ? '30 minutes' : '2-3 business days'}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -238,11 +269,13 @@ const MenteeResumeReview = () => {
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                  {user?.plan_id === 'starter' ? <Mail className="w-5 h-5 text-purple-400" /> : <Phone className="w-5 h-5 text-purple-400" />}
+                  {isEmailReview ? <Mail className="w-5 h-5 text-purple-400" /> : <Phone className="w-5 h-5 text-purple-400" />}
                 </div>
                 <div>
                   <p className={`${theme.text.primary} font-semibold`}>Delivery</p>
-                  <p className={`${theme.text.muted} text-sm`}>{getReviewType()}</p>
+                  <p className={`${theme.text.muted} text-sm`}>
+                    {isEmailReview ? 'Email Review' : '1:1 Call'}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -250,13 +283,154 @@ const MenteeResumeReview = () => {
         </div>
 
         {/* Submit New Request */}
-        {remainingReviews > 0 ? (
+        {(remainingReviews > 0 || isUnlimited) ? (
           <Card className={`${theme.bg.card} ${theme.border.primary} border`}>
             <CardHeader>
-              <CardTitle className={theme.text.primary}>Submit Resume for Review</CardTitle>
+              <CardTitle className={theme.text.primary}>
+                {isCallReview ? 'Book Resume Review Call' : 'Submit Resume for Review'}
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
+              {isCallReview ? (
+                /* Call Booking Interface */
+                <div className="space-y-6">
+                  <div className={`${theme.bg.secondary} rounded-lg p-6 border ${theme.border.primary}`}>
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Phone className="w-6 h-6 text-purple-400" />
+                      </div>
+                      <div>
+                        <h3 className={`${theme.text.primary} font-semibold mb-2`}>
+                          30-Minute Call with MAANG Engineer
+                        </h3>
+                        <p className={`${theme.text.secondary} text-sm mb-3`}>
+                          Get live, personalized feedback on your resume from an engineer who has worked at top tech companies.
+                        </p>
+                        <ul className={`${theme.text.muted} text-sm space-y-1`}>
+                          <li>• Real-time resume review and suggestions</li>
+                          <li>• ATS optimization tips</li>
+                          <li>• Project description improvements</li>
+                          <li>• Q&A session for your specific concerns</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={`${theme.bg.secondary} rounded-lg p-6 border ${theme.border.primary}`}>
+                    <h4 className={`${theme.text.primary} font-semibold mb-3`}>How it works:</h4>
+                    <ol className={`${theme.text.secondary} text-sm space-y-2`}>
+                      <li>1. Upload your resume below</li>
+                      <li>2. Share your target role and companies</li>
+                      <li>3. We'll schedule a 30-min call with a MAANG engineer</li>
+                      <li>4. Get live feedback and actionable improvements</li>
+                    </ol>
+                  </div>
+
+                  {/* File Upload for Call Review */}
+                  <div>
+                    <label className={`block ${theme.text.primary} text-sm font-medium mb-2`}>
+                      Upload Your Resume *
+                    </label>
+                    <div className={`border-2 border-dashed ${theme.border.primary} rounded-lg p-6 text-center`}>
+                      <input
+                        type="file"
+                        id="resume-upload"
+                        accept=".pdf,.doc,.docx"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                      <label htmlFor="resume-upload" className="cursor-pointer">
+                        <Upload className={`w-12 h-12 ${theme.text.muted} mx-auto mb-3`} />
+                        {selectedFile ? (
+                          <div>
+                            <p className={`${theme.text.primary} font-medium`}>{selectedFile.name}</p>
+                            <p className={`${theme.text.muted} text-sm`}>
+                              {(selectedFile.size / 1024).toFixed(2)} KB
+                            </p>
+                          </div>
+                        ) : (
+                          <div>
+                            <p className={`${theme.text.primary} font-medium mb-1`}>
+                              Click to upload or drag and drop
+                            </p>
+                            <p className={`${theme.text.muted} text-sm`}>
+                              PDF or Word (Max 5MB)
+                            </p>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Target Role */}
+                  <div>
+                    <label className={`block ${theme.text.primary} text-sm font-medium mb-2`}>
+                      Target Role *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.target_role}
+                      onChange={(e) => setFormData({ ...formData, target_role: e.target.value })}
+                      placeholder="e.g., Amazon SDE-2, Google L4"
+                      required
+                      className={`w-full px-4 py-3 rounded-lg ${theme.input.base} transition-colors`}
+                    />
+                  </div>
+
+                  {/* Target Companies */}
+                  <div>
+                    <label className={`block ${theme.text.primary} text-sm font-medium mb-2`}>
+                      Target Companies
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.target_companies}
+                      onChange={(e) => setFormData({ ...formData, target_companies: e.target.value })}
+                      placeholder="e.g., Amazon, Google, Microsoft"
+                      className={`w-full px-4 py-3 rounded-lg ${theme.input.base} transition-colors`}
+                    />
+                  </div>
+
+                  {/* Additional Notes */}
+                  <div>
+                    <label className={`block ${theme.text.primary} text-sm font-medium mb-2`}>
+                      What would you like to focus on?
+                    </label>
+                    <textarea
+                      value={formData.additional_notes}
+                      onChange={(e) => setFormData({ ...formData, additional_notes: e.target.value })}
+                      placeholder="e.g., I want to improve my project descriptions and make my resume more ATS-friendly..."
+                      rows={4}
+                      className={`w-full px-4 py-3 rounded-lg ${theme.input.base} transition-colors resize-none`}
+                    />
+                  </div>
+
+                  {/* Submit Button */}
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={submitting || !selectedFile}
+                    className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
+                  >
+                    {submitting ? (
+                      <>
+                        <Clock className="w-4 h-4 mr-2 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <Phone className="w-4 h-4 mr-2" />
+                        Submit & Book Call Slot
+                      </>
+                    )}
+                  </Button>
+                  
+                  <p className={`${theme.text.muted} text-xs text-center mt-3`}>
+                    After submitting, you'll be able to select your preferred time slot for the 30-min call
+                  </p>
+                </div>
+              ) : (
+                /* Email Review Interface */
+                <form onSubmit={handleSubmit} className="space-y-6">
                 {/* File Upload */}
                 <div>
                   <label className={`block ${theme.text.primary} text-sm font-medium mb-2`}>
@@ -369,6 +543,7 @@ const MenteeResumeReview = () => {
                   )}
                 </Button>
               </form>
+              )}
             </CardContent>
           </Card>
         ) : (

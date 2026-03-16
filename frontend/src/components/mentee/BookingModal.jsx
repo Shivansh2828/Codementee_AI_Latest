@@ -61,14 +61,20 @@ const BookingModal = ({ slot, onClose, onSuccess }) => {
   const fetchCompanies = async () => {
     try {
       const response = await api.get('/companies');
-      // Filter companies to only those in slot's specializations
-      const slotCompanyIds = slot.company_specializations.map(c => 
-        typeof c === 'string' ? c : c.id
-      );
-      const filteredCompanies = response.data.filter(c => 
-        slotCompanyIds.includes(c.id)
-      );
+      
+      // If slot has company specializations, filter to only those
+      // Otherwise, show all companies (mentor can help with any company)
+      const hasSpecializations = slot.company_specializations && slot.company_specializations.length > 0;
+      
+      const filteredCompanies = hasSpecializations
+        ? response.data.filter(company => slot.company_specializations.includes(company.id))
+        : response.data;
+      
       setCompanies(filteredCompanies);
+      
+      if (filteredCompanies.length === 0) {
+        toast.error('No companies available for this slot');
+      }
     } catch (error) {
       toast.error('Failed to load companies');
       console.error('Fetch companies error:', error);
@@ -120,6 +126,15 @@ const BookingModal = ({ slot, onClose, onSuccess }) => {
         additional_notes: additionalNotes
       };
 
+      console.log('📤 Booking data being sent:', bookingData);
+      console.log('📤 Data types:', {
+        slot_id: typeof slot.id,
+        company_id: typeof selectedCompany,
+        interview_track: typeof selectedTrack,
+        specific_topics: Array.isArray(specificTopics),
+        additional_notes: typeof additionalNotes
+      });
+
       const response = await api.post('/mentee/bookings', bookingData);
       
       toast.success('Booking confirmed!', {
@@ -128,6 +143,9 @@ const BookingModal = ({ slot, onClose, onSuccess }) => {
       
       onSuccess();
     } catch (error) {
+      console.error('❌ Booking error:', error);
+      console.error('❌ Error response:', error.response?.data);
+      
       const errorData = error.response?.data;
       
       if (errorData?.code === 'TIER_UPGRADE_REQUIRED') {
@@ -303,117 +321,142 @@ const BookingModal = ({ slot, onClose, onSuccess }) => {
 
           {/* Company Selection */}
           <div className="space-y-2">
-            <Label className={theme.text.secondary}>
-              <Building2 className="w-4 h-4 inline mr-1" />
-              Select Company *
+            <Label className={`${theme.text.primary} font-semibold text-base`}>
+              <Building2 className="w-4 h-4 inline mr-2" />
+              Which company are you preparing for? *
             </Label>
+            {companies.length > 0 && (
+              <p className={`${theme.text.muted} text-xs mb-2`}>
+                {slot.company_specializations && slot.company_specializations.length > 0
+                  ? `${companies.length} ${companies.length === 1 ? 'company' : 'companies'} available for this mentor's expertise`
+                  : 'This mentor can help with any company'}
+              </p>
+            )}
             <Select
               value={selectedCompany}
               onValueChange={setSelectedCompany}
-              disabled={loadingCompanies || isFreeUser}
+              disabled={loadingCompanies || isFreeUser || companies.length === 0}
             >
-              <SelectTrigger className={`${theme.bg.secondary} ${theme.border.primary} ${theme.text.primary}`}>
-                <SelectValue placeholder={loadingCompanies ? "Loading companies..." : "Choose a company"} />
+              <SelectTrigger className={`${theme.bg.secondary} ${theme.border.primary} ${theme.text.primary} h-12 text-base`}>
+                <SelectValue placeholder={
+                  loadingCompanies ? "Loading..." : 
+                  companies.length === 0 ? "No companies available" :
+                  "Select company (e.g., Amazon, Google, Microsoft)"
+                } />
               </SelectTrigger>
-              <SelectContent className={`${theme.bg.card} ${theme.border.primary}`}>
+              <SelectContent className={`${theme.bg.card} ${theme.border.primary} max-h-[300px]`}>
                 {companies.map((company) => (
                   <SelectItem 
                     key={company.id} 
                     value={company.id}
-                    className={theme.text.secondary}
+                    className={`${theme.text.secondary} text-base py-3`}
                   >
                     {company.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p className={`${theme.text.muted} text-xs`}>
-              Select from companies this mentor specializes in
-            </p>
           </div>
 
           {/* Interview Track Selection */}
-          {selectedCompany && (
+          {selectedCompany && availableTracks.length > 0 && (
             <div className="space-y-2">
-              <Label className={theme.text.secondary}>
-                Interview Track *
+              <Label className={`${theme.text.primary} font-semibold text-base`}>
+                What level are you targeting? *
               </Label>
               <Select
                 value={selectedTrack}
                 onValueChange={setSelectedTrack}
                 disabled={isFreeUser}
               >
-                <SelectTrigger className={`${theme.bg.secondary} ${theme.border.primary} ${theme.text.primary}`}>
-                  <SelectValue placeholder="Choose interview track" />
+                <SelectTrigger className={`${theme.bg.secondary} ${theme.border.primary} ${theme.text.primary} h-12 text-base`}>
+                  <SelectValue placeholder="Select level (e.g., SDE-2, L4, Senior)" />
                 </SelectTrigger>
                 <SelectContent className={`${theme.bg.card} ${theme.border.primary}`}>
-                  {availableTracks.length === 0 ? (
-                    <SelectItem value="general" className={theme.text.secondary}>
-                      General
+                  {availableTracks.map((track) => (
+                    <SelectItem 
+                      key={track} 
+                      value={track}
+                      className={`${theme.text.secondary} text-base py-3`}
+                    >
+                      {track.toUpperCase()}
                     </SelectItem>
-                  ) : (
-                    availableTracks.map((track) => (
-                      <SelectItem 
-                        key={track} 
-                        value={track}
-                        className={theme.text.secondary}
-                      >
-                        {track.toUpperCase()}
-                      </SelectItem>
-                    ))
-                  )}
+                  ))}
                 </SelectContent>
               </Select>
-              <p className={`${theme.text.muted} text-xs`}>
-                Select the specific role level you're targeting
-              </p>
             </div>
           )}
 
-          {/* Specific Topics */}
-          {availableTopics.length > 0 && (
+          {/* Simplified Interview Track for companies without tracks */}
+          {selectedCompany && availableTracks.length === 0 && (
             <div className="space-y-2">
-              <Label className={theme.text.secondary}>
-                Specific Topics (Optional)
+              <Label className={`${theme.text.primary} font-semibold text-base`}>
+                Interview Level *
               </Label>
-              <div className="flex flex-wrap gap-2">
-                {availableTopics.map((topic) => (
+              <Select
+                value={selectedTrack}
+                onValueChange={setSelectedTrack}
+                disabled={isFreeUser}
+              >
+                <SelectTrigger className={`${theme.bg.secondary} ${theme.border.primary} ${theme.text.primary} h-12 text-base`}>
+                  <SelectValue placeholder="Select experience level" />
+                </SelectTrigger>
+                <SelectContent className={`${theme.bg.card} ${theme.border.primary}`}>
+                  <SelectItem value="entry_level" className={`${theme.text.secondary} text-base py-3`}>
+                    Entry Level (0-2 years)
+                  </SelectItem>
+                  <SelectItem value="mid_level" className={`${theme.text.secondary} text-base py-3`}>
+                    Mid Level (2-5 years)
+                  </SelectItem>
+                  <SelectItem value="senior_level" className={`${theme.text.secondary} text-base py-3`}>
+                    Senior Level (5-8 years)
+                  </SelectItem>
+                  <SelectItem value="staff_plus" className={`${theme.text.secondary} text-base py-3`}>
+                    Staff+ Level (8+ years)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Specific Topics - Collapsed by default */}
+          {availableTopics.length > 0 && (
+            <details className="space-y-2">
+              <summary className={`${theme.text.secondary} text-sm cursor-pointer hover:text-[#06b6d4] transition-colors`}>
+                + Want to focus on specific topics? (Optional)
+              </summary>
+              <div className="flex flex-wrap gap-2 mt-3">
+                {availableTopics.slice(0, 12).map((topic) => (
                   <button
                     key={topic}
                     onClick={() => !isFreeUser && handleTopicToggle(topic)}
                     disabled={isFreeUser}
-                    className={`px-3 py-2 rounded-lg text-sm transition-all ${
+                    className={`px-3 py-1.5 rounded-lg text-xs transition-all ${
                       specificTopics.includes(topic)
-                        ? 'bg-[#06b6d4] text-white border-2 border-[#06b6d4]'
-                        : `${theme.bg.secondary} ${theme.text.secondary} ${theme.border.primary} border hover:border-[#06b6d4]`
+                        ? 'bg-[#06b6d4] text-white'
+                        : `${theme.bg.secondary} ${theme.text.secondary} hover:bg-[#06b6d4]/20`
                     } ${isFreeUser ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
                     {topic}
                   </button>
                 ))}
               </div>
-              <p className={`${theme.text.muted} text-xs`}>
-                Select topics you want to focus on during the interview
-              </p>
-            </div>
+            </details>
           )}
 
-          {/* Additional Notes */}
+          {/* Additional Notes - Simplified */}
           <div className="space-y-2">
-            <Label className={theme.text.secondary}>
-              Additional Notes (Optional)
+            <Label className={`${theme.text.secondary} text-sm`}>
+              Any specific requests or focus areas? (Optional)
             </Label>
             <Textarea
               value={additionalNotes}
               onChange={(e) => setAdditionalNotes(e.target.value)}
-              placeholder="Any specific areas you want to focus on or questions you have..."
-              rows={4}
+              placeholder="Example: Focus on optimization techniques, need help with communication..."
+              rows={3}
               disabled={isFreeUser}
-              className={`${theme.bg.secondary} ${theme.border.primary} ${theme.text.primary}`}
+              className={`${theme.bg.secondary} ${theme.border.primary} ${theme.text.primary} text-sm`}
             />
-            <p className={`${theme.text.muted} text-xs`}>
-              Share any additional context or requirements with your mentor
-            </p>
           </div>
 
           {/* Preparation Notes from Mentor */}

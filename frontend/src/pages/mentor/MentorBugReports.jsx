@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardContent } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { toast } from "sonner";
-import { Bug, CheckCircle, Clock, AlertCircle, RefreshCw } from "lucide-react";
+import { Bug, CheckCircle, Clock, AlertCircle, RefreshCw, Plus, Headphones, Mail, Phone } from "lucide-react";
 import api from "../../utils/api";
+import SupportRequestModal from "../../components/SupportRequestModal";
 
 const MentorBugReports = () => {
   const { theme } = useTheme();
+  const { user } = useAuth();
   const [bugReports, setBugReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [supportModalOpen, setSupportModalOpen] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     open: 0,
@@ -67,25 +71,65 @@ const MentorBugReports = () => {
 
   if (loading) {
     return (
-      <DashboardLayout title="My Bug Reports">
+      <DashboardLayout title="Support & Help">
         <div className={`text-center py-12 ${theme.text.secondary}`}>
           <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
-          <p>Loading your bug reports...</p>
+          <p>Loading your support requests...</p>
         </div>
       </DashboardLayout>
     );
   }
 
   return (
-    <DashboardLayout title="My Bug Reports">
+    <DashboardLayout title="Support & Help">
       <div className="space-y-6">
+        {/* Info Banner with Quick Actions */}
+        <div className={`${theme.bg.secondary} rounded-xl p-6 border ${theme.border.primary}`}>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4 flex-1">
+              <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Headphones className="w-6 h-6 text-blue-400" />
+              </div>
+              <div>
+                <h3 className={`${theme.text.primary} font-semibold mb-2`}>
+                  Need Help? We're Here for You!
+                </h3>
+                <p className={`${theme.text.secondary} text-sm mb-4`}>
+                  Submit bug reports, ask questions, request features, or get help with sessions and payments. Our team responds within 24 hours.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    onClick={() => setSupportModalOpen(true)}
+                    className="bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Submit Support Request
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      const phone = '919731842807';
+                      const message = encodeURIComponent('Hi Codementee Team! I need help with...');
+                      window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+                    }}
+                    variant="outline"
+                    className="border-green-500/30 text-green-400 hover:bg-green-500/10"
+                  >
+                    <Phone className="w-4 h-4 mr-2" />
+                    WhatsApp
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="flex items-center justify-between">
           <div>
             <h1 className={`text-3xl font-bold ${theme.text.primary} mb-2`}>
-              My Bug Reports
+              My Support Requests
             </h1>
             <p className={theme.text.secondary}>
-              Track the status of issues you've reported
+              Track the status of your support tickets and bug reports
             </p>
           </div>
           <Button
@@ -98,6 +142,7 @@ const MentorBugReports = () => {
           </Button>
         </div>
 
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className={`${theme.glass} border ${theme.border.primary}`}>
             <CardContent className="p-6">
@@ -232,6 +277,15 @@ const MentorBugReports = () => {
             ))}
           </div>
         )}
+
+        {/* Support Request Modal */}
+        <SupportRequestModal 
+          isOpen={supportModalOpen} 
+          onClose={() => {
+            setSupportModalOpen(false);
+            fetchBugReports(); // Refresh list after submission
+          }} 
+        />
       </div>
     </DashboardLayout>
   );
