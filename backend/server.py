@@ -2879,7 +2879,7 @@ async def send_job_digest_email(user_id: str):
                 {job_rows}
               </table>
               <div style="text-align:center;margin-top:24px;">
-                <a href="{os.environ.get('FRONTEND_URL', 'https://codementee.com')}/mentee/job-search"
+                <a href="{os.environ.get('FRONTEND_URL', 'https://codementee.io')}/mentee/job-search"
                    style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#0891b2,#06b6d4);color:white;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">
                   View All Matches →
                 </a>

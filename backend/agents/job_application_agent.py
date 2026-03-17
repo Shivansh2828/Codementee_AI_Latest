@@ -9,7 +9,7 @@ import asyncio
 import re
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import List, Dict
 import uuid
 import logging
@@ -100,7 +100,7 @@ Return JSON: {"skills":["list"],"total_years":number,"current_role":"string",
 
     # ─── MAIN SEARCH ─────────────────────────────────────────
 
-    async def search_jobs(self, user_profile: Dict, job_title: str, location: str, max_results: int = 30) -> List[Dict]:
+    async def search_jobs(self, user_profile: Dict, job_title: str, location: str, max_results: int = 50) -> List[Dict]:
         """
         Strategy:
         1) SerpAPI (Google Jobs) — real live postings with direct apply links
@@ -110,9 +110,9 @@ Return JSON: {"skills":["list"],"total_years":number,"current_role":"string",
         all_jobs = []
         loop = asyncio.get_running_loop()
 
-        # 1) SerpAPI — real Google Jobs results (primary source)
+        # 1) SerpAPI — real Google Jobs results (primary source), paginated
         serp_jobs = await loop.run_in_executor(
-            None, self._search_serpapi, job_title, location, min(max_results, 20)
+            None, self._search_serpapi, job_title, location, min(max_results, 30)
         )
         all_jobs.extend(serp_jobs)
         logger.info(f"SerpAPI returned {len(serp_jobs)} real jobs")
@@ -207,49 +207,60 @@ Return JSON: {"skills":["list"],"total_years":number,"current_role":"string",
             logger.warning("SERPAPI_KEY not set — skipping real job search")
             return []
 
+        jobs = []
+        pages = min((limit // 10) + 1, 3)  # Up to 3 pages (30 results), each page costs 1 SerpAPI credit
+
         try:
-            query = f"{title} jobs {location}"
-            params = {
-                "engine": "google_jobs",
-                "q": query,
-                "api_key": serpapi_key,
-                "num": limit,
-            }
-            resp = requests.get("https://serpapi.com/search", params=params, timeout=15)
-            if resp.status_code != 200:
-                logger.error(f"SerpAPI returned {resp.status_code}")
-                return []
+            for page in range(pages):
+                if len(jobs) >= limit:
+                    break
 
-            results = resp.json().get("jobs_results", [])
-            jobs = []
-            for j in results:
-                # Get direct application link
-                links = j.get("related_links", [])
-                link = links[0].get("link", "") if links else j.get("share_link", "")
-                # Also check apply_options for direct links
-                apply_opts = j.get("apply_options", [])
-                if apply_opts and not link:
-                    link = apply_opts[0].get("link", "")
+                query = f"{title} jobs {location}"
+                params = {
+                    "engine": "google_jobs",
+                    "q": query,
+                    "api_key": serpapi_key,
+                    "num": 10,
+                    "start": page * 10,
+                }
+                resp = requests.get("https://serpapi.com/search", params=params, timeout=15)
+                if resp.status_code != 200:
+                    logger.error(f"SerpAPI returned {resp.status_code} on page {page}")
+                    break
 
-                extensions = j.get("detected_extensions", {})
-                jobs.append({
-                    "id": str(uuid.uuid4()),
-                    "title": j.get("title", ""),
-                    "company": j.get("company_name", ""),
-                    "location": j.get("location", location),
-                    "salary": extensions.get("salary", "Not disclosed"),
-                    "url": link,
-                    "description": j.get("description", "")[:500],
-                    "required_skills": self._extract_skills(j.get("description", "")),
-                    "required_experience": self._guess_exp(j.get("title", "")),
-                    "source": "Google Jobs",
-                    "posted_at": extensions.get("posted_at", ""),
-                })
-            logger.info(f"SerpAPI: {len(jobs)} real jobs found for '{title}' in '{location}'")
-            return jobs
+                results = resp.json().get("jobs_results", [])
+                if not results:
+                    break
+
+                for j in results:
+                    # Get direct application link
+                    links = j.get("related_links", [])
+                    link = links[0].get("link", "") if links else j.get("share_link", "")
+                    # Also check apply_options for direct links
+                    apply_opts = j.get("apply_options", [])
+                    if apply_opts and not link:
+                        link = apply_opts[0].get("link", "")
+
+                    extensions = j.get("detected_extensions", {})
+                    jobs.append({
+                        "id": str(uuid.uuid4()),
+                        "title": j.get("title", ""),
+                        "company": j.get("company_name", ""),
+                        "location": j.get("location", location),
+                        "salary": extensions.get("salary", "Not disclosed"),
+                        "url": link,
+                        "description": j.get("description", "")[:500],
+                        "required_skills": self._extract_skills(j.get("description", "")),
+                        "required_experience": self._guess_exp(j.get("title", "")),
+                        "source": "Google Jobs",
+                        "posted_at": extensions.get("posted_at", ""),
+                    })
+
+            logger.info(f"SerpAPI: {len(jobs)} real jobs found for '{title}' in '{location}' ({pages} pages)")
+            return jobs[:limit]
         except Exception as e:
             logger.error(f"SerpAPI error: {e}")
-            return []
+            return jobs
 
 
     def _scrape_jobicy(self, title: str, limit: int) -> List[Dict]:
@@ -527,25 +538,39 @@ Jobs to score:
             scored.sort(key=lambda x: x["score"], reverse=True)
             top = scored[:20]
 
-            # Clear old matches, save fresh ones
-            await self.db.job_matches.delete_many({"user_id": user_id})
+            # Save new matches (keep old ones, skip duplicates)
             for job in top:
-                await self.db.job_matches.insert_one({
-                    "id": str(uuid.uuid4()),
+                existing = await self.db.job_matches.find_one({
                     "user_id": user_id,
-                    "job_id": job.get("id"),
-                    "company": job.get("company"),
                     "title": job.get("title"),
-                    "location": job.get("location"),
-                    "salary": job.get("salary"),
-                    "url": job.get("url"),
-                    "score": job.get("score"),
-                    "reasoning": job.get("reasoning"),
-                    "recommendation": job.get("recommendation"),
-                    "source": job.get("source", ""),
-                    "status": "found",
-                    "created_at": datetime.now(timezone.utc).isoformat()
+                    "company": job.get("company")
                 })
+                if not existing:
+                    await self.db.job_matches.insert_one({
+                        "id": str(uuid.uuid4()),
+                        "user_id": user_id,
+                        "job_id": job.get("id"),
+                        "company": job.get("company"),
+                        "title": job.get("title"),
+                        "location": job.get("location"),
+                        "salary": job.get("salary"),
+                        "url": job.get("url"),
+                        "score": job.get("score"),
+                        "reasoning": job.get("reasoning"),
+                        "recommendation": job.get("recommendation"),
+                        "source": job.get("source", ""),
+                        "status": "found",
+                        "created_at": datetime.now(timezone.utc).isoformat()
+                    })
             logger.info(f"Daily search: {len(top)} matches saved for {user_id}")
+
+            # Cleanup: remove recommendations older than 7 days
+            cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+            result = await self.db.job_matches.delete_many({
+                "user_id": user_id,
+                "created_at": {"$lt": cutoff}
+            })
+            if result.deleted_count:
+                logger.info(f"Cleaned up {result.deleted_count} old matches for {user_id}")
         except Exception as e:
             logger.error(f"Daily search failed: {e}")

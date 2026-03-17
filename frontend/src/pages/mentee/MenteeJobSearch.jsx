@@ -8,7 +8,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
-import { Briefcase, MapPin, DollarSign, TrendingUp, Search, Settings, ExternalLink, Loader2, RefreshCw, FileText, Crown, Lock } from 'lucide-react';
+import { Briefcase, MapPin, DollarSign, TrendingUp, Search, Settings, ExternalLink, Loader2, FileText, Crown, Lock, CheckCircle } from 'lucide-react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 
 const JOB_SEARCH_MESSAGES = [
@@ -112,12 +112,12 @@ export default function MenteeJobSearch() {
   const isElite = user?.plan_id === 'elite';
   const [preferences, setPreferences] = useState(null);
   const [jobMatches, setJobMatches] = useState([]);
-  const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [activeTab, setActiveTab] = useState('search'); // 'search' or 'saved'
+  const [activeTab, setActiveTab] = useState('jobs'); // 'jobs' or 'applied'
+  const [appliedJobs, setAppliedJobs] = useState(new Set());
 
   const [formData, setFormData] = useState({
     job_title: '',
@@ -135,7 +135,34 @@ export default function MenteeJobSearch() {
   useEffect(() => {
     loadPreferences();
     loadJobMatches();
+    loadAppliedJobs();
   }, []);
+
+  const loadAppliedJobs = async () => {
+    try {
+      const res = await api.get('/ai-agents/applied-jobs');
+      const keys = (res.data.applied || []).map(a => `${a.job_title}::${a.company}`);
+      setAppliedJobs(new Set(keys));
+    } catch (error) {
+      console.error('Failed to load applied jobs:', error);
+    }
+  };
+
+  const handleMarkApplied = async (job) => {
+    try {
+      await api.post('/ai-agents/mark-applied', {
+        job_title: job.title,
+        company: job.company,
+        job_url: job.url || ''
+      });
+      setAppliedJobs(prev => new Set([...prev, `${job.title}::${job.company}`]));
+      toast.success(`Marked "${job.title}" at ${job.company} as applied`);
+    } catch (error) {
+      toast.error('Failed to mark as applied');
+    }
+  };
+
+  const isApplied = (job) => appliedJobs.has(`${job.title}::${job.company}`);
 
   const loadPreferences = async () => {
     try {
@@ -201,18 +228,15 @@ export default function MenteeJobSearch() {
       return;
     }
     setSearching(true);
-    setActiveTab('search');
     try {
       const res = await api.post('/ai-agents/search-jobs', {
         job_title: preferences.job_title,
         location: preferences.location,
         max_results: 30
       });
-      setSearchResults(res.data.jobs || []);
       toast.success(`Found ${res.data.total_found || 0} jobs!`);
-
-      // Also trigger daily search to save results in background
-      api.post('/ai-agents/run-daily-search').catch(() => {});
+      await loadJobMatches();
+      setActiveTab('jobs');
     } catch (error) {
       toast.error('Job search failed. Please try again.');
       console.error(error);
@@ -227,7 +251,6 @@ export default function MenteeJobSearch() {
       await api.delete('/ai-agents/job-preferences');
       setPreferences(null);
       setJobMatches([]);
-      setSearchResults([]);
       setFormData({
         job_title: '', location: '', skills: '', experience_years: 0,
         expected_salary: '', preferred_companies: '', telegram_id: '', enable_sheets_logging: false
@@ -294,16 +317,15 @@ export default function MenteeJobSearch() {
 
   const handleSearchWithData = async (jobTitle, location) => {
     setSearching(true);
-    setActiveTab('search');
     try {
       const res = await api.post('/ai-agents/search-jobs', {
         job_title: jobTitle,
         location: location,
         max_results: 30
       });
-      setSearchResults(res.data.jobs || []);
       toast.success(`Found ${res.data.total_found || 0} jobs!`);
-      api.post('/ai-agents/run-daily-search').catch(() => {});
+      await loadJobMatches();
+      setActiveTab('jobs');
     } catch (error) {
       toast.error('Job search failed. Please try again.');
     } finally {
@@ -325,7 +347,13 @@ export default function MenteeJobSearch() {
     return 'border-gray-500/30';
   };
 
-  const displayJobs = activeTab === 'search' ? searchResults : jobMatches;
+  const appliedJobsList = jobMatches
+    .filter(job => isApplied(job))
+    .sort((a, b) => (b.score || 0) - (a.score || 0));
+
+  const displayJobs = activeTab === 'applied'
+    ? appliedJobsList
+    : jobMatches.filter(job => !isApplied(job)).sort((a, b) => (b.score || 0) - (a.score || 0));
 
   if (!isElite) return <EliteGate />;
 
@@ -372,12 +400,6 @@ export default function MenteeJobSearch() {
             {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
             {searching ? 'Searching jobs...' : 'Search Jobs Now'}
           </Button>
-          {jobMatches.length > 0 && (
-            <Button onClick={() => { setActiveTab('saved'); loadJobMatches(); }} variant="outline" className="flex items-center gap-2">
-              <RefreshCw className="w-4 h-4" />
-              Saved Matches ({jobMatches.length})
-            </Button>
-          )}
           {preferences && (
             <Button onClick={handleResetPreferences} variant="outline" className="flex items-center gap-2 text-red-500 border-red-500/30 hover:bg-red-500/10">
               Reset Preferences
@@ -435,28 +457,40 @@ export default function MenteeJobSearch() {
         {!searching && (
           <div>
             {/* Tab toggle */}
-            {(searchResults.length > 0 || jobMatches.length > 0) && (
-              <div className="flex gap-2 mb-4">
-                <button
-                  onClick={() => setActiveTab('search')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'search'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400'
-                  }`}
-                >
-                  Search Results ({searchResults.length})
-                </button>
-                <button
-                  onClick={() => { setActiveTab('saved'); loadJobMatches(); }}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'saved'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400'
-                  }`}
-                >
-                  Saved Matches ({jobMatches.length})
-                </button>
+            {(jobMatches.length > 0 || appliedJobs.size > 0) && (
+              <div className="mb-4">
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => { setActiveTab('jobs'); loadJobMatches(); }}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      activeTab === 'jobs'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400'
+                    }`}
+                  >
+                    📬 Jobs For You ({jobMatches.filter(j => !isApplied(j)).length})
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('applied')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      activeTab === 'applied'
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400'
+                    }`}
+                  >
+                    ✅ Applied ({appliedJobs.size})
+                  </button>
+                </div>
+                {activeTab === 'jobs' && (
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-2">
+                    Jobs curated by your AI agent based on your preferences (updated daily + on search)
+                  </p>
+                )}
+                {activeTab === 'applied' && (
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-2">
+                    Jobs you've marked as applied — these won't appear in Jobs For You
+                  </p>
+                )}
               </div>
             )}
 
@@ -465,9 +499,9 @@ export default function MenteeJobSearch() {
                 <CardContent className="py-12 text-center">
                   <Briefcase className="w-16 h-16 mx-auto text-gray-400 mb-4" />
                   <p className="text-gray-600 dark:text-slate-300 mb-2">
-                    {activeTab === 'search'
-                      ? 'No search results yet. Click "Search Jobs Now" to find matches!'
-                      : 'No saved matches yet. Run a search to get started.'}
+                    {activeTab === 'applied'
+                      ? 'No applied jobs yet. Mark jobs as applied to track them here.'
+                      : 'No jobs yet. Click "Search Jobs Now" or wait for your daily AI recommendations.'}
                   </p>
                   {!preferences && (
                     <Button onClick={() => setShowSettings(true)} className="mt-4">Set Preferences First</Button>
@@ -522,6 +556,15 @@ export default function MenteeJobSearch() {
                         {job.url && (
                           <Button size="sm" onClick={() => window.open(job.url, '_blank')} className="flex items-center gap-1">
                             <ExternalLink className="w-3 h-3" /> {job.source === 'AI Curated' ? 'Find & Apply' : 'Apply'}
+                          </Button>
+                        )}
+                        {isApplied(job) ? (
+                          <Badge className="bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30 flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" /> Applied
+                          </Badge>
+                        ) : (
+                          <Button size="sm" variant="outline" onClick={() => handleMarkApplied(job)} className="flex items-center gap-1 text-gray-600 dark:text-slate-400">
+                            <CheckCircle className="w-3 h-3" /> Mark Applied
                           </Button>
                         )}
                         {job.recommendation && (
