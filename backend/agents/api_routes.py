@@ -233,7 +233,35 @@ async def search_jobs(
         scored_jobs.sort(key=lambda x: x.get("score", 0), reverse=True)
 
         _logger.info(f"Returning {len(scored_jobs)} scored jobs")
-        return {"total_found": len(scored_jobs), "jobs": scored_jobs[:20]}
+
+        # Save results to job_matches (skip duplicates)
+        from datetime import datetime, timezone
+        import uuid as _uuid
+        for job in scored_jobs:
+            existing = await _db.job_matches.find_one({
+                "user_id": user["id"],
+                "title": job.get("title"),
+                "company": job.get("company")
+            })
+            if not existing:
+                await _db.job_matches.insert_one({
+                    "id": str(_uuid.uuid4()),
+                    "user_id": user["id"],
+                    "job_id": job.get("id"),
+                    "company": job.get("company"),
+                    "title": job.get("title"),
+                    "location": job.get("location"),
+                    "salary": job.get("salary"),
+                    "url": job.get("url"),
+                    "score": job.get("score"),
+                    "reasoning": job.get("reasoning"),
+                    "recommendation": job.get("recommendation"),
+                    "source": job.get("source", ""),
+                    "status": "found",
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                })
+
+        return {"total_found": len(scored_jobs), "jobs": scored_jobs}
 
     except Exception as e:
         _logger.error(f"Search jobs error: {e}", exc_info=True)
@@ -283,6 +311,56 @@ async def trigger_daily_search(
     asyncio.create_task(_run_and_email(user["id"]))
 
     return {"message": "Daily job search started"}
+
+
+@router.post("/mark-applied")
+async def mark_job_applied(
+    data: dict,
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())
+):
+    """Mark a job as applied so it won't be suggested again"""
+    user = await _get_current_user(credentials)
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+
+    job_title = data.get("job_title", "")
+    company = data.get("company", "")
+    job_url = data.get("job_url", "")
+
+    if not job_title or not company:
+        raise HTTPException(status_code=400, detail="job_title and company required")
+
+    from datetime import datetime, timezone
+    doc = {
+        "user_id": user["id"],
+        "job_title": job_title,
+        "company": company,
+        "job_url": job_url,
+        "applied_at": datetime.now(timezone.utc).isoformat()
+    }
+    await _db.applied_jobs.update_one(
+        {"user_id": user["id"], "job_title": job_title, "company": company},
+        {"$set": doc},
+        upsert=True
+    )
+    return {"message": "Job marked as applied"}
+
+
+@router.get("/applied-jobs")
+async def get_applied_jobs(
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())
+):
+    """Get list of jobs user has marked as applied"""
+    user = await _get_current_user(credentials)
+    applied = await _db.applied_jobs.find(
+        {"user_id": user["id"]}
+    ).to_list(length=500)
+
+    for a in applied:
+        if '_id' in a:
+            del a['_id']
+
+    return {"applied": applied}
 
 
 # ============ REFERRAL FINDER AGENT ENDPOINTS ============

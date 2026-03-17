@@ -38,7 +38,7 @@ const AIFeaturesSection = () => {
               </div>
               <div>
                 <h3 className={`text-xl font-bold ${theme.text.primary}`}>AI Job Search Agent</h3>
-                <span className="text-xs text-[#06b6d4] font-medium">Runs daily at 7 AM</span>
+                <span className="text-xs text-[#06b6d4] font-medium">Your personal job hunter, powered by AI</span>
               </div>
             </div>
 
