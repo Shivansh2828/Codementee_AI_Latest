@@ -208,38 +208,78 @@ Return JSON: {"skills":["list"],"total_years":number,"current_role":"string",
             return []
 
         jobs = []
-        pages = min((limit // 10) + 1, 3)  # Up to 3 pages (30 results), each page costs 1 SerpAPI credit
+        max_pages = min((limit // 10) + 1, 3)
+
+        # Detect remote/international intent
+        loc_lower = location.lower().strip()
+        is_remote = any(kw in loc_lower for kw in ["remote", "anywhere", "worldwide", "global", "international", "work from home", "wfh"])
 
         try:
-            for page in range(pages):
+            next_page_token = None
+
+            for page in range(max_pages):
                 if len(jobs) >= limit:
                     break
 
-                query = f"{title} jobs {location}"
+                if is_remote:
+                    query = f"{title}"
+                else:
+                    query = f"{title} jobs {location}"
+
                 params = {
                     "engine": "google_jobs",
                     "q": query,
                     "api_key": serpapi_key,
-                    "num": 10,
-                    "start": page * 10,
                 }
+
+                # Use next_page_token for pagination (start param is discontinued)
+                if next_page_token:
+                    params["next_page_token"] = next_page_token
+
+                if is_remote:
+                    params["ltype"] = "1"
+                    country_hint = loc_lower.replace("remote", "").replace(",", "").strip()
+                    if country_hint:
+                        params["location"] = country_hint
+
                 resp = requests.get("https://serpapi.com/search", params=params, timeout=15)
                 if resp.status_code != 200:
-                    logger.error(f"SerpAPI returned {resp.status_code} on page {page}")
+                    logger.error(f"SerpAPI returned {resp.status_code} on page {page}: {resp.text[:500]}")
                     break
 
-                results = resp.json().get("jobs_results", [])
+                data = resp.json()
+                results = data.get("jobs_results", [])
                 if not results:
                     break
 
+                # Get next page token for pagination
+                serpapi_pagination = data.get("serpapi_pagination", {})
+                next_page_token = serpapi_pagination.get("next_page_token")
+
                 for j in results:
-                    # Get direct application link
-                    links = j.get("related_links", [])
-                    link = links[0].get("link", "") if links else j.get("share_link", "")
-                    # Also check apply_options for direct links
+                    # Get direct application link — prefer apply_options first
+                    link = ""
                     apply_opts = j.get("apply_options", [])
-                    if apply_opts and not link:
-                        link = apply_opts[0].get("link", "")
+                    if apply_opts:
+                        for opt in apply_opts:
+                            opt_link = opt.get("link", "")
+                            if opt_link and "google.com/search" not in opt_link:
+                                link = opt_link
+                                break
+                    if not link:
+                        links = j.get("related_links", [])
+                        for rl in links:
+                            rl_link = rl.get("link", "")
+                            if rl_link and "google.com/search" not in rl_link:
+                                link = rl_link
+                                break
+                    if not link:
+                        link = j.get("share_link", "")
+                    if not link or "google.com/search" in link:
+                        company = j.get("company_name", "")
+                        job_title = j.get("title", "")
+                        search_q = f"{job_title} {company} {location} apply".replace(" ", "+")
+                        link = f"https://www.google.com/search?q={search_q}&udm=8"
 
                     extensions = j.get("detected_extensions", {})
                     jobs.append({
@@ -256,7 +296,11 @@ Return JSON: {"skills":["list"],"total_years":number,"current_role":"string",
                         "posted_at": extensions.get("posted_at", ""),
                     })
 
-            logger.info(f"SerpAPI: {len(jobs)} real jobs found for '{title}' in '{location}' ({pages} pages)")
+                # No more pages available
+                if not next_page_token:
+                    break
+
+            logger.info(f"SerpAPI: {len(jobs)} real jobs found for '{title}' in '{location}' ({page + 1} pages)")
             return jobs[:limit]
         except Exception as e:
             logger.error(f"SerpAPI error: {e}")
@@ -357,12 +401,22 @@ Every single job MUST be located in {location} or be Remote. No exceptions."""
                         job["required_skills"] = []
                     if not job.get("required_experience"):
                         job["required_experience"] = 2
-                    # Replace fake URLs with a Google search that finds the real posting
+                    # Replace fake/hallucinated URLs with Google Jobs search
+                    url = job.get("url", "")
                     company = job.get("company", "")
                     title_str = job.get("title", "")
                     loc = job.get("location", "")
-                    search_q = f"{title_str} {company} {loc} careers apply".replace(" ", "+")
-                    job["url"] = f"https://www.google.com/search?q={search_q}"
+                    is_fake = (
+                        not url
+                        or "example.com" in url
+                        or "company.com/careers" in url
+                        or re.search(r'/jobs?/\d{4,}', url)  # /jobs/123456 or /job/123456
+                        or url.endswith("/careers")
+                        or url.endswith("/jobs")
+                    )
+                    if is_fake:
+                        search_q = f"{title_str} {company} {loc} careers apply".replace(" ", "+")
+                        job["url"] = f"https://www.google.com/search?q={search_q}&udm=8"
                 logger.info(f"AI generated {len(jobs)} jobs")
                 return jobs
             except json.JSONDecodeError:

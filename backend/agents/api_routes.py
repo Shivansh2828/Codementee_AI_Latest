@@ -363,6 +363,38 @@ async def get_applied_jobs(
     return {"applied": applied}
 
 
+@router.delete("/reset-recommendations")
+async def reset_recommendations(
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())
+):
+    """Delete all job matches and applied jobs for the user — fresh start"""
+    user = await _get_current_user(credentials)
+    uid = user["id"]
+    del_matches = await _db.job_matches.delete_many({"user_id": uid})
+    del_applied = await _db.applied_jobs.delete_many({"user_id": uid})
+    return {
+        "message": "All recommendations cleared",
+        "deleted_matches": del_matches.deleted_count,
+        "deleted_applied": del_applied.deleted_count
+    }
+
+
+@router.delete("/job-match/{job_id}")
+async def delete_job_match(
+    job_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())
+):
+    """Delete a single job from matches or applied"""
+    user = await _get_current_user(credentials)
+    uid = user["id"]
+    # Try matching on both 'id' (document id) and 'job_id' (original job id)
+    del_match = await _db.job_matches.delete_one({"user_id": uid, "$or": [{"id": job_id}, {"job_id": job_id}]})
+    del_applied = await _db.applied_jobs.delete_one({"user_id": uid, "$or": [{"id": job_id}, {"job_id": job_id}]})
+    if del_match.deleted_count == 0 and del_applied.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return {"message": "Job removed"}
+
+
 # ============ REFERRAL FINDER AGENT ENDPOINTS ============
 
 @router.post("/find-referrals")
@@ -378,10 +410,13 @@ async def find_referrals(
     if not referral_agent:
         raise HTTPException(status_code=503, detail="Referral agent not initialized")
 
+    # Default role filter to "Software Engineer" to avoid C-suite results
+    effective_role = data.role_filter.strip() if data.role_filter else "Software Engineer"
+
     result = await referral_agent.find_and_draft_workflow(
         user_id=user["id"],
         target_company=data.company,
-        role_filter=data.role_filter
+        role_filter=effective_role
     )
 
     return result
@@ -418,7 +453,13 @@ async def draft_referral_message(
         "name": user.get("name", ""),
         "current_role": parsed_resume.get("current_role", "") or (prefs.get("job_title", "") if prefs else ""),
         "skills": skills,
-        "target_role": prefs.get("job_title", "") if prefs else ""
+        "target_role": prefs.get("job_title", "") if prefs else "",
+        "experience_years": parsed_resume.get("total_years", 0) or (prefs.get("experience_years", 0) if prefs else 0),
+        "projects_summary": parsed_resume.get("projects_summary", ""),
+        "github_url": parsed_resume.get("github_url", "") or user.get("github_url", ""),
+        "leetcode_url": parsed_resume.get("leetcode_url", "") or user.get("leetcode_url", ""),
+        "linkedin_url": parsed_resume.get("linkedin_url", "") or user.get("linkedin_url", ""),
+        "education": parsed_resume.get("education", ""),
     }
 
     messages = await referral_agent.draft_referral_message(

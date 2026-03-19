@@ -118,6 +118,11 @@ export default function MenteeReferralFinder() {
       return;
     }
 
+    if (!roleFilter.trim()) {
+      toast.error('Please enter a role filter (e.g., Software Engineer, Manager)');
+      return;
+    }
+
     setLoading(true);
     setMessages(null);
     setSelectedEmployee(null);
@@ -216,12 +221,13 @@ export default function MenteeReferralFinder() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="role">Role Filter (optional)</Label>
+                  <Label htmlFor="role">Role Filter</Label>
                   <Input
                     id="role"
                     value={roleFilter}
                     onChange={(e) => setRoleFilter(e.target.value)}
                     placeholder="e.g., Software Engineer, Manager"
+                    required
                   />
                 </div>
               </div>
