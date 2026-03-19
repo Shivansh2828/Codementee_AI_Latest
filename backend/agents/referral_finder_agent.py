@@ -375,7 +375,7 @@ Return JSON:
     ) -> Dict:
         """
         AI-generated personalized referral messages in 3 variants:
-        formal, friendly, and concise. Includes a recommendation on which to use.
+        formal, friendly, and concise. Includes user's experience, skills, profiles, and job link.
         """
         emp_name = employee.get("name", "there")
         emp_role = employee.get("role", "employee")
@@ -383,41 +383,72 @@ Return JSON:
         user_name = user_profile.get("name", "a professional")
         user_role = user_profile.get("current_role", "software engineer")
         skills = user_profile.get("skills", [])
+        experience_years = user_profile.get("experience_years", 0)
+        projects_summary = user_profile.get("projects_summary", "")
+        github_url = user_profile.get("github_url", "")
+        leetcode_url = user_profile.get("leetcode_url", "")
+        linkedin_url = user_profile.get("linkedin_url", "")
+        education = user_profile.get("education", "")
         best_approach = employee.get("best_approach", "")
         job_url = job_details.get("url", "") if job_details else ""
 
         system = """You are an expert career coach who writes compelling LinkedIn referral messages.
-You craft messages that are professional, personalized, and have high response rates.
+    You craft messages that are professional, detailed, and have high response rates.
 
-Return JSON:
-{
-  "formal": "Full formal message text",
-  "friendly": "Full friendly message text",
-  "concise": "Full concise message text (under 100 words)",
-  "recommended": "formal or friendly or concise",
-  "tips": ["tip1", "tip2", "tip3"]
-}
+    Return JSON:
+    {
+      "formal": "Full formal message text",
+      "friendly": "Full friendly message text",
+      "concise": "Full concise message text",
+      "recommended": "formal or friendly or concise",
+      "tips": ["tip1", "tip2", "tip3"]
+    }
 
-Rules:
-- Never be pushy or desperate
-- Show genuine interest in the company
-- Mention specific skills that are relevant
-- Keep formal under 200 words, friendly under 180 words, concise under 100 words
-- Include a clear but soft ask for referral
-- If a job URL is provided, mention it naturally"""
+    CRITICAL RULES for message content:
+    - Start with a greeting using the recipient's first name
+    - Introduce the sender with their name, experience (X+ years), and current role
+    - List key technical skills (comma separated)
+    - Briefly mention notable projects or achievements if provided
+    - Include profile links (GitHub, LeetCode, LinkedIn) if available — each on its own line
+    - ALWAYS include a referral ask with Job ID placeholder: "Could you please help me with a referral for this role? Job ID: [JOB_ID]"
+    - If a job URL is provided, include it on the next line. If not, add "Job Link: [PASTE_JOB_LINK]" as a placeholder
+    - The [JOB_ID] and [PASTE_JOB_LINK] placeholders are essential — users will replace them with actual values before sending
+    - End with a polite sign-off using the sender's full name
+    - Keep formal under 250 words, friendly under 220 words, concise under 150 words
+    - Never be pushy or desperate
+    - Make the message feel personal and genuine, not templated"""
+
+        # Build profile links section
+        profile_links = []
+        if github_url:
+            profile_links.append(f"GitHub: {github_url}")
+        if leetcode_url:
+            profile_links.append(f"LeetCode: {leetcode_url}")
+        if linkedin_url:
+            profile_links.append(f"LinkedIn: {linkedin_url}")
 
         user_msg = f"""Draft referral request messages:
 
-Recipient: {emp_name}, {emp_role} at {company}
-Seniority: {employee.get('seniority', 'unknown')}
-Best approach hint: {best_approach}
+    Recipient: {emp_name}, {emp_role} at {company}
+    Seniority: {employee.get('seniority', 'unknown')}
+    Best approach hint: {best_approach}
 
-Sender: {user_name}, currently a {user_role}
-Key skills: {', '.join(skills[:8]) if skills else 'Not specified'}
-Target role: {user_profile.get('target_role', user_role)}
-{f'Job URL: {job_url}' if job_url else ''}
+    Sender: {user_name}
+    Current role: {user_role}
+    Experience: {experience_years}+ years
+    Key skills: {', '.join(skills[:10]) if skills else 'Not specified'}
+    {f'Projects/Achievements: {projects_summary}' if projects_summary else ''}
+    {f'Education: {education}' if education else ''}
+    Profile links: {chr(10).join(profile_links) if profile_links else 'None provided'}
+    Target role: {user_profile.get('target_role', user_role)}
+    {f'Job URL: {job_url}' if job_url else ''}
 
-Generate 3 message variants and recommend which one to use."""
+    Generate 3 message variants. Each message MUST include:
+    1. Self-introduction with name, experience years, and role
+    2. Technical skills list
+    3. Any profile links provided above
+    4. The job URL if provided, with a polite referral ask
+    5. Professional sign-off with sender's name"""
 
         raw = await self._ask_llm_async(system, user_msg, json_mode=True)
         if raw:
@@ -434,34 +465,52 @@ Generate 3 message variants and recommend which one to use."""
                 logger.error("Failed to parse AI referral messages")
 
         # Fallback: template-based
-        return self._template_messages(emp_name, company, user_name, user_role, skills)
+        return self._template_messages(emp_name, company, user_name, user_role, skills,
+                                       experience_years, github_url, leetcode_url, job_url)
 
-    def _template_messages(self, emp_name, company, user_name, user_role, skills):
-        skill_str = ", ".join(skills[:4]) if skills else "relevant technical skills"
+    def _template_messages(self, emp_name, company, user_name, user_role, skills,
+                              experience_years=0, github_url="", leetcode_url="", job_url=""):
+        skill_str = ", ".join(skills[:6]) if skills else "relevant technical skills"
+        exp_str = f"{experience_years}+" if experience_years else "a few"
+
+        # Build profile links block
+        links_block = ""
+        if github_url:
+            links_block += f"\nGitHub: {github_url}"
+        if leetcode_url:
+            links_block += f"\nLeetCode: {leetcode_url}"
+
+        job_block = f"\nCould you please help me with a referral for this role?\nJob ID: [JOB_ID]\nJob Link: {job_url}" if job_url else "\nCould you please help me with a referral for this role?\nJob ID: [JOB_ID]\nJob Link: [PASTE_JOB_LINK]"
+
         return {
             "formal": (
-                f"Hi {emp_name},\n\n"
-                f"I hope this message finds you well. I'm {user_name}, currently working as a {user_role}. "
-                f"I'm very interested in opportunities at {company} and believe my experience in {skill_str} "
-                f"aligns well with the team's work.\n\n"
-                f"Would you be open to a brief conversation about your experience at {company}? "
-                f"I'd also appreciate any guidance on the referral process.\n\n"
-                f"Thank you for your time.\n\nBest regards,\n{user_name}"
+                f"Hello {emp_name},\n\n"
+                f"My name is {user_name}, and I have {exp_str} years of experience as a {user_role}.\n\n"
+                f"Technical skills: {skill_str}\n"
+                f"{links_block}\n"
+                f"I'm very interested in opportunities at {company} and believe my experience "
+                f"aligns well with the team's work.\n"
+                f"{job_block}\n\n"
+                f"Looking forward to your response!\n\n"
+                f"Thanks,\n{user_name}"
             ),
             "friendly": (
                 f"Hey {emp_name}!\n\n"
-                f"I came across your profile and saw you're at {company} — that's awesome! "
-                f"I'm {user_name}, a {user_role} with experience in {skill_str}.\n\n"
-                f"I'm really excited about what {company} is building and would love to learn more "
-                f"about your experience there. If you think I'd be a good fit, I'd appreciate "
-                f"hearing about the referral process.\n\n"
+                f"I'm {user_name}, a {user_role} with {exp_str} years of experience. "
+                f"I came across your profile and saw you're at {company} — that's awesome!\n\n"
+                f"My key skills include {skill_str}.\n"
+                f"{links_block}\n"
+                f"I'm really excited about what {company} is building and would love to be part of the team.\n"
+                f"{job_block}\n\n"
                 f"Thanks so much!\n{user_name}"
             ),
             "concise": (
                 f"Hi {emp_name},\n\n"
-                f"I'm {user_name}, a {user_role} interested in joining {company}. "
-                f"My background in {skill_str} seems like a strong fit. "
-                f"Would you be open to referring me? Happy to share my resume.\n\n"
+                f"I'm {user_name}, {exp_str} years as a {user_role}. "
+                f"Skills: {skill_str}.\n"
+                f"{links_block}\n"
+                f"{job_block}\n"
+                f"Would you be open to referring me?\n\n"
                 f"Thanks!\n{user_name}"
             ),
             "recommended": "friendly",
@@ -624,7 +673,13 @@ If it's been less than 5 days, be gentle. If more than 7 days, be more direct bu
                 "name": user.get("name", ""),
                 "current_role": parsed_resume.get("current_role", "") or prefs.get("job_title", "") if prefs else "",
                 "skills": skills,
-                "target_role": prefs.get("job_title", "") if prefs else ""
+                "target_role": prefs.get("job_title", "") if prefs else "",
+                "experience_years": parsed_resume.get("total_years", 0) or (prefs.get("experience_years", 0) if prefs else 0),
+                "projects_summary": parsed_resume.get("projects_summary", ""),
+                "github_url": parsed_resume.get("github_url", "") or user.get("github_url", ""),
+                "leetcode_url": parsed_resume.get("leetcode_url", "") or user.get("leetcode_url", ""),
+                "linkedin_url": parsed_resume.get("linkedin_url", "") or user.get("linkedin_url", ""),
+                "education": parsed_resume.get("education", ""),
             }
 
             # AI-powered employee discovery

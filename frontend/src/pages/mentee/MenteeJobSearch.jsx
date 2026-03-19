@@ -8,7 +8,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
-import { Briefcase, MapPin, DollarSign, TrendingUp, Search, Settings, ExternalLink, Loader2, FileText, Crown, Lock, CheckCircle } from 'lucide-react';
+import { Briefcase, MapPin, DollarSign, TrendingUp, Search, Settings, ExternalLink, Loader2, FileText, Crown, Lock, CheckCircle, X } from 'lucide-react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 
 const JOB_SEARCH_MESSAGES = [
@@ -262,6 +262,34 @@ export default function MenteeJobSearch() {
     }
   };
 
+  const handleResetRecommendations = async () => {
+    if (!window.confirm('This will clear all your saved job matches and applied history. Continue?')) return;
+    try {
+      await api.delete('/ai-agents/reset-recommendations');
+      setJobMatches([]);
+      setAppliedJobs(new Set());
+      setActiveTab('jobs');
+      toast.success('All recommendations cleared! Search again to get fresh results.');
+    } catch (error) {
+      toast.error('Failed to reset recommendations');
+    }
+  };
+
+  const handleDeleteJob = async (job) => {
+    try {
+      await api.delete(`/ai-agents/job-match/${job.id}`);
+      setJobMatches(prev => prev.filter(j => j.id !== job.id));
+      setAppliedJobs(prev => {
+        const next = new Set(prev);
+        next.delete(`${job.title}::${job.company}`);
+        return next;
+      });
+      toast.success('Job removed');
+    } catch (error) {
+      toast.error('Failed to remove job');
+    }
+  };
+
   const handleParseResume = async () => {
     if (!resumeText.trim()) {
       toast.error('Please paste your resume text');
@@ -405,6 +433,11 @@ export default function MenteeJobSearch() {
               Reset Preferences
             </Button>
           )}
+          {jobMatches.length > 0 && (
+            <Button onClick={handleResetRecommendations} variant="outline" className="flex items-center gap-2 text-orange-500 border-orange-500/30 hover:bg-orange-500/10">
+              Clear All Jobs
+            </Button>
+          )}
         </div>
 
         {/* Settings Panel */}
@@ -533,11 +566,18 @@ export default function MenteeJobSearch() {
                             )}
                           </div>
                         </div>
-                        <div className="text-right flex-shrink-0">
+                        <div className="text-right flex-shrink-0 flex items-start gap-2">
                           <div className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-white text-sm font-bold ${getScoreColor(job.score)}`}>
                             <TrendingUp className="w-3 h-3" />
                             {job.score}/100
                           </div>
+                          <button
+                            onClick={() => handleDeleteJob(job)}
+                            className="p-1 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                            title="Remove job"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
 
