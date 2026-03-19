@@ -13,7 +13,7 @@ const ProblemSection = () => {
         <div className="max-w-3xl mb-12 md:mb-16">
           <span className={`caption mb-4 block ${theme.text.accent}`}>The Problem</span>
           <h2 className={`heading-1 mb-6 ${theme.text.primary}`}>
-            Why most interview prep fails
+            Why most interview preps fail?
           </h2>
           <p className={`body-large ${theme.text.secondary}`}>
             You've done the courses. You've solved LeetCode. Yet interviews still feel like a gamble.

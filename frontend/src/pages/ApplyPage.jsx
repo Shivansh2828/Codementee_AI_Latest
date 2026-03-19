@@ -96,7 +96,7 @@ const ApplyPage = () => {
         amount: amount,
         currency: currency,
         name: 'Codementee',
-        description: pricingPlans.find(p => p.id === formData.selectedPlan)?.name || 'Membership',
+        description: pricingPlans.find(p => p.plan_id === formData.selectedPlan)?.name || 'Membership',
         order_id: razorpay_order_id,
         prefill: {
           name: formData.name,
@@ -146,7 +146,7 @@ const ApplyPage = () => {
     }
   };
 
-  const selectedPlanDetails = pricingPlans.find(p => p.id === formData.selectedPlan);
+  const selectedPlanDetails = pricingPlans.find(p => p.plan_id === formData.selectedPlan);
 
   return (
     <div className="min-h-screen bg-[#0d0d0d]">
@@ -184,9 +184,9 @@ const ApplyPage = () => {
                 <div className="grid grid-cols-1 gap-3">
                   {pricingPlans.map((plan) => (
                     <label
-                      key={plan.id}
+                      key={plan.plan_id}
                       className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-all ${
-                        formData.selectedPlan === plan.id
+                        formData.selectedPlan === plan.plan_id
                           ? 'border-[#06b6d4] bg-[#06b6d4]/10'
                           : 'border-[#404040] bg-[#0d0d0d] hover:border-[#475569]'
                       }`}
@@ -195,15 +195,15 @@ const ApplyPage = () => {
                         <input
                           type="radio"
                           name="selectedPlan"
-                          value={plan.id}
-                          checked={formData.selectedPlan === plan.id}
+                          value={plan.plan_id}
+                          checked={formData.selectedPlan === plan.plan_id}
                           onChange={handleInputChange}
                           className="sr-only"
                         />
                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                          formData.selectedPlan === plan.id ? 'border-[#06b6d4] bg-[#06b6d4]' : 'border-gray-500'
+                          formData.selectedPlan === plan.plan_id ? 'border-[#06b6d4] bg-[#06b6d4]' : 'border-gray-500'
                         }`}>
-                          {formData.selectedPlan === plan.id && <div className="w-2 h-2 rounded-full bg-[#0d0d0d]" />}
+                          {formData.selectedPlan === plan.plan_id && <div className="w-2 h-2 rounded-full bg-[#0d0d0d]" />}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
@@ -212,16 +212,18 @@ const ApplyPage = () => {
                           </div>
                           <p className="text-gray-500 text-sm">{plan.features[0]}</p>
                           <p className="text-gray-600 text-xs">
-                            {plan.id === 'foundation' ? '1 mock interview total' : 
-                             plan.id === 'growth' ? '3 mock interviews total' : 
-                             '6 mock interviews total'} • {plan.duration}
+                            {plan.plan_id === 'foundation' ? '1 mock interview total' : 
+                             plan.plan_id === 'growth' ? '3 mock interviews total' : 
+                             '6 mock interviews total'} • {plan.duration_months} month{plan.duration_months > 1 ? 's' : ''}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className="text-white font-bold text-lg">{cohortData.currency}{plan.price.toLocaleString()}</span>
+                        <span className="text-white font-bold text-lg">{cohortData.currency}{(plan.price / 100).toLocaleString()}</span>
                         {plan.savings && <p className="text-[#06b6d4] text-xs">{plan.savings}</p>}
-                        <p className="text-gray-600 text-xs">{cohortData.currency}{plan.perMonth.toLocaleString()}/month</p>
+                        {plan.duration_months > 1 && (
+                          <p className="text-gray-600 text-xs">{cohortData.currency}{Math.round(plan.price / 100 / plan.duration_months).toLocaleString()}/month</p>
+                        )}
                       </div>
                     </label>
                   ))}
@@ -309,7 +311,7 @@ const ApplyPage = () => {
                 </div>
                 <div className="flex justify-between items-center text-2xl font-bold">
                   <span className="text-gray-400">Total</span>
-                  <span className="text-white">{cohortData.currency}{selectedPlanDetails?.price.toLocaleString()}</span>
+                  <span className="text-white">{cohortData.currency}{selectedPlanDetails ? (selectedPlanDetails.price / 100).toLocaleString() : '—'}</span>
                 </div>
                 {selectedPlanDetails?.savings && (
                   <p className="text-[#06b6d4] text-sm text-right mt-1">{selectedPlanDetails.savings}</p>
@@ -325,7 +327,7 @@ const ApplyPage = () => {
                 {isLoading ? (
                   <><Loader2 size={20} className="animate-spin" /> Processing...</>
                 ) : (
-                  <><CreditCard size={20} /> Pay {cohortData.currency}{selectedPlanDetails?.price.toLocaleString()}</>
+                  <><CreditCard size={20} /> Pay {cohortData.currency}{selectedPlanDetails ? (selectedPlanDetails.price / 100).toLocaleString() : '—'}</>
                 )}
               </button>
 

@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -8,6 +8,12 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 console.log('🚀 APP.JS: Starting App component');
 
 // Loading component
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  React.useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+}
+
 const LoadingFallback = () => {
   return (
     <div className="min-h-screen bg-white dark:bg-[#0f172a] flex items-center justify-center">
@@ -85,6 +91,7 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
+          <ScrollToTop />
           <Toaster 
             position="top-right" 
             richColors 
