@@ -24,6 +24,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     if (user?.role === 'admin') return <Navigate to="/admin" replace />;
     if (user?.role === 'mentor') return <Navigate to="/mentor" replace />;
     if (user?.role === 'mentee') return <Navigate to="/mentee" replace />;
+    if (user?.role === 'agent_user') return <Navigate to="/mentee/job-search" replace />;
     return <Navigate to="/" replace />;
   }
 

@@ -100,7 +100,7 @@ function EliteGate() {
 
 export default function MenteeReferralFinder() {
   const { user } = useAuth();
-  const isElite = user?.plan_id === 'elite';
+  const isElite = user?.plan_id === 'elite' || user?.role === 'agent_user' || user?.plan_id?.startsWith('agent_');
   const [searchCompany, setSearchCompany] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [loading, setLoading] = useState(false);

@@ -24,8 +24,8 @@ const HeroSection = () => {
   const floatingBadges = [
     { icon: Code, label: 'DSA', color: 'from-blue-500 to-cyan-500', delay: '0s', position: 'top-24 left-4 md:top-32 md:left-10' },
     { icon: Terminal, label: 'System Design', color: 'from-purple-500 to-pink-500', delay: '0.5s', position: 'top-40 right-4 md:top-48 md:right-20' },
-    { icon: Sparkles, label: 'Behavioral', color: 'from-green-500 to-emerald-500', delay: '1s', position: 'top-[60%] left-4 md:left-20' },
-    { icon: TrendingUp, label: 'Career Growth', color: 'from-orange-500 to-red-500', delay: '1.5s', position: 'top-[75%] right-4 md:right-10' },
+    { icon: Sparkles, label: 'Behavioral', color: 'from-green-500 to-emerald-500', delay: '1s', position: 'top-[55%] left-0 md:left-4' },
+    { icon: TrendingUp, label: 'Career Growth', color: 'from-orange-500 to-red-500', delay: '1.5s', position: 'top-[72%] right-4 md:right-10' },
   ];
 
   const companyLogos = [
@@ -77,7 +77,7 @@ const HeroSection = () => {
           return (
             <div
               key={index}
-              className={`absolute ${badge.position} hidden md:block z-20`}
+              className={`absolute ${badge.position} hidden md:block z-[5] pointer-events-none`}
               style={{ animationDelay: badge.delay }}
             >
               <div className={`${theme.glass} rounded-xl ${theme.border.primary} border ${theme.shadowMd} p-3 animate-float-slow backdrop-blur-xl hover:scale-110 transition-transform duration-300`}>
@@ -258,7 +258,7 @@ const HeroSection = () => {
               </div>
 
               {/* Floating Cards */}
-              <div className={`absolute -top-6 -left-6 ${theme.glass} rounded-xl ${theme.shadow} ${theme.border.primary} border p-4 animate-float`}>
+              <div className={`absolute -top-10 -left-4 lg:-top-12 lg:-left-8 ${theme.glass} rounded-xl ${theme.shadow} ${theme.border.primary} border p-4 animate-float pointer-events-none`}>
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-500 rounded-lg flex items-center justify-center">
                     <Trophy className="w-4 h-4 text-white" />

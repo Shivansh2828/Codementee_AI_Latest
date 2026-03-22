@@ -109,7 +109,7 @@ function EliteGate() {
 
 export default function MenteeJobSearch() {
   const { user } = useAuth();
-  const isElite = user?.plan_id === 'elite';
+  const isElite = user?.plan_id === 'elite' || user?.role === 'agent_user' || user?.plan_id?.startsWith('agent_');
   const [preferences, setPreferences] = useState(null);
   const [jobMatches, setJobMatches] = useState([]);
   const [loading, setLoading] = useState(false);

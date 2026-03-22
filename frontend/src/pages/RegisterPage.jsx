@@ -50,9 +50,9 @@ const RegisterPage = () => {
         
         toast.success('Welcome to Codementee! 🎉');
         
-        // Redirect to mentee dashboard
+        // Redirect to homepage (free users explore first)
         setTimeout(() => {
-          navigate('/mentee');
+          navigate('/');
         }, 1000);
       }
     } catch (error) {

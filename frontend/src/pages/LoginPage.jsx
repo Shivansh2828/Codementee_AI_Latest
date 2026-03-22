@@ -39,7 +39,13 @@ const LoginPage = () => {
       // Redirect based on role
       if (user.role === 'admin') navigate('/admin');
       else if (user.role === 'mentor') navigate('/mentor');
-      else if (user.role === 'mentee') navigate('/mentee');
+      else if (user.role === 'agent_user') navigate('/mentee/job-search');
+      else if (user.role === 'mentee') {
+        // Mentees with a mentorship plan go to dashboard
+        // Free users or agent-only add-on users go to homepage
+        const hasMentorshipPlan = user.plan_id && !user.plan_id.startsWith('agent_');
+        navigate(hasMentorshipPlan ? '/mentee' : '/');
+      }
       else navigate(from);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Invalid credentials');

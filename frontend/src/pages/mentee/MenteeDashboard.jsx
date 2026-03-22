@@ -59,9 +59,11 @@ const MenteeDashboard = () => {
   const [planFeatures, setPlanFeatures] = useState([]);
 
   const isFreeUser = user?.status === 'Free' || !user?.plan_id;
+  const isAgentOnly = user?.role === 'agent_user';
   
   // Get plan display name - Simple tier names only
   const getPlanDisplayName = () => {
+    if (isAgentOnly) return 'AI Agent';
     if (isFreeUser) return 'Free Tier';
     const planId = user?.plan_id;
     if (planId === 'starter') return 'Starter Plan';
@@ -78,12 +80,17 @@ const MenteeDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch bookings
-      const bookingsRes = await api.get('/mentee/bookings');
-      const bookings = bookingsRes.data;
-      
-      const upcoming = bookings.upcoming || [];
-      const past = bookings.past || [];
+      // agent_user may not have bookings — handle gracefully
+      let upcoming = [];
+      let past = [];
+      try {
+        const bookingsRes = await api.get('/mentee/bookings');
+        const bookings = bookingsRes.data;
+        upcoming = bookings.upcoming || [];
+        past = bookings.past || [];
+      } catch (err) {
+        console.log('Bookings not available for this user');
+      }
       
       // Fetch resume requests to calculate used reviews
       let resumeReviewsUsed = 0;
@@ -219,7 +226,7 @@ const MenteeDashboard = () => {
           {locked ? (
             <div className="flex items-center gap-2 text-yellow-400 text-sm">
               <Crown className="w-4 h-4" />
-              <span>Upgrade to unlock</span>
+              <span>{isBookingCard || title === "Resume Review" ? 'Get a mentorship plan' : 'Upgrade to unlock'}</span>
             </div>
           ) : (
             <div className="flex items-center gap-2 text-[#06b6d4] text-sm font-medium">
@@ -257,7 +264,7 @@ const MenteeDashboard = () => {
         </div>
 
         {/* Migration Warning - Show if quota fields are missing */}
-        {!isFreeUser && (user?.interview_quota_total === undefined || user?.interview_quota_total === null) && (
+        {!isFreeUser && !isAgentOnly && (user?.interview_quota_total === undefined || user?.interview_quota_total === null) && (
           <div className={`${theme.bg.secondary} rounded-xl p-4 border-2 border-yellow-500/30`}>
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
@@ -275,25 +282,47 @@ const MenteeDashboard = () => {
         <div className={`${theme.glass} rounded-2xl p-6 ${theme.border.primary} border ${theme.shadow}`}>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className={`w-12 h-12 rounded-xl ${isFreeUser ? 'bg-gray-600' : 'bg-gradient-to-br from-[#06b6d4] to-[#0891b2]'} flex items-center justify-center`}>
-                {isFreeUser ? <Lock className="w-6 h-6 text-gray-400" /> : <Crown className="w-6 h-6 text-white" />}
+              <div className={`w-12 h-12 rounded-xl ${(isFreeUser && !isAgentOnly) ? 'bg-gray-600' : 'bg-gradient-to-br from-[#06b6d4] to-[#0891b2]'} flex items-center justify-center`}>
+                {(isFreeUser && !isAgentOnly) ? <Lock className="w-6 h-6 text-gray-400" /> : <Crown className="w-6 h-6 text-white" />}
               </div>
               <div>
                 <h2 className={`${theme.text.primary} text-xl font-bold`}>Your Progress</h2>
                 <p className={`${theme.text.secondary} text-sm`}>
-                  {isFreeUser ? 'Upgrade to unlock all features' : `${planName} - Active`}
+                  {isAgentOnly ? 'AI Agent Active — Upgrade for mock interviews' : isFreeUser ? 'Upgrade to unlock all features' : `${planName} - Active`}
                 </p>
               </div>
             </div>
-            {isFreeUser && (
-              <Link to="/mentee/book">
+            {(isFreeUser || isAgentOnly) && (
+              <Link to={isAgentOnly ? '/apply' : '/mentee/book'}>
                 <Button className="bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white">
                   <Crown className="w-4 h-4 mr-2" />
-                  View Plans
+                  {isAgentOnly ? 'Unlock Interviews' : 'View Plans'}
                 </Button>
               </Link>
             )}
           </div>
+
+          {/* Agent-only user: show AI agent status */}
+          {isAgentOnly && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Link to="/mentee/job-search" className={`${theme.bg.secondary} rounded-xl p-4 hover:border-[#06b6d4] border ${theme.border.primary} transition-colors`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Briefcase className="w-4 h-4 text-[#06b6d4]" />
+                  <span className={`${theme.text.secondary} text-sm font-medium`}>AI Job Search</span>
+                </div>
+                <p className={`${theme.text.primary} text-lg font-bold`}>Active ✓</p>
+                <p className={`${theme.text.muted} text-xs mt-1`}>Daily automated job matching</p>
+              </Link>
+              <Link to="/mentee/referral-finder" className={`${theme.bg.secondary} rounded-xl p-4 hover:border-[#06b6d4] border ${theme.border.primary} transition-colors`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="w-4 h-4 text-[#06b6d4]" />
+                  <span className={`${theme.text.secondary} text-sm font-medium`}>Referral Finder</span>
+                </div>
+                <p className={`${theme.text.primary} text-lg font-bold`}>Active ✓</p>
+                <p className={`${theme.text.muted} text-xs mt-1`}>LinkedIn-powered referral outreach</p>
+              </Link>
+            </div>
+          )}
 
           {/* Usage Summary - Only for Paid Users */}
           {!isFreeUser && (
@@ -396,9 +425,9 @@ const MenteeDashboard = () => {
               title="Book Mock Interview"
               description="Schedule a mock interview with expert mentors from top companies"
               icon={Calendar}
-              to="/mentee/slots"
-              locked={isFreeUser}
-              badge={stats.quotaRemaining > 0 ? `${stats.quotaRemaining} left` : null}
+              to={isAgentOnly ? '/apply' : '/mentee/slots'}
+              locked={isFreeUser || isAgentOnly}
+              badge={!isAgentOnly && stats.quotaRemaining > 0 ? `${stats.quotaRemaining} left` : null}
             />
             
             <QuickActionCard
@@ -408,33 +437,33 @@ const MenteeDashboard = () => {
                 : "Book a 30-min call with a MAANG engineer for resume review"
               }
               icon={FileText}
-              to="/mentee/resume-review"
-              locked={isFreeUser}
-              badge={stats.resumeReviewsTotal >= 999 ? '∞ Unlimited' : (stats.resumeReviewsTotal > 0 && stats.resumeReviewsUsed < stats.resumeReviewsTotal) ? `${stats.resumeReviewsTotal - stats.resumeReviewsUsed} left` : null}
+              to={isAgentOnly ? '/apply' : '/mentee/resume-review'}
+              locked={isFreeUser || isAgentOnly}
+              badge={!isAgentOnly && stats.resumeReviewsTotal >= 999 ? '∞ Unlimited' : (!isAgentOnly && stats.resumeReviewsTotal > 0 && stats.resumeReviewsUsed < stats.resumeReviewsTotal) ? `${stats.resumeReviewsTotal - stats.resumeReviewsUsed} left` : null}
             />
             
             <QuickActionCard
               title="My Interviews"
               description="View your upcoming and past interview sessions"
               icon={BookOpen}
-              to="/mentee/mocks"
-              locked={false}
+              to={isAgentOnly ? '/apply' : '/mentee/mocks'}
+              locked={isAgentOnly}
             />
             
             <QuickActionCard
               title="Community Forum"
               description="Connect with other mentees and share interview experiences"
               icon={Users}
-              to="/mentee/community"
-              locked={!['pro', 'elite'].includes(user?.plan_id)}
+              to={isAgentOnly ? '/apply' : '/mentee/community'}
+              locked={isAgentOnly || !['pro', 'elite'].includes(user?.plan_id)}
             />
             
             <QuickActionCard
               title="My Feedbacks"
               description="Review detailed feedback from your completed interviews"
               icon={MessageSquare}
-              to="/mentee/feedbacks"
-              locked={false}
+              to={isAgentOnly ? '/apply' : '/mentee/feedbacks'}
+              locked={isAgentOnly}
             />
           </div>
         </div>
