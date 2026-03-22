@@ -68,6 +68,7 @@ const Header = () => {
   };
 
   const isFreeUser = !user?.plan_id || user?.plan_id?.startsWith('agent_');
+  const isAgentUser = user?.role === 'agent_user';
   // Agent plan on a mentee is an add-on, not a tier upgrade
   const hasAgentAddon = user?.role === 'mentee' && user?.plan_id?.startsWith('agent_');
 
@@ -122,11 +123,12 @@ const Header = () => {
                       <p className={`${theme.text.primary} font-semibold text-sm truncate`}>{user.name}</p>
                       <p className={`${theme.text.muted} text-xs truncate`}>{user.email}</p>
                       <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${
+                        isAgentUser ? 'bg-[#06b6d4]/20 text-[#06b6d4]' :
                         isFreeUser ? 'bg-gray-600/20 text-gray-400' :
-                        user.plan_id?.startsWith('agent_') ? 'bg-[#06b6d4]/20 text-[#06b6d4]' :
                         'bg-[#06b6d4]/20 text-[#06b6d4]'
                       }`}>
-                        {isFreeUser ? (hasAgentAddon ? 'Free + AI Agent' : 'Free Tier') :
+                        {isAgentUser ? 'AI Agent' :
+                         isFreeUser ? (hasAgentAddon ? 'Free + AI Agent' : 'Free Tier') :
                          user.plan_id === 'starter' ? 'Starter' :
                          user.plan_id === 'pro' ? 'Pro' :
                          user.plan_id === 'elite' ? 'Elite' :
