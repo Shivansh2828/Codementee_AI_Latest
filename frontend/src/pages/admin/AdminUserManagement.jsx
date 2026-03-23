@@ -134,11 +134,13 @@ const AdminUserManagement = () => {
     }
   };
 
+  const [deleteDialog, setDeleteDialog] = useState(null);
+
   const handleDeleteUser = async (user) => {
-    if (!window.confirm(`Delete user "${user.name}" (${user.email})? This will also remove their job matches, preferences, and notifications. This cannot be undone.`)) return;
     try {
       await api.delete(`/admin/users/${user.id}`);
       toast.success(`User "${user.name}" deleted`);
+      setDeleteDialog(null);
       fetchUsers();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to delete user');
@@ -335,7 +337,7 @@ const AdminUserManagement = () => {
                           Edit
                         </Button>
                         <Button
-                          onClick={() => handleDeleteUser(user)}
+                          onClick={() => setDeleteDialog(user)}
                           size="sm"
                           variant="outline"
                           className="text-red-500 border-red-500/30 hover:bg-red-500/10"
@@ -487,6 +489,45 @@ const AdminUserManagement = () => {
                     className="bg-[#06b6d4] hover:bg-[#0891b2] text-white"
                   >
                     Save Changes
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+        {/* Delete Confirmation Dialog */}
+        {deleteDialog && (
+          <Dialog open={!!deleteDialog} onOpenChange={() => setDeleteDialog(null)}>
+            <DialogContent className={`${theme.glass} ${theme.border.primary} border max-w-md`}>
+              <DialogHeader>
+                <DialogTitle className={`${theme.text.primary} text-lg`}>Delete User</DialogTitle>
+              </DialogHeader>
+              <div className="mt-4 space-y-4">
+                <div className={`p-4 rounded-xl bg-red-500/10 border border-red-500/20`}>
+                  <p className={`${theme.text.primary} font-medium mb-1`}>
+                    Are you sure you want to delete this user?
+                  </p>
+                  <p className={`${theme.text.secondary} text-sm`}>
+                    <span className="font-semibold">{deleteDialog.name}</span> ({deleteDialog.email})
+                  </p>
+                  <p className="text-red-400 text-sm mt-2">
+                    This will permanently remove the user and all their data including job matches, preferences, and notifications. This cannot be undone.
+                  </p>
+                </div>
+                <div className="flex justify-end gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setDeleteDialog(null)}
+                    className={theme.button.secondary}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => handleDeleteUser(deleteDialog)}
+                    className="bg-red-500 hover:bg-red-600 text-white"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete User
                   </Button>
                 </div>
               </div>
