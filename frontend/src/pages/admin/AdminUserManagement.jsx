@@ -149,7 +149,8 @@ const AdminUserManagement = () => {
     const colors = {
       admin: 'bg-red-400/20 text-red-400 border-red-400/30',
       mentor: 'bg-blue-400/20 text-blue-400 border-blue-400/30',
-      mentee: 'bg-green-400/20 text-green-400 border-green-400/30'
+      mentee: 'bg-green-400/20 text-green-400 border-green-400/30',
+      agent_user: 'bg-cyan-400/20 text-cyan-400 border-cyan-400/30'
     };
     return colors[role] || colors.mentee;
   };
@@ -251,6 +252,7 @@ const AdminUserManagement = () => {
                 <SelectContent className={theme.bg.card}>
                   <SelectItem value="all">All Roles</SelectItem>
                   <SelectItem value="mentee">Mentees</SelectItem>
+                  <SelectItem value="agent_user">Agent Users</SelectItem>
                   <SelectItem value="mentor">Mentors</SelectItem>
                   <SelectItem value="admin">Admins</SelectItem>
                 </SelectContent>
@@ -387,6 +389,7 @@ const AdminUserManagement = () => {
                       </SelectTrigger>
                       <SelectContent className={theme.bg.card}>
                         <SelectItem value="mentee">Mentee</SelectItem>
+                        <SelectItem value="agent_user">Agent User</SelectItem>
                         <SelectItem value="mentor">Mentor</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
@@ -417,6 +420,9 @@ const AdminUserManagement = () => {
                     </SelectTrigger>
                     <SelectContent className={theme.bg.card}>
                       <SelectItem value="none">No Plan</SelectItem>
+                      <SelectItem value="agent_trial">AI Agent Trial - ₹99</SelectItem>
+                      <SelectItem value="agent_monthly">AI Agent Monthly - ₹199</SelectItem>
+                      <SelectItem value="agent_quarterly">AI Agent Quarterly - ₹599</SelectItem>
                       {pricingPlans.map(plan => (
                         <SelectItem key={plan.plan_id} value={plan.plan_id}>
                           {plan.name} - ₹{plan.price / 100}
