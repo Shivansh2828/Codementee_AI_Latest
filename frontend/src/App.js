@@ -32,6 +32,8 @@ import RegisterPage from "./pages/RegisterPage";
 
 // Lazy load other pages to reduce initial bundle size
 const ApplyPage = lazy(() => import("./pages/ApplyPage"));
+const AgentPurchasePage = lazy(() => import("./pages/AgentPurchasePage"));
+const AIAgentLandingPage = lazy(() => import("./pages/AIAgentLandingPage"));
 const ConfirmationPage = lazy(() => import("./pages/ConfirmationPage"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
@@ -108,6 +110,8 @@ function App() {
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/apply" element={<ApplyPage />} />
+            <Route path="/agent-purchase" element={<AgentPurchasePage />} />
+            <Route path="/ai-agents" element={<AIAgentLandingPage />} />
             <Route path="/confirmation" element={<ConfirmationPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
@@ -147,17 +151,17 @@ function App() {
             <Route path="/mentor/bug-reports" element={<ProtectedRoute allowedRoles={['mentor']}><MentorBugReports /></ProtectedRoute>} />
 
             {/* Mentee Routes */}
-            <Route path="/mentee" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeDashboard /></ProtectedRoute>} />
-            <Route path="/mentee/book" element={<ProtectedRoute allowedRoles={['mentee']}><MenteePricing /></ProtectedRoute>} />
-            <Route path="/mentee/slots" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeSlotBrowsing /></ProtectedRoute>} />
-            <Route path="/mentee/mocks" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeMentorSelection /></ProtectedRoute>} />
-            <Route path="/mentee/feedbacks" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeFeedbacks /></ProtectedRoute>} />
-            <Route path="/mentee/resume-review" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeResumeReview /></ProtectedRoute>} />
-            <Route path="/mentee/resume-review-slots" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeResumeReviewSlots /></ProtectedRoute>} />
-            <Route path="/mentee/community" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeCommunity /></ProtectedRoute>} />
-            <Route path="/mentee/bug-reports" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeBugReports /></ProtectedRoute>} />
-            <Route path="/mentee/job-search" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeJobSearch /></ProtectedRoute>} />
-            <Route path="/mentee/referral-finder" element={<ProtectedRoute allowedRoles={['mentee']}><MenteeReferralFinder /></ProtectedRoute>} />
+            <Route path="/mentee" element={<ProtectedRoute allowedRoles={['mentee', 'agent_user']}><MenteeDashboard /></ProtectedRoute>} />
+            <Route path="/mentee/book" element={<ProtectedRoute allowedRoles={['mentee', 'agent_user']}><MenteePricing /></ProtectedRoute>} />
+            <Route path="/mentee/slots" element={<ProtectedRoute allowedRoles={['mentee', 'agent_user']}><MenteeSlotBrowsing /></ProtectedRoute>} />
+            <Route path="/mentee/mocks" element={<ProtectedRoute allowedRoles={['mentee', 'agent_user']}><MenteeMentorSelection /></ProtectedRoute>} />
+            <Route path="/mentee/feedbacks" element={<ProtectedRoute allowedRoles={['mentee', 'agent_user']}><MenteeFeedbacks /></ProtectedRoute>} />
+            <Route path="/mentee/resume-review" element={<ProtectedRoute allowedRoles={['mentee', 'agent_user']}><MenteeResumeReview /></ProtectedRoute>} />
+            <Route path="/mentee/resume-review-slots" element={<ProtectedRoute allowedRoles={['mentee', 'agent_user']}><MenteeResumeReviewSlots /></ProtectedRoute>} />
+            <Route path="/mentee/community" element={<ProtectedRoute allowedRoles={['mentee', 'agent_user']}><MenteeCommunity /></ProtectedRoute>} />
+            <Route path="/mentee/bug-reports" element={<ProtectedRoute allowedRoles={['mentee', 'agent_user']}><MenteeBugReports /></ProtectedRoute>} />
+            <Route path="/mentee/job-search" element={<ProtectedRoute allowedRoles={['mentee', 'agent_user']}><MenteeJobSearch /></ProtectedRoute>} />
+            <Route path="/mentee/referral-finder" element={<ProtectedRoute allowedRoles={['mentee', 'agent_user']}><MenteeReferralFinder /></ProtectedRoute>} />
 
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/" replace />} />

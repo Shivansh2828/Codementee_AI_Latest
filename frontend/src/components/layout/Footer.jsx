@@ -28,6 +28,11 @@ const Footer = () => {
             <h4 className={`${theme.text.primary} font-semibold mb-4`}>Quick Links</h4>
             <ul className="space-y-3">
               <li>
+                <Link to="/ai-agents" className={`${theme.text.secondary} hover:${theme.text.accent} transition-colors text-sm`}>
+                  AI Agents
+                </Link>
+              </li>
+              <li>
                 <a href="/#pricing" className={`${theme.text.secondary} hover:${theme.text.accent} transition-colors text-sm`}>
                   Pricing
                 </a>

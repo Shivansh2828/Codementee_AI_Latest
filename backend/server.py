@@ -3194,6 +3194,32 @@ async def increase_user_quota(user_id: str, data: dict, user=Depends(get_current
     updated_user = await db.users.find_one({"id": user_id})
     return serialize_doc(updated_user)
 
+@api_router.delete("/admin/users/{user_id}")
+async def delete_user(user_id: str, user=Depends(get_current_user)):
+    """Delete a user and their related data - admin only"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    target = await db.users.find_one({"id": user_id})
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Prevent deleting yourself
+    if user_id == user["id"]:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+
+    # Clean up related data
+    await db.notifications.delete_many({"user_id": user_id})
+    await db.job_matches.delete_many({"user_id": user_id})
+    await db.applied_jobs.delete_many({"user_id": user_id})
+    await db.job_preferences.delete_many({"user_id": user_id})
+    await db.referral_employees.delete_many({"discovered_by": user_id})
+
+    # Delete the user
+    await db.users.delete_one({"id": user_id})
+
+    return {"message": f"User {target.get('name', user_id)} deleted successfully"}
+
 # Admin Slot Management
 @api_router.get("/admin/all-slots")
 async def get_all_slots(user=Depends(get_current_user)):
@@ -5928,7 +5954,11 @@ PLAN_PRICES = {
     "premium": 899900,      # ₹8,999 in paise
     "monthly": 199900,      # ₹1,999 in paise
     "quarterly": 499900,    # ₹4,999 in paise
-    "biannual": 899900      # ₹8,999 in paise
+    "biannual": 899900,     # ₹8,999 in paise
+    # AI Agent standalone plans
+    "agent_trial": 9900,    # ₹99 in paise (first month trial)
+    "agent_monthly": 19900, # ₹199 in paise
+    "agent_quarterly": 59900, # ₹599 in paise (3 months, save ₹98)
 }
 
 PLAN_NAMES = {
@@ -5942,7 +5972,11 @@ PLAN_NAMES = {
     "premium": "Premium Plan",
     "monthly": "Monthly Plan",
     "quarterly": "3 Months Plan",
-    "biannual": "6 Months Plan"
+    "biannual": "6 Months Plan",
+    # AI Agent standalone plans
+    "agent_trial": "AI Agent Trial (1 Month)",
+    "agent_monthly": "AI Agent Monthly",
+    "agent_quarterly": "AI Agent Quarterly (3 Months)",
 }
 
 async def get_pricing_plan(plan_id: str):
@@ -5979,7 +6013,11 @@ async def get_pricing_plan(plan_id: str):
             "premium": 6,
             "monthly": 1,
             "quarterly": 3,
-            "biannual": 6
+            "biannual": 6,
+            # AI Agent standalone plans
+            "agent_trial": 1,
+            "agent_monthly": 1,
+            "agent_quarterly": 3,
         }
         return {
             "price": PLAN_PRICES[plan_id],
@@ -6201,25 +6239,76 @@ async def verify_payment(data: VerifyPaymentRequest):
                     "strategy_calls": 0,
                     "referral_guidance": True
                 }
-            }
+            },
+            "agent_trial": {
+                "interview_quota_total": 0,
+                "plan_features": {
+                    "mock_interviews": 0,
+                    "resume_reviews": 0,
+                    "resume_review_type": "none",
+                    "offline_profile_creation": 0,
+                    "ai_tools_access": "full",
+                    "community_access": False,
+                    "priority_support": False,
+                    "strategy_calls": 0,
+                    "referral_guidance": False
+                }
+            },
+            "agent_monthly": {
+                "interview_quota_total": 0,
+                "plan_features": {
+                    "mock_interviews": 0,
+                    "resume_reviews": 0,
+                    "resume_review_type": "none",
+                    "offline_profile_creation": 0,
+                    "ai_tools_access": "full",
+                    "community_access": False,
+                    "priority_support": False,
+                    "strategy_calls": 0,
+                    "referral_guidance": False
+                }
+            },
+            "agent_quarterly": {
+                "interview_quota_total": 0,
+                "plan_features": {
+                    "mock_interviews": 0,
+                    "resume_reviews": 0,
+                    "resume_review_type": "none",
+                    "offline_profile_creation": 0,
+                    "ai_tools_access": "full",
+                    "community_access": False,
+                    "priority_support": False,
+                    "strategy_calls": 0,
+                    "referral_guidance": False
+                }
+            },
         }
         
         plan_config = plan_configs.get(order["plan_id"], plan_configs["starter"])
         
         # This is an upgrade - update existing user
+        # Determine role: agent plans create agent_user role
+        is_agent_plan = order["plan_id"].startswith("agent_")
+        new_role = "agent_user" if is_agent_plan else existing_user.get("role", "mentee")
+        
+        update_fields = {
+            "status": "Active",
+            "plan_id": order["plan_id"],
+            "plan_name": order["plan_name"],
+            "current_role": order.get("current_role", existing_user.get("current_role", "")),
+            "target_role": order.get("target_role", existing_user.get("target_role", "")),
+            "interview_quota_total": plan_config["interview_quota_total"],
+            "interview_quota_remaining": plan_config["interview_quota_total"],
+            "plan_features": plan_config["plan_features"],
+            "upgraded_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        # Only change role to agent_user for brand new users (not existing mentees)
+        # For existing mentees, agent plan is an add-on — role stays mentee
+        
         await db.users.update_one(
             {"email": order["email"]},
-            {"$set": {
-                "status": "Active",
-                "plan_id": order["plan_id"],
-                "plan_name": order["plan_name"],
-                "current_role": order.get("current_role", existing_user.get("current_role", "")),
-                "target_role": order.get("target_role", existing_user.get("target_role", "")),
-                "interview_quota_total": plan_config["interview_quota_total"],
-                "interview_quota_remaining": plan_config["interview_quota_total"],
-                "plan_features": plan_config["plan_features"],
-                "upgraded_at": datetime.now(timezone.utc).isoformat()
-            }}
+            {"$set": update_fields}
         )
         
         # Get updated user
@@ -6288,10 +6377,56 @@ async def verify_payment(data: VerifyPaymentRequest):
                     "strategy_calls": 0,
                     "referral_guidance": True
                 }
-            }
+            },
+            "agent_trial": {
+                "interview_quota_total": 0,
+                "plan_features": {
+                    "mock_interviews": 0,
+                    "resume_reviews": 0,
+                    "resume_review_type": "none",
+                    "offline_profile_creation": 0,
+                    "ai_tools_access": "full",
+                    "community_access": False,
+                    "priority_support": False,
+                    "strategy_calls": 0,
+                    "referral_guidance": False
+                }
+            },
+            "agent_monthly": {
+                "interview_quota_total": 0,
+                "plan_features": {
+                    "mock_interviews": 0,
+                    "resume_reviews": 0,
+                    "resume_review_type": "none",
+                    "offline_profile_creation": 0,
+                    "ai_tools_access": "full",
+                    "community_access": False,
+                    "priority_support": False,
+                    "strategy_calls": 0,
+                    "referral_guidance": False
+                }
+            },
+            "agent_quarterly": {
+                "interview_quota_total": 0,
+                "plan_features": {
+                    "mock_interviews": 0,
+                    "resume_reviews": 0,
+                    "resume_review_type": "none",
+                    "offline_profile_creation": 0,
+                    "ai_tools_access": "full",
+                    "community_access": False,
+                    "priority_support": False,
+                    "strategy_calls": 0,
+                    "referral_guidance": False
+                }
+            },
         }
         
         plan_config = plan_configs.get(order["plan_id"], plan_configs["starter"])
+        
+        # Determine role based on plan type
+        is_agent_plan = order["plan_id"].startswith("agent_")
+        user_role = "agent_user" if is_agent_plan else "mentee"
         
         # This is a new user - create account
         user_doc = {
@@ -6299,7 +6434,7 @@ async def verify_payment(data: VerifyPaymentRequest):
             "name": order["name"],
             "email": order["email"],
             "password": order["password"],
-            "role": "mentee",
+            "role": user_role,
             "status": "Active",
             "plan_id": order["plan_id"],
             "plan_name": order["plan_name"],

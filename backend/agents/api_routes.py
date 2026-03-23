@@ -21,6 +21,13 @@ _get_current_user = None
 
 router = APIRouter(prefix="/ai-agents", tags=["AI Agents"])
 
+ALLOWED_AGENT_ROLES = {"mentee", "agent_user"}
+
+def _check_agent_access(user):
+    """Check if user has access to AI agent features"""
+    if user["role"] not in ALLOWED_AGENT_ROLES:
+        raise HTTPException(status_code=403, detail="Access denied")
+
 
 def inject_dependencies(database, auth_dependency):
     """Inject database and auth dependency from main server"""
@@ -90,8 +97,7 @@ async def save_job_preferences(
 ):
     """Save user's job search preferences"""
     user = await _get_current_user(credentials)
-    if user["role"] != "mentee":
-        raise HTTPException(status_code=403, detail="Mentee only")
+    _check_agent_access(user)
 
     existing = await _db.job_preferences.find_one({"user_id": user["id"]})
 
@@ -125,8 +131,7 @@ async def get_job_preferences(
 ):
     """Get user's job search preferences"""
     user = await _get_current_user(credentials)
-    if user["role"] != "mentee":
-        raise HTTPException(status_code=403, detail="Mentee only")
+    _check_agent_access(user)
 
     preferences = await _db.job_preferences.find_one({"user_id": user["id"]})
 
@@ -144,8 +149,7 @@ async def reset_job_preferences(
 ):
     """Reset/delete user's job search preferences and saved matches"""
     user = await _get_current_user(credentials)
-    if user["role"] != "mentee":
-        raise HTTPException(status_code=403, detail="Mentee only")
+    _check_agent_access(user)
 
     await _db.job_preferences.delete_many({"user_id": user["id"]})
     await _db.job_matches.delete_many({"user_id": user["id"]})
@@ -161,8 +165,7 @@ async def parse_resume(
 ):
     """Parse resume and extract skills, experience, education"""
     user = await _get_current_user(credentials)
-    if user["role"] != "mentee":
-        raise HTTPException(status_code=403, detail="Mentee only")
+    _check_agent_access(user)
 
     if not job_agent:
         raise HTTPException(status_code=503, detail="Job agent not initialized")
@@ -190,8 +193,7 @@ async def search_jobs(
     _logger = logging.getLogger(__name__)
 
     user = await _get_current_user(credentials)
-    if user["role"] != "mentee":
-        raise HTTPException(status_code=403, detail="Mentee only")
+    _check_agent_access(user)
 
     if not job_agent:
         raise HTTPException(status_code=503, detail="Job agent not initialized")
@@ -276,8 +278,7 @@ async def get_job_matches(
 ):
     """Get user's saved job matches"""
     user = await _get_current_user(credentials)
-    if user["role"] != "mentee":
-        raise HTTPException(status_code=403, detail="Mentee only")
+    _check_agent_access(user)
 
     matches = await _db.job_matches.find(
         {"user_id": user["id"], "score": {"$gte": min_score}}
@@ -296,8 +297,7 @@ async def trigger_daily_search(
 ):
     """Manually trigger daily job search"""
     user = await _get_current_user(credentials)
-    if user["role"] != "mentee":
-        raise HTTPException(status_code=403, detail="Mentee only")
+    _check_agent_access(user)
 
     if not job_agent:
         raise HTTPException(status_code=503, detail="Job agent not initialized")
@@ -320,8 +320,7 @@ async def mark_job_applied(
 ):
     """Mark a job as applied so it won't be suggested again"""
     user = await _get_current_user(credentials)
-    if user["role"] != "mentee":
-        raise HTTPException(status_code=403, detail="Mentee only")
+    _check_agent_access(user)
 
     job_title = data.get("job_title", "")
     company = data.get("company", "")
@@ -404,8 +403,7 @@ async def find_referrals(
 ):
     """Find employees at target company for referrals"""
     user = await _get_current_user(credentials)
-    if user["role"] != "mentee":
-        raise HTTPException(status_code=403, detail="Mentee only")
+    _check_agent_access(user)
 
     if not referral_agent:
         raise HTTPException(status_code=503, detail="Referral agent not initialized")
@@ -429,8 +427,7 @@ async def draft_referral_message(
 ):
     """Draft personalized referral message for an employee"""
     user = await _get_current_user(credentials)
-    if user["role"] != "mentee":
-        raise HTTPException(status_code=403, detail="Mentee only")
+    _check_agent_access(user)
 
     if not referral_agent:
         raise HTTPException(status_code=503, detail="Referral agent not initialized")
@@ -481,8 +478,7 @@ async def track_outreach(
 ):
     """Track referral outreach sent to an employee"""
     user = await _get_current_user(credentials)
-    if user["role"] != "mentee":
-        raise HTTPException(status_code=403, detail="Mentee only")
+    _check_agent_access(user)
 
     if not referral_agent:
         raise HTTPException(status_code=503, detail="Referral agent not initialized")
@@ -506,8 +502,7 @@ async def update_outreach_response(
 ):
     """Update outreach with response received"""
     user = await _get_current_user(credentials)
-    if user["role"] != "mentee":
-        raise HTTPException(status_code=403, detail="Mentee only")
+    _check_agent_access(user)
 
     if not referral_agent:
         raise HTTPException(status_code=503, detail="Referral agent not initialized")
@@ -527,8 +522,7 @@ async def get_referral_pipeline(
 ):
     """Get user's referral pipeline status"""
     user = await _get_current_user(credentials)
-    if user["role"] != "mentee":
-        raise HTTPException(status_code=403, detail="Mentee only")
+    _check_agent_access(user)
 
     if not referral_agent:
         raise HTTPException(status_code=503, detail="Referral agent not initialized")
@@ -544,8 +538,7 @@ async def get_referral_outreach(
 ):
     """Get user's referral outreach history"""
     user = await _get_current_user(credentials)
-    if user["role"] != "mentee":
-        raise HTTPException(status_code=403, detail="Mentee only")
+    _check_agent_access(user)
 
     outreach = await _db.referral_outreach.find(
         {"user_id": user["id"]}

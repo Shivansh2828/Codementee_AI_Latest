@@ -20,7 +20,8 @@ import {
   Award,
   Calendar,
   Eye,
-  EyeOff
+  EyeOff,
+  Trash2
 } from "lucide-react";
 import api from "../../utils/api";
 
@@ -130,6 +131,17 @@ const AdminUserManagement = () => {
       fetchUsers();
     } catch (error) {
       toast.error('Failed to increase quota');
+    }
+  };
+
+  const handleDeleteUser = async (user) => {
+    if (!window.confirm(`Delete user "${user.name}" (${user.email})? This will also remove their job matches, preferences, and notifications. This cannot be undone.`)) return;
+    try {
+      await api.delete(`/admin/users/${user.id}`);
+      toast.success(`User "${user.name}" deleted`);
+      fetchUsers();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete user');
     }
   };
 
@@ -311,14 +323,24 @@ const AdminUserManagement = () => {
                       </div>
                     </td>
                     <td className="p-4">
-                      <Button
-                        onClick={() => handleEditUser(user)}
-                        size="sm"
-                        className="bg-[#06b6d4] hover:bg-[#0891b2] text-white"
-                      >
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => handleEditUser(user)}
+                          size="sm"
+                          className="bg-[#06b6d4] hover:bg-[#0891b2] text-white"
+                        >
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </Button>
+                        <Button
+                          onClick={() => handleDeleteUser(user)}
+                          size="sm"
+                          variant="outline"
+                          className="text-red-500 border-red-500/30 hover:bg-red-500/10"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus, Video, DollarSign, FileText, MessageCircle, BarChart3, TrendingUp, ChevronDown, Bug, Briefcase, Target, Crown, Headphones, Search } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus, DollarSign, FileText, MessageCircle, BarChart3, TrendingUp, ChevronDown, Bug, Briefcase, Target, Crown, Headphones, Search, Lock } from 'lucide-react';
 import ThemeToggle from '../ui/ThemeToggle';
 import { Badge } from '../ui/badge';
 import BugReportModal from '../BugReportModal';
@@ -90,6 +90,25 @@ const DashboardLayout = ({ children, title }) => {
         { path: '/mentor/payouts', label: 'My Payouts', icon: DollarSign },
         { path: '/mentor/feedbacks', label: 'Feedbacks', icon: MessageSquare },
         { path: '/mentor/bug-reports', label: 'Support & Help', icon: Headphones },
+      ];
+    } else if (user?.role === 'agent_user') {
+      return [
+        { path: '/mentee/job-search', label: 'Dashboard', icon: LayoutDashboard },
+        { path: '/apply', label: 'Unlock Interviews', icon: CalendarPlus, isUpgrade: true },
+        { path: '/mentee/mocks', label: 'My Interviews', icon: Calendar, isLocked: true },
+        { path: '/mentee/feedbacks', label: 'My Feedbacks', icon: MessageSquare, isLocked: true },
+        { path: '/mentee/resume-review', label: 'Resume Review', icon: FileText, isLocked: true },
+        { path: '/mentee/bug-reports', label: 'Support & Help', icon: Headphones },
+        { 
+          label: 'AI Tools', 
+          icon: Search, 
+          isSection: true,
+          items: [
+            { path: '/mentee/job-search', label: 'AI Job Search', icon: Briefcase },
+            { path: '/mentee/referral-finder', label: 'Referral Finder', icon: Target },
+          ]
+        },
+        { path: '/mentee/community', label: 'Community', icon: MessageCircle, isLocked: true },
       ];
     } else {
       // Check if user is free or paid
@@ -188,6 +207,34 @@ const DashboardLayout = ({ children, title }) => {
               } else {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
+                
+                if (item.isLocked) {
+                  return (
+                    <div
+                      key={item.path}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg ${theme.text.muted} opacity-50 cursor-not-allowed`}
+                    >
+                      <Icon size={20} />
+                      <span className="flex-1">{item.label}</span>
+                      <Lock size={14} />
+                    </div>
+                  );
+                }
+                
+                if (item.isUpgrade) {
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setSidebarOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 rounded-lg text-amber-400 hover:bg-amber-500/10 transition-all duration-200"
+                    >
+                      <Crown size={20} />
+                      <span className="font-medium">{item.label}</span>
+                    </Link>
+                  );
+                }
+                
                 return (
                   <Link
                     key={item.path}
@@ -283,10 +330,13 @@ const DashboardLayout = ({ children, title }) => {
                         </div>
                       </div>
                       <Badge className={`${user?.status === 'Free' || !user?.plan_id ? 'bg-gray-600/20 text-gray-400' : 'bg-[#06b6d4]/20 text-[#06b6d4]'} border-0 text-xs`}>
-                        {user?.status === 'Free' || !user?.plan_id ? 'Free Tier' : 
+                        {user?.role === 'agent_user' ? 'AI Agent' :
+                         user?.status === 'Free' || !user?.plan_id || user?.plan_id?.startsWith('agent_') ? 
+                         (user?.plan_id?.startsWith('agent_') ? 'Free + AI Agent' : 'Free Tier') : 
                          user?.plan_id === 'starter' ? 'Starter Plan' :
                          user?.plan_id === 'pro' ? 'Pro Plan' :
-                         user?.plan_id === 'elite' ? 'Elite Plan' : 'Free Tier'}
+                         user?.plan_id === 'elite' ? 'Elite Plan' :
+                         'Free Tier'}
                       </Badge>
                     </div>
 
