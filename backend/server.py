@@ -6082,6 +6082,25 @@ PLAN_PRICES = {
     "agent_quarterly": 59900, # ₹599 in paise (3 months, save ₹98)
 }
 
+# USD prices for all plans (in cents)
+PLAN_PRICES_USD = {
+    # New minimal launch plans
+    "foundation": 2400,     # $24 in cents
+    "growth": 8400,         # $84 in cents
+    "accelerator": 18000,   # $180 in cents
+    # Legacy support
+    "starter": 2400,
+    "professional": 8400,
+    "premium": 18000,
+    "monthly": 2400,
+    "quarterly": 8400,
+    "biannual": 18000,
+    # AI Agent standalone plans
+    "agent_trial": 200,     # $2 in cents
+    "agent_monthly": 400,   # $4 in cents
+    "agent_quarterly": 1000, # $10 in cents (3 months, save $2)
+}
+
 PLAN_NAMES = {
     # New minimal launch plans
     "foundation": "Foundation Plan",
@@ -6161,7 +6180,7 @@ async def get_pricing_plan(plan_id: str):
             "agent_quarterly": 3,
         }
         price_inr = PLAN_PRICES[plan_id]
-        price_usd = int(price_inr * 0.012)  # Approximate conversion
+        price_usd = PLAN_PRICES_USD.get(plan_id, int(price_inr * 0.012))  # Use USD dict or fallback conversion
         
         return {
             "price": price_inr,

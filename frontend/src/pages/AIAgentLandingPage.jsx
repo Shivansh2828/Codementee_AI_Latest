@@ -8,6 +8,14 @@ import {
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import { useTheme } from '../contexts/ThemeContext';
+import { useCurrency } from '../contexts/CurrencyContext';
+
+// AI Agent pricing
+const AGENT_PRICING = {
+  trial: { inr: 99, usd: 2 },
+  monthly: { inr: 199, usd: 4 },
+  quarterly: { inr: 599, usd: 10 }
+};
 
 const FAQItem = ({ question, answer, theme }) => {
   const [open, setOpen] = useState(false);
@@ -31,6 +39,12 @@ const FAQItem = ({ question, answer, theme }) => {
 
 const AIAgentLandingPage = () => {
   const { theme, isDark } = useTheme();
+  const { currency, formatPrice } = useCurrency();
+  
+  // Get price based on currency
+  const getPrice = (plan) => {
+    return currency === 'USD' ? AGENT_PRICING[plan].usd : AGENT_PRICING[plan].inr;
+  };
 
   const faqs = [
     {
@@ -43,7 +57,7 @@ const AIAgentLandingPage = () => {
     },
     {
       question: 'Do I need a mentorship plan to use AI Agents?',
-      answer: 'No. AI Agents are available as a standalone product starting at ₹99/month. However, if you have an Elite mentorship plan, both agents are included for free.'
+      answer: `No. AI Agents are available as a standalone product starting at ${formatPrice(getPrice('trial'))}/month. However, if you have an Elite mentorship plan, both agents are included for free.`
     },
     {
       question: 'What job boards does it search?',
@@ -98,7 +112,7 @@ const AIAgentLandingPage = () => {
                   className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-bold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-lg"
                 >
                   <Zap className="w-5 h-5" />
-                  Start for ₹99/month
+                  Start for {formatPrice(getPrice('trial'))}/month
                 </Link>
                 <a
                   href="#pricing"
@@ -307,7 +321,7 @@ const AIAgentLandingPage = () => {
                   <h4 className={`text-xl font-bold ${theme.text.primary} mt-1`}>First Month</h4>
                 </div>
                 <div className="flex items-baseline gap-1 mb-5">
-                  <span className={`text-5xl font-bold ${theme.text.primary}`}>₹99</span>
+                  <span className={`text-5xl font-bold ${theme.text.primary}`}>{formatPrice(getPrice('trial'))}</span>
                   <span className={`${theme.text.muted} text-sm`}>/month</span>
                 </div>
                 <ul className="space-y-3 mb-7">
@@ -322,7 +336,7 @@ const AIAgentLandingPage = () => {
                   to="/agent-purchase?plan=agent_trial"
                   className={`block w-full text-center px-4 py-3.5 rounded-xl font-semibold transition-all duration-200 ${theme.bg.secondary} ${theme.text.primary} border ${theme.border.primary} hover:border-[#06b6d4]/50`}
                 >
-                  Start for ₹99
+                  Start for {formatPrice(getPrice('trial'))}
                 </Link>
               </div>
 
@@ -336,7 +350,7 @@ const AIAgentLandingPage = () => {
                   <h4 className={`text-xl font-bold ${theme.text.primary} mt-1`}>Regular</h4>
                 </div>
                 <div className="flex items-baseline gap-1 mb-5">
-                  <span className={`text-5xl font-bold ${theme.text.primary}`}>₹199</span>
+                  <span className={`text-5xl font-bold ${theme.text.primary}`}>{formatPrice(getPrice('monthly'))}</span>
                   <span className={`${theme.text.muted} text-sm`}>/month</span>
                 </div>
                 <ul className="space-y-3 mb-7">
@@ -358,14 +372,18 @@ const AIAgentLandingPage = () => {
               {/* Quarterly */}
               <div className={`rounded-2xl p-7 ${theme.bg.card} ${theme.border.primary} border hover:border-[#06b6d4]/40 transition-all duration-300`}>
                 <div className="mb-5">
-                  <span className="text-xs font-semibold text-green-500 uppercase tracking-wider">Save ₹98</span>
+                  <span className="text-xs font-semibold text-green-500 uppercase tracking-wider">
+                    Save {currency === 'USD' ? '$2' : '₹98'}
+                  </span>
                   <h4 className={`text-xl font-bold ${theme.text.primary} mt-1`}>3 Months</h4>
                 </div>
                 <div className="flex items-baseline gap-1 mb-1">
-                  <span className={`text-5xl font-bold ${theme.text.primary}`}>₹599</span>
+                  <span className={`text-5xl font-bold ${theme.text.primary}`}>{formatPrice(getPrice('quarterly'))}</span>
                   <span className={`${theme.text.muted} text-sm`}>/3 months</span>
                 </div>
-                <p className={`text-xs ${theme.text.muted} mb-5`}>~₹200/month</p>
+                <p className={`text-xs ${theme.text.muted} mb-5`}>
+                  ~{currency === 'USD' ? '$3.33' : '₹200'}/month
+                </p>
                 <ul className="space-y-3 mb-7">
                   {['AI Job Search Agent', 'AI Referral Finder', 'Daily email digest', 'LinkedIn referral drafts', 'Resume parsing & scoring'].map((f, i) => (
                     <li key={i} className="flex items-center gap-2">
@@ -440,7 +458,7 @@ const AIAgentLandingPage = () => {
                   className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-bold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all duration-300 shadow-lg text-lg"
                 >
                   <Zap className="w-5 h-5" />
-                  Try for ₹99
+                  Try for {formatPrice(getPrice('trial'))}
                 </Link>
                 <Link
                   to="/register"

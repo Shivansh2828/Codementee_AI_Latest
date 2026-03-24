@@ -293,6 +293,8 @@ async def setup_initial_data():
                 "plan_id": "starter",
                 "name": "Mock Starter",
                 "price": 299900,  # ₹2,999 in paise
+                "price_inr": 299900,
+                "price_usd": 3600,  # $36 in cents
                 "duration_months": 1,
                 "features": [
                     "1 MAANG-Level Mock Interview",
@@ -315,6 +317,8 @@ async def setup_initial_data():
                 "plan_id": "pro",
                 "name": "Interview Pro",
                 "price": 699900,  # ₹6,999 in paise
+                "price_inr": 699900,
+                "price_usd": 8400,  # $84 in cents
                 "duration_months": 3,
                 "features": [
                     "3 MAANG-Level Mock Interviews",
@@ -339,6 +343,8 @@ async def setup_initial_data():
                 "plan_id": "elite",
                 "name": "Interview Elite",
                 "price": 1499900,  # ₹14,999 in paise
+                "price_inr": 1499900,
+                "price_usd": 18000,  # $180 in cents
                 "duration_months": 6,
                 "features": [
                     "6 MAANG-Level Mock Interviews",
@@ -357,6 +363,77 @@ async def setup_initial_data():
                 },
                 "is_active": True,
                 "display_order": 3
+            },
+            # AI Agent Standalone Plans
+            {
+                "plan_id": "agent_trial",
+                "name": "AI Agent Trial (1 Month)",
+                "price": 9900,  # ₹99 in paise
+                "price_inr": 9900,
+                "price_usd": 200,  # $2 in cents
+                "duration_months": 1,
+                "features": [
+                    "AI Job Search Agent",
+                    "AI Referral Finder",
+                    "Daily email digest",
+                    "LinkedIn referral drafts",
+                    "Resume parsing & scoring"
+                ],
+                "limits": {
+                    "mock_interviews": 0,
+                    "ai_job_search": True,
+                    "ai_referral_finder": True,
+                    "daily_job_digest": True
+                },
+                "is_active": True,
+                "display_order": 4
+            },
+            {
+                "plan_id": "agent_monthly",
+                "name": "AI Agent Monthly",
+                "price": 19900,  # ₹199 in paise
+                "price_inr": 19900,
+                "price_usd": 400,  # $4 in cents
+                "duration_months": 1,
+                "features": [
+                    "AI Job Search Agent",
+                    "AI Referral Finder",
+                    "Daily email digest",
+                    "LinkedIn referral drafts",
+                    "Resume parsing & scoring"
+                ],
+                "limits": {
+                    "mock_interviews": 0,
+                    "ai_job_search": True,
+                    "ai_referral_finder": True,
+                    "daily_job_digest": True
+                },
+                "is_active": True,
+                "display_order": 5
+            },
+            {
+                "plan_id": "agent_quarterly",
+                "name": "AI Agent Quarterly (3 Months)",
+                "price": 59900,  # ₹599 in paise
+                "price_inr": 59900,
+                "price_usd": 1000,  # $10 in cents
+                "duration_months": 3,
+                "features": [
+                    "AI Job Search Agent",
+                    "AI Referral Finder",
+                    "Daily email digest",
+                    "LinkedIn referral drafts",
+                    "Resume parsing & scoring",
+                    "Save ₹98 (INR) or $2 (USD)"
+                ],
+                "limits": {
+                    "mock_interviews": 0,
+                    "ai_job_search": True,
+                    "ai_referral_finder": True,
+                    "daily_job_digest": True
+                },
+                "is_active": True,
+                "display_order": 6
             }
         ]
         
@@ -368,33 +445,39 @@ async def setup_initial_data():
                     "plan_id": plan_data["plan_id"],
                     "name": plan_data["name"],
                     "price": plan_data["price"],
+                    "price_inr": plan_data.get("price_inr", plan_data["price"]),
+                    "price_usd": plan_data.get("price_usd", int(plan_data["price"] / 83)),  # Fallback conversion
                     "duration_months": plan_data["duration_months"],
                     "features": plan_data["features"],
                     "limits": plan_data["limits"],
                     "is_active": plan_data["is_active"],
                     "display_order": plan_data["display_order"],
+                    "currencies": ["INR", "USD"],
                     "created_at": datetime.now(timezone.utc).isoformat(),
                     "updated_at": datetime.now(timezone.utc).isoformat()
                 }
                 await db.pricing_plans.insert_one(plan_doc)
-                print(f"✅ Pricing plan created: {plan_data['name']} - ₹{plan_data['price']/100}")
+                print(f"✅ Pricing plan created: {plan_data['name']} - ₹{plan_data['price']/100} / ${plan_data.get('price_usd', 0)/100}")
             else:
                 # Update existing plans with new pricing
                 update_data = {
                     "name": plan_data["name"],
                     "price": plan_data["price"],
+                    "price_inr": plan_data.get("price_inr", plan_data["price"]),
+                    "price_usd": plan_data.get("price_usd", int(plan_data["price"] / 83)),
                     "duration_months": plan_data["duration_months"],
                     "features": plan_data["features"],
                     "limits": plan_data["limits"],
                     "is_active": plan_data["is_active"],
                     "display_order": plan_data["display_order"],
+                    "currencies": ["INR", "USD"],
                     "updated_at": datetime.now(timezone.utc).isoformat()
                 }
                 await db.pricing_plans.update_one(
                     {"plan_id": plan_data["plan_id"]},
                     {"$set": update_data}
                 )
-                print(f"✅ Pricing plan updated: {plan_data['name']} - ₹{plan_data['price']/100}")
+                print(f"✅ Pricing plan updated: {plan_data['name']} - ₹{plan_data['price']/100} / ${plan_data.get('price_usd', 0)/100}")
         
         # Validate pricing integrity
         print("🔍 Validating pricing plan integrity...")
