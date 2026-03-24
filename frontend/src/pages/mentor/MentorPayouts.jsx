@@ -45,8 +45,12 @@ const MentorPayouts = () => {
     }
   };
 
-  const formatAmount = (amount) => {
-    return `₹${(amount / 100).toLocaleString()}`;
+  const formatAmount = (amount, currency = 'INR') => {
+    if (currency === 'USD') {
+      return `$${(amount / 100).toFixed(0)}`;
+    } else {
+      return `₹${(amount / 100).toLocaleString()}`;
+    }
   };
 
   const formatDate = (dateStr) => {
@@ -156,7 +160,14 @@ const MentorPayouts = () => {
                     )}
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`font-bold text-lg ${theme.text.primary}`}>{formatAmount(payout.amount)}</span>
+                    <span className={`font-bold text-lg ${theme.text.primary}`}>
+                      {formatAmount(payout.amount, payout.currency)}
+                    </span>
+                    {payout.mentee_currency && payout.mentee_currency !== payout.currency && (
+                      <p className={`text-xs ${theme.text.muted} mt-1`}>
+                        Mentee paid in {payout.mentee_currency}
+                      </p>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(payout.status)}`}>
@@ -203,7 +214,8 @@ const MentorPayouts = () => {
           <div>
             <h4 className={`font-medium ${theme.text.primary} mb-2`}>Payment Rates</h4>
             <ul className={`text-sm ${theme.text.secondary} space-y-1`}>
-              <li>• Standard rate: ₹800 per 45-60 minute session</li>
+              <li>• India: ₹800 per 45-60 minute session</li>
+              <li>• International: $10 per 45-60 minute session</li>
               <li>• All rates are inclusive of applicable taxes</li>
               <li>• Payments are made via bank transfer</li>
             </ul>

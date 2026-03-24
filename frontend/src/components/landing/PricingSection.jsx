@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, Sparkles, TrendingUp, Crown } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useCurrency } from '../../contexts/CurrencyContext';
 import { useFoundingSlots } from '../../hooks/useFoundingSlots';
 import axios from 'axios';
 
 const PricingSection = () => {
   const { theme } = useTheme();
+  const { currency, isIndia, loading: currencyLoading, formatPrice, getCurrencySymbol } = useCurrency();
   const { remaining, total, sold_out } = useFoundingSlots(30000);
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,15 +40,10 @@ const PricingSection = () => {
   };
 
   useEffect(() => {
-    fetchPricingPlans();
-    
-    // Poll for updates every 30 seconds
-    const interval = setInterval(() => {
+    if (!currencyLoading) {
       fetchPricingPlans();
-    }, 30000); // 30 seconds
-    
-    return () => clearInterval(interval);
-  }, []);
+    }
+  }, [currency, currencyLoading]);
 
   const fetchPricingPlans = async () => {
     try {
@@ -62,7 +59,8 @@ const PricingSection = () => {
           'Expires': '0'
         },
         params: {
-          _t: new Date().getTime() // Cache buster
+          _t: new Date().getTime(), // Cache buster
+          currency: currency // Pass currency parameter
         }
       });
       
@@ -92,20 +90,20 @@ const PricingSection = () => {
             popular: false
           };
           
-          // Handle price - could be in paise or rupees
-          let priceInRupees;
-          if (plan.price > 10000) {
-            // Likely in paise
-            priceInRupees = plan.price / 100;
-          } else {
-            // Already in rupees
-            priceInRupees = plan.price;
-          }
+          // Price is already in correct currency from backend
+          const priceAmount = plan.price / 100; // Convert from cents/paise to dollars/rupees
+          const currencySymbol = plan.currency_symbol || (currency === 'USD' ? '$' : '₹');
+          const formattedPrice = currency === 'USD' 
+            ? priceAmount.toFixed(0) 
+            : priceAmount.toLocaleString('en-IN');
           
           return {
             id: planId,
             name: plan.name,
-            price: priceInRupees.toLocaleString('en-IN'),
+            price: formattedPrice,
+            priceAmount: priceAmount,
+            currency: plan.currency || currency,
+            currencySymbol: currencySymbol,
             features: plan.features || [],
             icon: config.icon,
             iconColor: config.iconColor,
@@ -270,7 +268,7 @@ const PricingSection = () => {
                   {/* Price */}
                   <div className="mb-6">
                     <div className="flex items-baseline gap-1">
-                      <span className={`text-lg ${theme.text.secondary}`}>₹</span>
+                      <span className={`text-lg ${theme.text.secondary}`}>{plan.currencySymbol}</span>
                       <span className={`text-5xl font-bold ${theme.text.primary}`}>
                         {plan.price}
                       </span>

@@ -26,6 +26,7 @@ const AdminPricing = () => {
     plan_id: '',
     name: '',
     price: '',
+    price_usd: '',
     duration_months: '1',
     features: '',
     limits: '',
@@ -69,11 +70,14 @@ const AdminPricing = () => {
       const submitData = {
         name: formData.name,
         price: parseInt(formData.price) * 100, // Convert to paise
+        price_inr: parseInt(formData.price) * 100, // INR in paise
+        price_usd: parseInt(formData.price_usd) * 100, // USD in cents
         duration_months: parseInt(formData.duration_months),
         features: formData.features.split('\n').filter(f => f.trim()),
         limits: formData.limits ? JSON.parse(formData.limits) : {},
         is_active: formData.is_active,
-        display_order: parseInt(formData.display_order)
+        display_order: parseInt(formData.display_order),
+        currencies: ['INR', 'USD']
       };
 
       if (editingPlan) {
@@ -112,6 +116,7 @@ const AdminPricing = () => {
       plan_id: plan.plan_id || '',
       name: plan.name || '',
       price: plan.price ? (plan.price / 100).toString() : '',
+      price_usd: plan.price_usd ? (plan.price_usd / 100).toString() : '',
       duration_months: plan.duration_months ? plan.duration_months.toString() : '1',
       features: plan.features ? plan.features.join('\n') : '',
       limits: JSON.stringify(plan.limits || {}, null, 2),
@@ -136,6 +141,7 @@ const AdminPricing = () => {
       plan_id: '',
       name: '',
       price: '',
+      price_usd: '',
       duration_months: '1',
       features: '',
       limits: '',
@@ -245,13 +251,41 @@ const AdminPricing = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="price" className={theme.text.primary}>Price (₹)</Label>
+                    <Label htmlFor="price" className={theme.text.primary}>Price INR (₹)</Label>
                     <Input
                       id="price"
                       type="number"
                       value={formData.price}
                       onChange={(e) => setFormData({...formData, price: e.target.value})}
                       placeholder="2999"
+                      required
+                      className={`${theme.bg.secondary} ${theme.border.primary} ${theme.text.primary}`}
+                    />
+                    <p className={`text-xs ${theme.text.muted}`}>Price in rupees (will be stored as paise)</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="price_usd" className={theme.text.primary}>Price USD ($)</Label>
+                    <Input
+                      id="price_usd"
+                      type="number"
+                      value={formData.price_usd}
+                      onChange={(e) => setFormData({...formData, price_usd: e.target.value})}
+                      placeholder="36"
+                      required
+                      className={`${theme.bg.secondary} ${theme.border.primary} ${theme.text.primary}`}
+                    />
+                    <p className={`text-xs ${theme.text.muted}`}>Price in dollars (will be stored as cents)</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="duration_months" className={theme.text.primary}>Duration (Months)</Label>
+                    <Input
+                      id="duration_months"
+                      type="number"
+                      value={formData.duration_months}
+                      onChange={(e) => setFormData({...formData, duration_months: e.target.value})}
+                      placeholder="1"
                       required
                       className={`${theme.bg.secondary} ${theme.border.primary} ${theme.text.primary}`}
                     />
@@ -355,11 +389,25 @@ const AdminPricing = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex items-baseline gap-1">
-                      <span className={`${theme.text.secondary} text-lg`}>₹</span>
-                      <span className={`text-4xl font-bold ${theme.text.primary}`}>
-                        {(plan.price / 100).toLocaleString()}
-                      </span>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className={`text-xs ${theme.text.muted} mb-1`}>India Price</p>
+                        <div className="flex items-baseline gap-1">
+                          <span className={`${theme.text.secondary} text-lg`}>₹</span>
+                          <span className={`text-3xl font-bold ${theme.text.primary}`}>
+                            {(plan.price / 100).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <p className={`text-xs ${theme.text.muted} mb-1`}>International Price</p>
+                        <div className="flex items-baseline gap-1">
+                          <span className={`${theme.text.secondary} text-lg`}>$</span>
+                          <span className={`text-3xl font-bold ${theme.text.primary}`}>
+                            {plan.price_usd ? (plan.price_usd / 100).toFixed(0) : 'N/A'}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                     
                     {plan.features && plan.features.length > 0 && (

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { Toaster } from "sonner";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { CurrencyProvider } from "./contexts/CurrencyContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 console.log('🚀 APP.JS: Starting App component');
@@ -92,21 +93,22 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <BrowserRouter>
-          <ScrollToTop />
-          <Toaster 
-            position="top-right" 
-            richColors 
-            toastOptions={{
-              style: {
-                background: 'var(--toast-bg)',
-                border: '1px solid var(--toast-border)',
-                color: 'var(--toast-text)',
-              },
-            }}
-          />
-          <Suspense fallback={<LoadingFallback />}>
-            <Routes>
+        <CurrencyProvider>
+          <BrowserRouter>
+            <ScrollToTop />
+            <Toaster 
+              position="top-right" 
+              richColors 
+              toastOptions={{
+                style: {
+                  background: 'var(--toast-bg)',
+                  border: '1px solid var(--toast-border)',
+                  color: 'var(--toast-text)',
+                },
+              }}
+            />
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/apply" element={<ApplyPage />} />
@@ -168,6 +170,7 @@ function App() {
           </Routes>
         </Suspense>
       </BrowserRouter>
+    </CurrencyProvider>
     </AuthProvider>
   </ThemeProvider>
   );
