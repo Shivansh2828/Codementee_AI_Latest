@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCurrency } from '../../contexts/CurrencyContext';
 import { useFoundingSlots } from '../../hooks/useFoundingSlots';
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
@@ -21,6 +22,7 @@ import api from "../../utils/api";
 const MenteePricing = () => {
   const { theme } = useTheme();
   const { user } = useAuth();
+  const { currency, formatPrice, currencySymbol } = useCurrency();
   const { remaining, total, sold_out } = useFoundingSlots(30000);
   const [loading, setLoading] = useState(true);
   const [processingPlan, setProcessingPlan] = useState(null);
@@ -60,11 +62,11 @@ const MenteePricing = () => {
 
   useEffect(() => {
     fetchPricingPlans();
-  }, []);
+  }, [currency]);
 
   const fetchPricingPlans = async () => {
     try {
-      const response = await api.get('/pricing-plans');
+      const response = await api.get(`/pricing-plans?currency=${currency}`);
       
       // Map and sort plans
       const mappedPlans = response.data
@@ -274,9 +276,12 @@ const MenteePricing = () => {
                   {/* Price */}
                   <div className="mb-6">
                     <div className="flex items-baseline gap-1">
-                      <span className={`text-lg ${theme.text.secondary}`}>₹</span>
+                      <span className={`text-lg ${theme.text.secondary}`}>{currencySymbol}</span>
                       <span className={`text-5xl font-bold ${theme.text.primary}`}>
-                        {Math.floor(plan.price / 100).toLocaleString('en-IN')}
+                        {currency === 'USD' 
+                          ? Math.floor(plan.price / 100).toLocaleString('en-US')
+                          : Math.floor(plan.price / 100).toLocaleString('en-IN')
+                        }
                       </span>
                     </div>
                     <p className={`text-sm ${theme.text.muted} mt-2`}>
