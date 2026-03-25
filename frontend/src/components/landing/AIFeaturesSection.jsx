@@ -1,10 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, Sparkles, Search, Crown, ArrowRight, CheckCircle, Bot } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useCurrency } from '../../contexts/CurrencyContext';
+import api from '../../utils/api';
 
 const AIFeaturesSection = () => {
   const { theme } = useTheme();
+  const { currency, formatPrice } = useCurrency();
+  const [trialPrice, setTrialPrice] = useState(null);
+
+  useEffect(() => {
+    fetchTrialPrice();
+  }, [currency]);
+
+  const fetchTrialPrice = async () => {
+    try {
+      const response = await api.get(`/pricing-plans?currency=${currency}`);
+      const trialPlan = response.data.find(plan => plan.plan_id === 'agent_trial');
+      if (trialPlan) {
+        setTrialPrice(trialPlan.price);
+      }
+    } catch (error) {
+      console.error('Failed to fetch trial price:', error);
+    }
+  };
 
   return (
     <section id="ai-features" className={`py-20 md:py-28 ${theme.bg.secondary}`}>
@@ -94,7 +114,7 @@ const AIFeaturesSection = () => {
               <span className={`text-sm ${theme.text.muted}`}>
                 Included free with{' '}
                 <a href="#pricing" className="text-amber-500 hover:underline font-medium">Elite Plan</a>
-                {' '}· Standalone from ₹99/mo
+                {trialPrice && ` · Standalone from ${formatPrice(trialPrice)}/mo`}
               </span>
             </div>
           </div>

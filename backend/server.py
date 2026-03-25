@@ -202,12 +202,15 @@ class PricingPlanCreate(BaseModel):
 
 class PricingPlanUpdate(BaseModel):
     name: Optional[str] = None
-    price: Optional[int] = None  # in paise
+    price: Optional[int] = None  # in paise (deprecated, use price_inr)
+    price_inr: Optional[int] = None  # INR in paise
+    price_usd: Optional[int] = None  # USD in cents
     duration_months: Optional[int] = None
     features: Optional[List[str]] = None
     limits: Optional[dict] = None
     is_active: Optional[bool] = None
     display_order: Optional[int] = None
+    currencies: Optional[List[str]] = None
 
 # ============ BOOKING SYSTEM MODELS ============
 class CompanyCreate(BaseModel):
@@ -3728,6 +3731,13 @@ async def update_pricing_plan(plan_id: str, data: PricingPlanUpdate, user=Depend
         raise HTTPException(status_code=404, detail="Pricing plan not found")
     
     update_data = {k: v for k, v in data.dict().items() if v is not None}
+    
+    # Ensure price_inr and price are synced for backward compatibility
+    if 'price_inr' in update_data and 'price' not in update_data:
+        update_data['price'] = update_data['price_inr']
+    elif 'price' in update_data and 'price_inr' not in update_data:
+        update_data['price_inr'] = update_data['price']
+    
     if update_data:
         update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
         await db.pricing_plans.update_one({"plan_id": plan_id}, {"$set": update_data})
@@ -6082,6 +6092,25 @@ PLAN_PRICES = {
     "agent_quarterly": 59900, # ₹599 in paise (3 months, save ₹98)
 }
 
+# USD prices for all plans (in cents)
+PLAN_PRICES_USD = {
+    # New minimal launch plans
+    "foundation": 2400,     # $24 in cents
+    "growth": 8400,         # $84 in cents
+    "accelerator": 18000,   # $180 in cents
+    # Legacy support
+    "starter": 2400,
+    "professional": 8400,
+    "premium": 18000,
+    "monthly": 2400,
+    "quarterly": 8400,
+    "biannual": 18000,
+    # AI Agent standalone plans
+    "agent_trial": 200,     # $2 in cents
+    "agent_monthly": 400,   # $4 in cents
+    "agent_quarterly": 1000, # $10 in cents (3 months, save $2)
+}
+
 PLAN_NAMES = {
     # New minimal launch plans
     "foundation": "Foundation Plan",
@@ -6161,7 +6190,7 @@ async def get_pricing_plan(plan_id: str):
             "agent_quarterly": 3,
         }
         price_inr = PLAN_PRICES[plan_id]
-        price_usd = int(price_inr * 0.012)  # Approximate conversion
+        price_usd = PLAN_PRICES_USD.get(plan_id, int(price_inr * 0.012))  # Use USD dict or fallback conversion
         
         return {
             "price": price_inr,

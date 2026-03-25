@@ -9,7 +9,7 @@ import { Badge } from "../../components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../../components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, DollarSign, CheckCircle, XCircle, Sparkles, TrendingUp, Crown, RefreshCw } from "lucide-react";
+import { Plus, Edit, Trash2, DollarSign, CheckCircle, XCircle, Sparkles, TrendingUp, Crown, RefreshCw, Bot } from "lucide-react";
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
 import { useTheme } from "../../contexts/ThemeContext";
 import api from "../../utils/api";
@@ -20,6 +20,7 @@ const AdminPricing = () => {
   const [loading, setLoading] = useState(true);
   const [editingPlan, setEditingPlan] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState(null);
   const [formData, setFormData] = useState({
@@ -37,13 +38,19 @@ const AdminPricing = () => {
   const planIcons = {
     'starter': Sparkles,
     'pro': TrendingUp,
-    'elite': Crown
+    'elite': Crown,
+    'agent_trial': Bot,
+    'agent_monthly': Bot,
+    'agent_quarterly': Bot
   };
 
   const planColors = {
     'starter': 'text-blue-400',
     'pro': 'text-[#06b6d4]',
-    'elite': 'text-amber-400'
+    'elite': 'text-amber-400',
+    'agent_trial': 'text-purple-400',
+    'agent_monthly': 'text-purple-400',
+    'agent_quarterly': 'text-purple-400'
   };
 
   useEffect(() => {
@@ -66,6 +73,7 @@ const AdminPricing = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    setSaving(true);
     try {
       const submitData = {
         name: formData.name,
@@ -93,9 +101,12 @@ const AdminPricing = () => {
         toast.success('Pricing plan created successfully');
       }
 
+      // Close dialog and reset form first
       setIsDialogOpen(false);
       resetForm();
-      fetchPricingPlans();
+      
+      // Fetch updated pricing plans immediately
+      await fetchPricingPlans();
       
       // Auto-sync to website after update
       setTimeout(() => {
@@ -107,6 +118,8 @@ const AdminPricing = () => {
       } else {
         toast.error(error.response?.data?.detail || 'Failed to save pricing plan');
       }
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -337,11 +350,11 @@ const AdminPricing = () => {
                   <Label htmlFor="is_active" className={theme.text.primary}>Active</Label>
                 </div>
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={saving}>
                     Cancel
                   </Button>
-                  <Button type="submit">
-                    {editingPlan ? 'Update Plan' : 'Create Plan'}
+                  <Button type="submit" disabled={saving}>
+                    {saving ? 'Saving...' : (editingPlan ? 'Update Plan' : 'Create Plan')}
                   </Button>
                 </DialogFooter>
               </form>
