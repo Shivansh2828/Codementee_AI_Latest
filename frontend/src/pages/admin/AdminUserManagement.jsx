@@ -422,9 +422,6 @@ const AdminUserManagement = () => {
                     </SelectTrigger>
                     <SelectContent className={theme.bg.card}>
                       <SelectItem value="none">No Plan</SelectItem>
-                      <SelectItem value="agent_trial">AI Agent Trial - ₹99</SelectItem>
-                      <SelectItem value="agent_monthly">AI Agent Monthly - ₹199</SelectItem>
-                      <SelectItem value="agent_quarterly">AI Agent Quarterly - ₹599</SelectItem>
                       {pricingPlans.map(plan => (
                         <SelectItem key={plan.plan_id} value={plan.plan_id}>
                           {plan.name} - ₹{plan.price / 100}

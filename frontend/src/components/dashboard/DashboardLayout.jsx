@@ -2,21 +2,41 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useCurrency } from '../../contexts/CurrencyContext';
 import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus, DollarSign, FileText, MessageCircle, BarChart3, TrendingUp, ChevronDown, Bug, Briefcase, Target, Crown, Headphones, Search, Lock } from 'lucide-react';
 import ThemeToggle from '../ui/ThemeToggle';
 import { Badge } from '../ui/badge';
 import BugReportModal from '../BugReportModal';
 import NotificationBell from '../NotificationBell';
+import api from '../../utils/api';
 
 const DashboardLayout = ({ children, title }) => {
   const { user, logout } = useAuth();
   const { theme } = useTheme();
+  const { currency, formatPrice } = useCurrency();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [bugReportOpen, setBugReportOpen] = useState(false);
+  const [starterPrice, setStarterPrice] = useState(null);
   const dropdownRef = useRef(null);
+
+  // Fetch starter plan price
+  useEffect(() => {
+    const fetchStarterPrice = async () => {
+      try {
+        const response = await api.get(`/pricing-plans?currency=${currency}`);
+        const starter = response.data.find(plan => plan.plan_id === 'starter');
+        if (starter) {
+          setStarterPrice(starter.price);
+        }
+      } catch (error) {
+        console.error('Failed to fetch starter price:', error);
+      }
+    };
+    fetchStarterPrice();
+  }, [currency]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -434,7 +454,9 @@ const DashboardLayout = ({ children, title }) => {
                               <Calendar size={16} className="text-green-400" />
                               <div className="flex-1 text-left">
                                 <p className="text-sm font-medium">Buy Single Mock</p>
-                                <p className={`${theme.text.muted} text-xs`}>₹2,499 per interview</p>
+                                <p className={`${theme.text.muted} text-xs`}>
+                                  {starterPrice ? `Starting from ${formatPrice(starterPrice)}` : 'Loading...'}
+                                </p>
                               </div>
                             </Link>
                           )}

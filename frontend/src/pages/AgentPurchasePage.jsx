@@ -8,36 +8,6 @@ import api from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useCurrency } from '../contexts/CurrencyContext';
 
-const AGENT_PLANS = {
-  agent_trial: { 
-    name: 'AI Agent Trial', 
-    price_inr: 99, 
-    price_usd: 2,
-    duration: '1 month', 
-    tag: 'Try it out',
-    savings_inr: null,
-    savings_usd: null
-  },
-  agent_monthly: { 
-    name: 'AI Agent Monthly', 
-    price_inr: 199, 
-    price_usd: 4,
-    duration: '1 month', 
-    tag: 'Popular',
-    savings_inr: null,
-    savings_usd: null
-  },
-  agent_quarterly: { 
-    name: 'AI Agent Quarterly', 
-    price_inr: 599, 
-    price_usd: 10,
-    duration: '3 months', 
-    tag: 'Save',
-    savings_inr: 98,
-    savings_usd: 2
-  },
-};
-
 const AgentPurchasePage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -45,16 +15,52 @@ const AgentPurchasePage = () => {
   const { currency, formatPrice, currencySymbol } = useCurrency();
   const [isLoading, setIsLoading] = useState(false);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  const [agentPlans, setAgentPlans] = useState({});
+  const [loadingPlans, setLoadingPlans] = useState(true);
   const selectedPlanId = searchParams.get('plan') || 'agent_monthly';
-  const plan = AGENT_PLANS[selectedPlanId] || AGENT_PLANS.agent_monthly;
 
-  // Get price based on currency
-  const getPrice = (planData) => {
-    return currency === 'USD' ? planData.price_usd : planData.price_inr;
+  // Fetch agent plans from API
+  useEffect(() => {
+    fetchAgentPlans();
+  }, [currency]);
+
+  const fetchAgentPlans = async () => {
+    try {
+      const response = await api.get(`/pricing-plans?currency=${currency}`);
+      const plans = response.data;
+      
+      // Map agent plans (prices already in paise/cents, formatPrice will handle division)
+      const planMap = {};
+      plans.forEach(plan => {
+        if (plan.plan_id.startsWith('agent_')) {
+          planMap[plan.plan_id] = {
+            name: plan.name,
+            price: plan.price, // Keep in cents/paise, formatPrice will divide by 100
+            duration: plan.duration_months === 1 ? '1 month' : `${plan.duration_months} months`,
+            features: plan.features || [],
+            tag: plan.plan_id === 'agent_monthly' ? 'Popular' : 
+                 plan.plan_id === 'agent_quarterly' ? 'Save' : 'Try it out',
+            savings: plan.plan_id === 'agent_quarterly' ? (currency === 'USD' ? 200 : 9800) : null // Savings in cents/paise
+          };
+        }
+      });
+      
+      setAgentPlans(planMap);
+    } catch (error) {
+      console.error('Failed to fetch agent plans:', error);
+      toast.error('Failed to load pricing plans');
+    } finally {
+      setLoadingPlans(false);
+    }
   };
 
-  const getSavings = (planData) => {
-    return currency === 'USD' ? planData.savings_usd : planData.savings_inr;
+  // Get price based on plan ID
+  const getPrice = (planId) => {
+    return agentPlans[planId]?.price || 0;
+  };
+
+  const getSavings = (planId) => {
+    return agentPlans[planId]?.savings || null;
   };
 
   const [formData, setFormData] = useState({
@@ -74,8 +80,8 @@ const AgentPurchasePage = () => {
   // Update plan when URL param changes
   useEffect(() => {
     const p = searchParams.get('plan');
-    if (p && AGENT_PLANS[p]) setFormData(prev => ({ ...prev, selectedPlan: p }));
-  }, [searchParams]);
+    if (p && agentPlans[p]) setFormData(prev => ({ ...prev, selectedPlan: p }));
+  }, [searchParams, agentPlans]);
 
   // Load Razorpay script
   useEffect(() => {
@@ -92,7 +98,24 @@ const AgentPurchasePage = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const currentPlan = AGENT_PLANS[formData.selectedPlan] || plan;
+  const currentPlan = agentPlans[formData.selectedPlan];
+  
+  if (loadingPlans) {
+    return (
+      <div className="min-h-screen bg-[#0d0d0d]">
+        <Header />
+        <main className="pt-24 pb-16 md:pt-32 md:pb-24">
+          <div className="container flex items-center justify-center min-h-[50vh]">
+            <div className="text-center">
+              <Loader2 className="w-12 h-12 animate-spin text-[#06b6d4] mx-auto mb-4" />
+              <p className="text-gray-500">Loading pricing...</p>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   const handlePayment = async (e) => {
     e.preventDefault();
@@ -173,9 +196,9 @@ const AgentPurchasePage = () => {
               <div className="bg-[#171717] rounded-xl border border-[#404040] p-6">
                 <h3 className="text-white font-semibold mb-4">Select Plan</h3>
                 <div className="space-y-3">
-                  {Object.entries(AGENT_PLANS).map(([id, p]) => {
-                    const price = getPrice(p);
-                    const savings = getSavings(p);
+                  {Object.entries(agentPlans).map(([id, p]) => {
+                    const price = p.price;
+                    const savings = p.savings;
                     return (
                       <label key={id} className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-all ${formData.selectedPlan === id ? 'border-[#06b6d4] bg-[#06b6d4]/10' : 'border-[#404040] bg-[#0d0d0d] hover:border-[#475569]'}`}>
                         <div className="flex items-center gap-3">
@@ -187,7 +210,7 @@ const AgentPurchasePage = () => {
                             <div className="flex items-center gap-2">
                               <span className="text-white font-medium">{p.name}</span>
                               {id === 'agent_monthly' && <span className="text-xs px-2 py-0.5 rounded-full bg-[#06b6d4] text-[#0f172a] font-semibold">Popular</span>}
-                              {id === 'agent_quarterly' && savings && <span className="text-xs px-2 py-0.5 rounded-full bg-green-500 text-white font-semibold">Save {currencySymbol}{savings}</span>}
+                              {id === 'agent_quarterly' && savings && <span className="text-xs px-2 py-0.5 rounded-full bg-green-500 text-white font-semibold">Save {formatPrice(savings)}</span>}
                             </div>
                             <p className="text-gray-500 text-sm">{p.duration}</p>
                           </div>
@@ -203,7 +226,7 @@ const AgentPurchasePage = () => {
               <div className="bg-[#171717] rounded-xl border border-[#404040] p-6">
                 <h3 className="text-white font-semibold mb-3">What's included</h3>
                 <ul className="space-y-2">
-                  {['AI Job Search Agent — daily matches', 'AI Referral Finder — LinkedIn contacts + drafts', 'Resume parsing & skill extraction', 'Job scoring (0-100) against your profile', 'Daily email digest with top matches'].map((f, i) => (
+                  {(currentPlan?.features || ['AI Job Search Agent — daily matches', 'AI Referral Finder — LinkedIn contacts + drafts', 'Resume parsing & skill extraction', 'Job scoring (0-100) against your profile', 'Daily email digest with top matches']).map((f, i) => (
                     <li key={i} className="flex items-center gap-2">
                       <CheckCircle className="w-4 h-4 text-[#06b6d4] shrink-0" />
                       <span className="text-gray-400 text-sm">{f}</span>
@@ -243,16 +266,16 @@ const AgentPurchasePage = () => {
               <div className="bg-[#06b6d4]/10 rounded-xl border border-[#06b6d4]/30 p-6">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-white font-semibold">Order Summary</span>
-                  <span className="text-[#06b6d4] text-sm">{currentPlan.name}</span>
+                  <span className="text-[#06b6d4] text-sm">{currentPlan?.name || 'AI Agent Plan'}</span>
                 </div>
                 <div className="flex justify-between items-center text-2xl font-bold">
                   <span className="text-gray-400">Total</span>
-                  <span className="text-white">{formatPrice(getPrice(currentPlan))}</span>
+                  <span className="text-white">{formatPrice(currentPlan?.price || 0)}</span>
                 </div>
               </div>
 
-              <button type="submit" disabled={isLoading || !razorpayLoaded} className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-bold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all text-lg disabled:opacity-50 disabled:cursor-not-allowed">
-                {isLoading ? <><Loader2 size={20} className="animate-spin" /> Processing...</> : <><CreditCard size={20} /> Pay {formatPrice(getPrice(currentPlan))}</>}
+              <button type="submit" disabled={isLoading || !razorpayLoaded || !currentPlan} className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-bold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all text-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                {isLoading ? <><Loader2 size={20} className="animate-spin" /> Processing...</> : <><CreditCard size={20} /> Pay {formatPrice(currentPlan?.price || 0)}</>}
               </button>
 
               <div className="flex items-center justify-center gap-6 text-gray-500 text-sm">
