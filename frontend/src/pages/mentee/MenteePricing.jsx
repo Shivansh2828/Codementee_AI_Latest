@@ -107,54 +107,79 @@ const MenteePricing = () => {
         is_upgrade: !isFreeUser
       });
 
-      const { order_id, razorpay_order_id, amount, razorpay_key_id } = orderResponse.data;
+      const orderData = orderResponse.data;
+      const payment_gateway = orderData.payment_gateway;
 
-      // Initialize Razorpay
-      const options = {
-        key: razorpay_key_id,
-        amount: amount,
-        currency: 'INR',
-        name: 'Codementee',
-        description: `${plan.name} Plan`,
-        order_id: razorpay_order_id,
-        handler: async function (response) {
-          try {
-            const verifyResponse = await api.post('/payment/verify', {
-              order_id: order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_signature: response.razorpay_signature
-            });
+      if (payment_gateway === 'razorpay') {
+        // Handle Razorpay payment (India)
+        const { order_id, razorpay_order_id, amount, razorpay_key_id } = orderData;
 
-            if (verifyResponse.data.success) {
-              toast.success('Payment successful! Your account has been upgraded.');
-              localStorage.setItem('token', verifyResponse.data.access_token);
-              
-              setTimeout(() => {
-                window.location.href = '/mentee';
-              }, 1500);
+        const options = {
+          key: razorpay_key_id,
+          amount: amount,
+          currency: 'INR',
+          name: 'Codementee',
+          description: `${plan.name} Plan`,
+          order_id: razorpay_order_id,
+          handler: async function (response) {
+            try {
+              const verifyResponse = await api.post('/payment/verify', {
+                order_id: order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature
+              });
+
+              if (verifyResponse.data.success) {
+                toast.success('Payment successful! Your account has been upgraded.');
+                localStorage.setItem('token', verifyResponse.data.access_token);
+                
+                setTimeout(() => {
+                  window.location.href = '/mentee';
+                }, 1500);
+              }
+            } catch (error) {
+              toast.error('Payment verification failed');
+              setProcessingPlan(null);
             }
-          } catch (error) {
-            toast.error('Payment verification failed');
-            setProcessingPlan(null);
+          },
+          prefill: {
+            name: user.name,
+            email: user.email
+          },
+          theme: {
+            color: '#06b6d4'
+          },
+          modal: {
+            ondismiss: function() {
+              setProcessingPlan(null);
+            }
           }
-        },
-        prefill: {
-          name: user.name,
-          email: user.email
-        },
-        theme: {
-          color: '#06b6d4'
-        },
-        modal: {
-          ondismiss: function() {
-            setProcessingPlan(null);
-          }
-        }
-      };
+        };
 
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
+        const razorpay = new window.Razorpay(options);
+        razorpay.open();
+      } else if (payment_gateway === 'cashfree') {
+        // Handle Cashfree payment (International)
+        const { order_id, payment_session_id } = orderData;
+
+        const cashfree = new window.Cashfree({
+          mode: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
+        });
+
+        cashfree.checkout({
+          paymentSessionId: payment_session_id,
+          returnUrl: `${window.location.origin}/payment/success?order_id=${order_id}`,
+          redirectTarget: '_self'
+        }).then(() => {
+          // Payment initiated successfully
+          console.log('Cashfree payment initiated');
+        }).catch((error) => {
+          console.error('Cashfree payment error:', error);
+          toast.error('Failed to initiate payment');
+          setProcessingPlan(null);
+        });
+      }
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to initiate payment');
       setProcessingPlan(null);

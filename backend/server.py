@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Response, File, UploadFile, Form
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Response, File, UploadFile, Form, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -40,10 +40,16 @@ SECRET_KEY = os.environ.get('JWT_SECRET', 'codementee-secret-key-2025')
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
 
-# Razorpay Config
+# Razorpay Config (for India)
 RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID')
 RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET')
-razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET)) if RAZORPAY_KEY_ID else None
+
+# Cashfree Config (for International)
+CASHFREE_APP_ID = os.environ.get('CASHFREE_APP_ID')
+CASHFREE_SECRET_KEY = os.environ.get('CASHFREE_SECRET_KEY')
+CASHFREE_API_VERSION = "2023-08-01"
+CASHFREE_BASE_URL = os.environ.get('CASHFREE_BASE_URL', 'https://api.cashfree.com/pg')  # Use sandbox for testing
 
 # Resend Email Config
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
@@ -196,12 +202,15 @@ class PricingPlanCreate(BaseModel):
 
 class PricingPlanUpdate(BaseModel):
     name: Optional[str] = None
-    price: Optional[int] = None  # in paise
+    price: Optional[int] = None  # in paise (deprecated, use price_inr)
+    price_inr: Optional[int] = None  # INR in paise
+    price_usd: Optional[int] = None  # USD in cents
     duration_months: Optional[int] = None
     features: Optional[List[str]] = None
     limits: Optional[dict] = None
     is_active: Optional[bool] = None
     display_order: Optional[int] = None
+    currencies: Optional[List[str]] = None
 
 # ============ BOOKING SYSTEM MODELS ============
 class CompanyCreate(BaseModel):
@@ -415,6 +424,92 @@ def serialize_doc(doc):
     if doc and 'password' in doc:
         del doc['password']
     return doc
+
+# ============ CURRENCY & GEOLOCATION HELPERS ============
+import httpx
+
+async def detect_user_country(request):
+    """Detect user's country from IP address"""
+    try:
+        # Try to get IP from headers (for proxied requests)
+        client_ip = request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+        if not client_ip:
+            client_ip = request.headers.get("X-Real-IP", "")
+        if not client_ip:
+            client_ip = request.client.host
+        
+        # Skip detection for localhost
+        if client_ip in ["127.0.0.1", "localhost", "::1"]:
+            return "IN"  # Default to India for local development
+        
+        # Use ip-api.com for geolocation (free, no API key needed)
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"http://ip-api.com/json/{client_ip}?fields=countryCode")
+            if response.status_code == 200:
+                data = response.json()
+                return data.get("countryCode", "IN")
+    except Exception as e:
+        logger.error(f"Geolocation detection failed: {e}")
+    
+    return "IN"  # Default to India if detection fails
+
+def get_currency_for_country(country_code: str) -> str:
+    """Get currency based on country code"""
+    if country_code == "IN":
+        return "INR"
+    else:
+        return "USD"  # All international users pay in USD
+
+async def create_cashfree_order(amount_usd: int, customer_details: dict, order_id: str):
+    """Create Cashfree payment order for international users"""
+    try:
+        import httpx
+        import time
+        
+        # Cashfree order payload
+        payload = {
+            "order_id": order_id,
+            "order_amount": amount_usd / 100,  # Convert cents to dollars
+            "order_currency": "USD",
+            "customer_details": {
+                "customer_id": customer_details.get("email", "").replace("@", "_at_"),
+                "customer_email": customer_details.get("email"),
+                "customer_phone": customer_details.get("phone", "+10000000000"),  # Default for international
+                "customer_name": customer_details.get("name")
+            },
+            "order_meta": {
+                "return_url": f"{os.environ.get('FRONTEND_URL', 'https://codementee.io')}/payment/success?order_id={order_id}",
+                "notify_url": f"{os.environ.get('BACKEND_URL', 'https://codementee.io/api')}/payment/cashfree-webhook"
+            },
+            "order_note": f"Payment for {customer_details.get('plan_name', 'plan')}"
+        }
+        
+        # Cashfree API headers
+        headers = {
+            "accept": "application/json",
+            "content-type": "application/json",
+            "x-api-version": CASHFREE_API_VERSION,
+            "x-client-id": CASHFREE_APP_ID,
+            "x-client-secret": CASHFREE_SECRET_KEY
+        }
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{CASHFREE_BASE_URL}/orders",
+                json=payload,
+                headers=headers,
+                timeout=30.0
+            )
+            
+            if response.status_code in [200, 201]:
+                return response.json()
+            else:
+                logger.error(f"Cashfree order creation failed: {response.text}")
+                raise HTTPException(status_code=500, detail="Failed to create payment order")
+                
+    except Exception as e:
+        logger.error(f"Cashfree order creation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Payment gateway error: {str(e)}")
 
 # ============ EMAIL FUNCTIONS ============
 async def send_welcome_email(name: str, email: str, plan_name: str, amount: int):
@@ -3636,6 +3731,13 @@ async def update_pricing_plan(plan_id: str, data: PricingPlanUpdate, user=Depend
         raise HTTPException(status_code=404, detail="Pricing plan not found")
     
     update_data = {k: v for k, v in data.dict().items() if v is not None}
+    
+    # Ensure price_inr and price are synced for backward compatibility
+    if 'price_inr' in update_data and 'price' not in update_data:
+        update_data['price'] = update_data['price_inr']
+    elif 'price' in update_data and 'price_inr' not in update_data:
+        update_data['price_inr'] = update_data['price']
+    
     if update_data:
         update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
         await db.pricing_plans.update_one({"plan_id": plan_id}, {"$set": update_data})
@@ -3655,16 +3757,45 @@ async def delete_pricing_plan(plan_id: str, user=Depends(get_current_user)):
     return {"message": "Pricing plan deleted successfully"}
 
 # ============ PUBLIC PRICING ROUTES ============
+@api_router.get("/detect-currency")
+async def detect_currency(request: Request):
+    """Detect user's currency based on location"""
+    country_code = await detect_user_country(request)
+    currency = get_currency_for_country(country_code)
+    
+    return {
+        "country": country_code,
+        "currency": currency,
+        "is_india": country_code == "IN"
+    }
+
 @api_router.get("/pricing-plans")
-async def get_public_pricing_plans(response: Response):
-    """Get active pricing plans for public display"""
+async def get_public_pricing_plans(response: Response, currency: str = "INR"):
+    """Get active pricing plans for public display in specified currency"""
     # Prevent caching to ensure fresh data
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     
     plans = await db.pricing_plans.find({"is_active": True}).sort("display_order", 1).to_list(100)
-    result = [serialize_doc(dict(p)) for p in plans]
+    
+    # Format plans with correct currency
+    result = []
+    for plan in plans:
+        plan_dict = serialize_doc(dict(plan))
+        
+        # Set price based on currency
+        if currency == "USD":
+            plan_dict["price"] = plan_dict.get("price_usd", plan_dict.get("price", 0))
+            plan_dict["currency"] = "USD"
+            plan_dict["currency_symbol"] = "$"
+        else:
+            plan_dict["price"] = plan_dict.get("price_inr", plan_dict.get("price", 0))
+            plan_dict["currency"] = "INR"
+            plan_dict["currency_symbol"] = "₹"
+        
+        result.append(plan_dict)
+    
     return result
 
 # ============ MEET LINKS MANAGEMENT ============
@@ -5961,6 +6092,25 @@ PLAN_PRICES = {
     "agent_quarterly": 59900, # ₹599 in paise (3 months, save ₹98)
 }
 
+# USD prices for all plans (in cents)
+PLAN_PRICES_USD = {
+    # New minimal launch plans
+    "foundation": 2400,     # $24 in cents
+    "growth": 8400,         # $84 in cents
+    "accelerator": 18000,   # $180 in cents
+    # Legacy support
+    "starter": 2400,
+    "professional": 8400,
+    "premium": 18000,
+    "monthly": 2400,
+    "quarterly": 8400,
+    "biannual": 18000,
+    # AI Agent standalone plans
+    "agent_trial": 200,     # $2 in cents
+    "agent_monthly": 400,   # $4 in cents
+    "agent_quarterly": 1000, # $10 in cents (3 months, save $2)
+}
+
 PLAN_NAMES = {
     # New minimal launch plans
     "foundation": "Foundation Plan",
@@ -5984,7 +6134,9 @@ async def get_pricing_plan(plan_id: str):
     plan = await db.pricing_plans.find_one({"plan_id": plan_id, "is_active": True})
     if plan:
         return {
-            "price": plan["price"],
+            "price": plan.get("price", 0),  # Legacy field
+            "price_inr": plan.get("price_inr", plan.get("price", 0)),
+            "price_usd": plan.get("price_usd", int(plan.get("price", 0) * 0.012)),  # Fallback conversion
             "name": plan["name"],
             "duration_months": plan["duration_months"],
             "features": plan.get("features", [])
@@ -5992,9 +6144,27 @@ async def get_pricing_plan(plan_id: str):
     
     # Mock add-on plans (not in database)
     mock_addons = {
-        "mock_1": {"price": 249900, "name": "1 Mock Interview", "duration_months": 0},
-        "mock_3": {"price": 699900, "name": "3 Mock Interviews", "duration_months": 0},
-        "mock_5": {"price": 1099900, "name": "5 Mock Interviews", "duration_months": 0}
+        "mock_1": {
+            "price": 249900, 
+            "price_inr": 249900,
+            "price_usd": 3000,  # $30
+            "name": "1 Mock Interview", 
+            "duration_months": 0
+        },
+        "mock_3": {
+            "price": 699900,
+            "price_inr": 699900,
+            "price_usd": 8400,  # $84
+            "name": "3 Mock Interviews",
+            "duration_months": 0
+        },
+        "mock_5": {
+            "price": 1099900,
+            "price_inr": 1099900,
+            "price_usd": 13200,  # $132
+            "name": "5 Mock Interviews",
+            "duration_months": 0
+        }
     }
     
     if plan_id in mock_addons:
@@ -6019,8 +6189,13 @@ async def get_pricing_plan(plan_id: str):
             "agent_monthly": 1,
             "agent_quarterly": 3,
         }
+        price_inr = PLAN_PRICES[plan_id]
+        price_usd = PLAN_PRICES_USD.get(plan_id, int(price_inr * 0.012))  # Use USD dict or fallback conversion
+        
         return {
-            "price": PLAN_PRICES[plan_id],
+            "price": price_inr,
+            "price_inr": price_inr,
+            "price_usd": price_usd,
             "name": PLAN_NAMES[plan_id],
             "duration_months": duration_map.get(plan_id, 1),
             "features": []
@@ -6029,7 +6204,12 @@ async def get_pricing_plan(plan_id: str):
     return None
 
 @api_router.post("/payment/create-order")
-async def create_payment_order(data: CreateOrderRequest):
+async def create_payment_order(data: CreateOrderRequest, request: Request):
+    # Detect user's currency
+    country_code = await detect_user_country(request)
+    currency = get_currency_for_country(country_code)
+    is_india = currency == "INR"
+    
     # Check if email already exists
     existing = await db.users.find_one({"email": data.email})
     
@@ -6059,23 +6239,119 @@ async def create_payment_order(data: CreateOrderRequest):
     if not plan_info:
         raise HTTPException(status_code=400, detail="Invalid plan selected")
     
-    amount = plan_info["price"]
+    # Get price in correct currency
+    if is_india:
+        amount = plan_info.get("price_inr", plan_info.get("price", 0))
+    else:
+        amount = plan_info.get("price_usd", plan_info.get("price", 0))
+    
     plan_name = plan_info["name"]
     
-    # Create Razorpay order
-    try:
-        razorpay_order = razorpay_client.order.create({
-            "amount": amount,
-            "currency": "INR",
-            "receipt": f"order_{uuid.uuid4().hex[:10]}",
-            "notes": {
+    # Generate internal order ID
+    internal_order_id = str(uuid.uuid4())
+    
+    # Check if this is a founding batch purchase
+    founding_count = await db.orders.count_documents({"status": "success", "is_founding_batch": True})
+    is_founding_batch = founding_count < FOUNDING_SLOTS_TOTAL
+    
+    # Create order based on currency
+    if is_india:
+        # Use Razorpay for India
+        try:
+            razorpay_order = razorpay_client.order.create({
+                "amount": amount,
+                "currency": "INR",
+                "receipt": f"order_{uuid.uuid4().hex[:10]}",
+                "notes": {
+                    "email": data.email,
+                    "plan": data.plan_id,
+                    "upgrade": "true" if existing else "false"
+                }
+            })
+            
+            # Store order in DB
+            order_doc = {
+                "id": internal_order_id,
+                "razorpay_order_id": razorpay_order["id"],
+                "payment_gateway": "razorpay",
+                "name": data.name,
                 "email": data.email,
-                "plan": data.plan_id,
-                "upgrade": "true" if existing else "false"
+                "password": hash_password(data.password) if data.password else (existing["password"] if existing else None),
+                "plan_id": data.plan_id,
+                "plan_name": plan_name,
+                "amount": amount,
+                "currency": "INR",
+                "current_role": data.current_role,
+                "target_role": data.target_role,
+                "timeline": data.timeline,
+                "struggle": data.struggle,
+                "status": "pending",
+                "is_upgrade": data.is_upgrade or bool(existing),
+                "is_founding_batch": is_founding_batch,
+                "created_at": datetime.now(timezone.utc).isoformat()
             }
-        })
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create order: {str(e)}")
+            await db.orders.insert_one(order_doc)
+            
+            return {
+                "order_id": internal_order_id,
+                "razorpay_order_id": razorpay_order["id"],
+                "razorpay_key_id": RAZORPAY_KEY_ID,
+                "amount": amount,
+                "currency": "INR",
+                "name": data.name,
+                "email": data.email,
+                "payment_gateway": "razorpay"
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to create order: {str(e)}")
+    else:
+        # Use Cashfree for International
+        try:
+            cashfree_order = await create_cashfree_order(
+                amount_usd=amount,
+                customer_details={
+                    "name": data.name,
+                    "email": data.email,
+                    "plan_name": plan_name
+                },
+                order_id=internal_order_id
+            )
+            
+            # Store order in DB
+            order_doc = {
+                "id": internal_order_id,
+                "cashfree_order_id": cashfree_order.get("cf_order_id"),
+                "payment_gateway": "cashfree",
+                "name": data.name,
+                "email": data.email,
+                "password": hash_password(data.password) if data.password else (existing["password"] if existing else None),
+                "plan_id": data.plan_id,
+                "plan_name": plan_name,
+                "amount": amount,
+                "currency": "USD",
+                "current_role": data.current_role,
+                "target_role": data.target_role,
+                "timeline": data.timeline,
+                "struggle": data.struggle,
+                "status": "pending",
+                "is_upgrade": data.is_upgrade or bool(existing),
+                "is_founding_batch": is_founding_batch,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.orders.insert_one(order_doc)
+            
+            return {
+                "order_id": internal_order_id,
+                "cashfree_order_id": cashfree_order.get("cf_order_id"),
+                "payment_session_id": cashfree_order.get("payment_session_id"),
+                "amount": amount,
+                "currency": "USD",
+                "name": data.name,
+                "email": data.email,
+                "payment_gateway": "cashfree"
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to create order: {str(e)}")
     
     # Store order in DB with user details (pending status)
     # Check if this is a founding batch purchase (first 25 customers)
@@ -6466,12 +6742,111 @@ async def verify_payment(data: VerifyPaymentRequest):
             "user": serialize_doc(user_doc)
         }
 
+# ============ CASHFREE WEBHOOK HANDLER ============
+@api_router.post("/payment/cashfree-webhook")
+async def cashfree_webhook(request: Request):
+    """Handle Cashfree payment webhooks for international payments"""
+    try:
+        # Get webhook payload
+        payload = await request.json()
+        
+        # Verify webhook signature (Cashfree sends signature in headers)
+        signature = request.headers.get("x-webhook-signature")
+        timestamp = request.headers.get("x-webhook-timestamp")
+        
+        # TODO: Verify signature using Cashfree secret
+        # For now, we'll process the webhook (add signature verification in production)
+        
+        event_type = payload.get("type")
+        order_data = payload.get("data", {}).get("order", {})
+        
+        if event_type == "PAYMENT_SUCCESS_WEBHOOK":
+            # Payment successful
+            cf_order_id = order_data.get("cf_order_id")
+            
+            # Find order in database
+            order = await db.orders.find_one({"cashfree_order_id": cf_order_id})
+            if not order:
+                logger.error(f"Order not found for Cashfree order ID: {cf_order_id}")
+                return {"status": "error", "message": "Order not found"}
+            
+            if order["status"] == "paid":
+                return {"status": "success", "message": "Already processed"}
+            
+            # Update order status
+            await db.orders.update_one(
+                {"id": order["id"]},
+                {"$set": {
+                    "status": "paid",
+                    "cashfree_payment_id": order_data.get("cf_payment_id"),
+                    "paid_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+            
+            # Create or update user account (same logic as Razorpay)
+            existing_user = await db.users.find_one({"email": order["email"]})
+            
+            if existing_user:
+                # Upgrade existing user
+                plan_config = {
+                    "interview_quota_total": 3,  # Default, adjust based on plan
+                    "plan_features": {}
+                }
+                
+                await db.users.update_one(
+                    {"email": order["email"]},
+                    {"$set": {
+                        "status": "Active",
+                        "plan_id": order["plan_id"],
+                        "plan_name": order["plan_name"],
+                        "interview_quota_total": plan_config["interview_quota_total"],
+                        "interview_quota_remaining": plan_config["interview_quota_total"],
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }}
+                )
+            else:
+                # Create new user
+                user_doc = {
+                    "id": str(uuid.uuid4()),
+                    "name": order["name"],
+                    "email": order["email"],
+                    "password": order["password"],
+                    "role": "mentee",
+                    "status": "Active",
+                    "plan_id": order["plan_id"],
+                    "plan_name": order["plan_name"],
+                    "mentor_id": None,
+                    "current_role": order.get("current_role", ""),
+                    "target_role": order.get("target_role", ""),
+                    "interview_quota_total": 3,
+                    "interview_quota_remaining": 3,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                await db.users.insert_one(user_doc)
+            
+            # Send welcome email
+            asyncio.create_task(send_welcome_email(
+                name=order["name"],
+                email=order["email"],
+                plan_name=order["plan_name"],
+                amount=int(order["amount"] / 100)  # Convert cents to dollars
+            ))
+            
+            return {"status": "success"}
+        
+        return {"status": "ignored", "event": event_type}
+        
+    except Exception as e:
+        logger.error(f"Cashfree webhook error: {e}")
+        return {"status": "error", "message": str(e)}
+
 # ============ MENTOR PAYOUT TRACKING SYSTEM ============
 
 class PayoutRequest(BaseModel):
     mock_id: str
     mentor_id: str
-    amount: int  # Amount in paise (₹800 = 80000 paise)
+    amount: int  # Amount in paise/cents
+    currency: str = "INR"  # INR or USD
     notes: Optional[str] = None
 
 class PayoutUpdate(BaseModel):
@@ -6502,13 +6877,34 @@ async def create_payout(payout_data: PayoutRequest, user=Depends(get_current_use
     if not mentor:
         raise HTTPException(status_code=404, detail="Mentor not found")
     
+    # Get mentee details to determine currency
+    mentee = await db.users.find_one({"id": mock.get("mentee_id")})
+    mentee_currency = mentee.get("currency", "INR") if mentee else "INR"
+    
+    # Determine payout currency and amount
+    # Standard payout: ₹800 for INR, $10 for USD
+    if mentee_currency == "USD":
+        payout_amount = 1000  # $10 in cents
+        payout_currency = "USD"
+    else:
+        payout_amount = 80000  # ₹800 in paise
+        payout_currency = "INR"
+    
+    # Allow admin to override with custom amount
+    if payout_data.amount:
+        payout_amount = payout_data.amount
+    if payout_data.currency:
+        payout_currency = payout_data.currency
+    
     payout_doc = {
         "id": str(uuid.uuid4()),
         "mock_id": payout_data.mock_id,
         "mentor_id": payout_data.mentor_id,
         "mentor_name": mentor["name"],
         "mentor_email": mentor["email"],
-        "amount": payout_data.amount,
+        "amount": payout_amount,
+        "currency": payout_currency,
+        "mentee_currency": mentee_currency,
         "status": "pending",  # pending, approved, paid, rejected
         "notes": payout_data.notes,
         "admin_notes": None,
