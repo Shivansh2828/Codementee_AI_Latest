@@ -224,7 +224,7 @@ Return JSON: {"skills":["list"],"total_years":number,"current_role":"string",
                 if is_remote:
                     query = f"{title}"
                 else:
-                    query = f"{title} jobs {location}"
+                    query = f"{title} {location}"
 
                 params = {
                     "engine": "google_jobs",
