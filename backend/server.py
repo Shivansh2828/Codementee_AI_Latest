@@ -478,7 +478,7 @@ async def create_cashfree_order(amount_usd: int, customer_details: dict, order_i
             "order_amount": amount_usd / 100,  # Convert cents to dollars
             "order_currency": "USD",
             "customer_details": {
-                "customer_id": customer_details.get("email", "").replace("@", "_at_"),
+                "customer_id": customer_details.get("email", "").replace("@", "_at_").replace(".", "_"),
                 "customer_email": customer_details.get("email"),
                 "customer_phone": customer_details.get("phone", "+10000000000"),  # Default for international
                 "customer_name": customer_details.get("name")
