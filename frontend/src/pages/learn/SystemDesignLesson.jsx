@@ -370,7 +370,6 @@ const SystemDesignLesson = () => {
             {SECTIONS.map((section) => (
               <div key={section.id}>
                 <div className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-1.5`}>
-                  <span>{section.icon}</span>
                   <span>{section.title}</span>
                 </div>
                 {section.topics.map((topicSlug) => {
@@ -381,7 +380,7 @@ const SystemDesignLesson = () => {
                   if (isTopicLocked) {
                     return (
                       <div key={topicSlug} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-600 cursor-not-allowed">
-                        <span className="text-sm shrink-0 grayscale">{t.icon}</span>
+                        
                         <span className="truncate">{t.title}</span>
                         <Lock className="w-3 h-3 ml-auto shrink-0" />
                       </div>
@@ -397,7 +396,7 @@ const SystemDesignLesson = () => {
                           : `${theme.text.secondary} hover:bg-gray-800`
                       }`}
                     >
-                      <span className="text-sm shrink-0">{t.icon}</span>
+                      
                       <span className="truncate">{t.title}</span>
                     </Link>
                   );
@@ -419,7 +418,7 @@ const SystemDesignLesson = () => {
                 {SECTIONS.map((section) => (
                   <div key={section.id}>
                     <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
-                      <span>{section.icon}</span><span>{section.title}</span>
+                      <span>{section.title}</span>
                     </div>
                     {section.topics.map((topicSlug) => {
                       const t = TOPICS[topicSlug];
@@ -428,7 +427,7 @@ const SystemDesignLesson = () => {
                       if (topicAccess === 'locked') {
                         return (
                           <div key={topicSlug} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-600 cursor-not-allowed">
-                            <span className="grayscale">{t.icon}</span>
+                            
                             <span className="truncate">{t.title}</span>
                             <Lock className="w-3 h-3 ml-auto shrink-0" />
                           </div>
@@ -443,7 +442,7 @@ const SystemDesignLesson = () => {
                             topicSlug === slug ? 'bg-[#06b6d4]/20 text-[#06b6d4] font-medium' : `${theme.text.secondary} hover:bg-gray-800`
                           }`}
                         >
-                          <span>{t.icon}</span>
+                          
                           <span className="truncate">{t.title}</span>
                         </Link>
                       );
@@ -480,7 +479,7 @@ const SystemDesignLesson = () => {
             {/* Lesson header */}
             <div className="mb-10">
               <div className="flex items-center gap-3 mb-3">
-                <span className="text-4xl">{topic.icon}</span>
+                <span className="text-4xl"></span>
                 <div className="flex items-center gap-2">
                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                     topic.difficulty === 'Beginner' ? 'bg-green-500/20 text-green-400' :

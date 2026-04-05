@@ -2,7 +2,7 @@ export const IN_A_HURRY_TOPICS = {
 
   'introduction': {
     slug: 'introduction', title: 'Introduction', subtitle: 'What is system design and why does it matter in interviews?',
-    duration: '10 min', difficulty: 'Beginner', icon: '🏗️',
+    duration: '10 min', difficulty: 'Beginner',
     sections: [
       { type: 'text', heading: 'What is System Design?', body: `System design is the process of defining the architecture, components, interfaces, and data flow of a system to satisfy specified requirements.\n\nIn interviews, you're asked to design large-scale systems like Twitter, YouTube, or Uber. The goal isn't a "perfect" answer — it's to demonstrate structured thinking, trade-off awareness, and engineering judgment.\n\nUnlike coding interviews where there's a correct answer, system design is open-ended. Two engineers can design the same system completely differently and both be correct.` },
       { type: 'callout', variant: 'info', heading: 'What Interviewers Are Really Testing', body: 'Can you break down a vague problem into concrete requirements? Do you know the building blocks of distributed systems? Can you reason about trade-offs? Can you communicate complex ideas clearly? These matter more than knowing the "right" answer.' },
@@ -14,7 +14,7 @@ export const IN_A_HURRY_TOPICS = {
 
   'how-to-prep': {
     slug: 'how-to-prep', title: 'How to Prepare', subtitle: 'A structured study plan to get interview-ready',
-    duration: '8 min', difficulty: 'Beginner', icon: '📋',
+    duration: '8 min', difficulty: 'Beginner',
     sections: [
       { type: 'text', heading: 'The 4-Week Study Plan', body: `**Week 1: Foundations**\nNetworking basics (DNS, TCP, HTTP), databases (SQL vs NoSQL, indexing, replication), caching, load balancing, CAP theorem. Read the "Numbers to Know" section.\n\n**Week 2: Patterns**\nScaling reads/writes, real-time updates, blob storage, message queues, consistent hashing. For each pattern, understand when to use it and what problem it solves.\n\n**Week 3: Question Practice**\nDesign 2-3 systems per day. Start with simpler ones (URL shortener, rate limiter), then progress to harder ones (YouTube, Uber). Write out your design, then compare with solutions.\n\n**Week 4: Mock Interviews**\nPractice with a partner or book a mock interview. Simulate real conditions — 45 minutes, whiteboard, talking out loud. This is the most important week.` },
       { type: 'callout', variant: 'tip', heading: 'Quality Over Quantity', body: 'Deeply understanding 10 systems is better than superficially knowing 30. For each system, understand the bottlenecks, trade-offs, and how you\'d scale it 10x. Be able to explain every component you draw.' },
@@ -25,7 +25,7 @@ export const IN_A_HURRY_TOPICS = {
 
   'delivery-framework': {
     slug: 'delivery-framework', title: 'Delivery Framework', subtitle: 'A step-by-step framework to structure any system design answer',
-    duration: '12 min', difficulty: 'Beginner', icon: '🗺️',
+    duration: '12 min', difficulty: 'Beginner',
     sections: [
       { type: 'text', heading: 'The 5-Step Framework', body: `Use this structure for every system design interview. It keeps you organized and ensures you cover everything the interviewer is looking for.\n\n**Step 1: Clarify Requirements (5 min)**\n**Step 2: Estimate Scale (3 min)**\n**Step 3: High-Level Design (10 min)**\n**Step 4: Deep Dive (15 min)**\n**Step 5: Identify Bottlenecks & Trade-offs (5 min)**\n\nTotal: ~38 minutes. Most interviews are 45 minutes, leaving buffer for questions.` },
       { type: 'text', heading: 'Step 1: Clarify Requirements', body: `Never start designing without asking questions. This is the most important step.\n\n**Functional requirements** — What does the system do?\n- "What are the core features we need to support?"\n- "What's out of scope for today?"\n\n**Non-functional requirements** — How does it perform?\n- "How many daily active users?"\n- "What's the expected read/write ratio?"\n- "Do we need real-time updates or is eventual consistency OK?"\n- "What's the acceptable latency?"\n- "Any geographic constraints?"\n\n**Scale**\n- "How many requests per second?"\n- "How much data do we need to store?"\n\nNarrow scope to 2-3 core features. Don't try to design everything.` },

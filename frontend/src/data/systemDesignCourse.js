@@ -18,7 +18,6 @@ export const SECTIONS = [
     id: 'in-a-hurry',
     title: 'In a Hurry',
     description: 'The essentials — get interview-ready fast',
-    icon: '⚡',
     color: 'cyan',
     access: 'free',  // free for everyone
     topics: ['introduction', 'how-to-prep', 'delivery-framework'],
@@ -27,7 +26,6 @@ export const SECTIONS = [
     id: 'core-concepts',
     title: 'Core Concepts',
     description: 'Foundational knowledge every engineer needs',
-    icon: '🧠',
     color: 'blue',
     access: 'pro',  // pro + elite
     freeTopics: ['networking-essentials', 'caching', 'numbers-to-know'], // these 3 free as preview
@@ -41,7 +39,6 @@ export const SECTIONS = [
     id: 'question-breakdowns',
     title: 'Question Breakdowns',
     description: 'End-to-end walkthroughs of real interview questions',
-    icon: '🔍',
     color: 'purple',
     access: 'elite',  // elite only
     freeTopics: ['design-bitly', 'design-rate-limiter'], // 2 free as preview
@@ -58,7 +55,6 @@ export const SECTIONS = [
     id: 'patterns',
     title: 'Patterns',
     description: 'Reusable solutions to common system design problems',
-    icon: '🔄',
     color: 'green',
     access: 'pro',
     freeTopics: ['pattern-realtime-updates'],
@@ -72,7 +68,6 @@ export const SECTIONS = [
     id: 'key-technologies',
     title: 'Key Technologies',
     description: 'Deep dives into the tools that power modern systems',
-    icon: '🛠️',
     color: 'orange',
     access: 'pro',
     freeTopics: ['tech-redis'],
@@ -86,7 +81,6 @@ export const SECTIONS = [
     id: 'advanced',
     title: 'Advanced Topics',
     description: 'For senior engineers and staff-level interviews',
-    icon: '🚀',
     color: 'red',
     access: 'elite',
     freeTopics: [],
@@ -104,7 +98,7 @@ export const TOPICS = {
     slug: 'networking-essentials',
     title: 'Networking Essentials',
     subtitle: 'DNS, TCP/IP, HTTP, WebSockets — what every engineer needs to know',
-    duration: '20 min', difficulty: 'Beginner', icon: '🌐',
+    duration: '20 min', difficulty: 'Beginner',
     sections: [
       { type: 'text', heading: 'What Happens When You Type a URL', body: `1. **DNS Lookup** — Browser resolves domain to IP address\n2. **TCP Handshake** — 3-way handshake establishes connection\n3. **TLS Handshake** — Encrypts the connection (HTTPS)\n4. **HTTP Request** — Browser sends GET request\n5. **Server Response** — Server returns HTML/JSON\n6. **Rendering** — Browser renders the page` },
       { type: 'text', heading: 'DNS (Domain Name System)', body: `DNS translates human-readable domains (google.com) to IP addresses (142.250.80.46).\n\n**DNS Resolution:**\n1. Check browser cache\n2. Check OS cache\n3. Query recursive resolver (your ISP)\n4. Query root nameserver → TLD nameserver → authoritative nameserver\n\n**TTL** — How long DNS records are cached. Lower TTL = faster propagation but more DNS queries.` },
@@ -119,7 +113,7 @@ export const TOPICS = {
     slug: 'api-design',
     title: 'API Design',
     subtitle: 'REST, GraphQL, gRPC — designing clean, scalable APIs',
-    duration: '20 min', difficulty: 'Intermediate', icon: '🔌',
+    duration: '20 min', difficulty: 'Intermediate',
     sections: [
       { type: 'text', heading: 'REST API Design Principles', body: `**Resources are nouns:** /users, /posts, /orders\n**HTTP verbs define actions:**\n- GET — read\n- POST — create\n- PUT/PATCH — update\n- DELETE — remove\n\n**Stateless** — each request contains all needed info\n**Use HTTP status codes:** 200 OK, 201 Created, 400 Bad Request, 401 Unauthorized, 404 Not Found, 500 Server Error` },
       { type: 'text', heading: 'REST URL Design', body: `**Good:**\n- GET /users/{id}\n- POST /users\n- GET /users/{id}/posts\n- PATCH /posts/{id}\n\n**Bad:**\n- GET /getUser?id=123\n- POST /createNewUser\n- GET /user_posts/{userId}\n\nRule: Use nouns, not verbs. Use plural for collections. Nest resources to show relationships.` },
@@ -134,7 +128,7 @@ export const TOPICS = {
     slug: 'data-modeling',
     title: 'Data Modeling',
     subtitle: 'SQL vs NoSQL, schema design, and choosing the right database',
-    duration: '25 min', difficulty: 'Intermediate', icon: '📊',
+    duration: '25 min', difficulty: 'Intermediate',
     sections: [
       { type: 'text', heading: 'SQL vs NoSQL', body: `**SQL (Relational)** — Structured data, ACID transactions, complex queries.\nUse for: financial data, user accounts, orders, anything requiring joins.\n\n**NoSQL** — Flexible schema, horizontal scale, eventual consistency.\nUse for: user activity feeds, product catalogs, real-time analytics, unstructured data.\n\nThe choice isn't SQL vs NoSQL — it's about picking the right tool for the data model.` },
       { type: 'text', heading: 'NoSQL Types', body: `**Document (MongoDB, Firestore)** — JSON-like documents. Good for hierarchical data.\n\n**Key-Value (Redis, DynamoDB)** — Simple lookups by key. Extremely fast.\n\n**Wide-Column (Cassandra, HBase)** — Rows with dynamic columns. Good for time-series, write-heavy workloads.\n\n**Graph (Neo4j)** — Nodes and edges. Good for social networks, recommendation engines.` },
@@ -148,7 +142,7 @@ export const TOPICS = {
     slug: 'caching',
     title: 'Caching',
     subtitle: 'Speed up reads and reduce database load with caching',
-    duration: '25 min', difficulty: 'Intermediate', icon: '⚡',
+    duration: '25 min', difficulty: 'Intermediate',
     sections: [
       { type: 'text', heading: 'Why Cache?', body: `Caching stores frequently accessed data in fast storage (memory) to avoid expensive recomputation or database queries.\n\n**Cache hit** — Data found in cache → fast response (~1ms)\n**Cache miss** — Data not in cache → fetch from DB (~100ms), store in cache\n\nTypical cache hit rates in production: 80-99%` },
       { type: 'animation', id: 'cache-flow', heading: 'Cache Hit vs Cache Miss', body: 'Cache hit returns data instantly. Cache miss fetches from DB and populates the cache.' },
@@ -163,7 +157,7 @@ export const TOPICS = {
     slug: 'sharding',
     title: 'Sharding',
     subtitle: 'Horizontal partitioning to scale databases beyond a single machine',
-    duration: '20 min', difficulty: 'Intermediate', icon: '🔀',
+    duration: '20 min', difficulty: 'Intermediate',
     sections: [
       { type: 'text', heading: 'What is Sharding?', body: `Sharding splits data across multiple databases. Each shard holds a subset of data.\n\nWhen to shard:\n- Single DB can't handle the write load\n- Dataset is too large for one machine\n- You need geographic distribution` },
       { type: 'text', heading: 'Sharding Strategies', body: `**Range-based** — Users A-M on shard 1, N-Z on shard 2\n- Pro: Simple, range queries easy\n- Con: Hotspots (all new users go to last shard)\n\n**Hash-based** — hash(user_id) % num_shards\n- Pro: Even distribution\n- Con: Range queries require all shards, resharding is painful\n\n**Directory-based** — Lookup table maps keys to shards\n- Pro: Flexible, easy to move data\n- Con: Lookup table is a bottleneck/SPOF` },
@@ -176,7 +170,7 @@ export const TOPICS = {
     slug: 'consistent-hashing',
     title: 'Consistent Hashing',
     subtitle: 'Minimize data movement when adding or removing nodes',
-    duration: '15 min', difficulty: 'Intermediate', icon: '🔵',
+    duration: '15 min', difficulty: 'Intermediate',
     sections: [
       { type: 'text', heading: 'The Problem with Simple Hashing', body: `With simple hash(key) % N:\n- Adding a node changes N\n- Almost all keys remap to different nodes\n- Massive data movement, cache invalidation\n\nExample: 1M keys, add 1 server to 10 → ~91% of keys move` },
       { type: 'text', heading: 'How Consistent Hashing Works', body: `Imagine a ring (0 to 2^32). Both servers and keys are hashed onto this ring.\n\nA key is assigned to the first server clockwise from its position on the ring.\n\n**Adding a server:** Only keys between the new server and its predecessor move.\n**Removing a server:** Only that server's keys move to the next server.\n\nResult: Only K/N keys move on average (K = keys, N = nodes).` },
@@ -189,7 +183,7 @@ export const TOPICS = {
     slug: 'cap-theorem',
     title: 'CAP Theorem',
     subtitle: 'Consistency, Availability, Partition Tolerance — pick two',
-    duration: '15 min', difficulty: 'Intermediate', icon: '⚖️',
+    duration: '15 min', difficulty: 'Intermediate',
     sections: [
       { type: 'text', heading: 'The CAP Theorem', body: `A distributed system can only guarantee **2 of 3** properties:\n\n**Consistency (C)** — Every read receives the most recent write or an error\n**Availability (A)** — Every request receives a response (not necessarily the latest data)\n**Partition Tolerance (P)** — System continues operating despite network partitions\n\nSince network partitions always happen in distributed systems, you must choose between **CP** or **AP**.` },
       { type: 'text', heading: 'CP Systems', body: `**CP (Consistent + Partition Tolerant)**\nWhen a partition occurs, the system returns an error rather than stale data.\n\nExamples: HBase, Zookeeper, MongoDB (with strong consistency)\n\nUse when: Financial transactions, inventory management, anything where stale data causes real harm.` },
@@ -203,7 +197,7 @@ export const TOPICS = {
     slug: 'database-indexing',
     title: 'Database Indexing',
     subtitle: 'Speed up queries with the right indexes',
-    duration: '15 min', difficulty: 'Intermediate', icon: '📑',
+    duration: '15 min', difficulty: 'Intermediate',
     sections: [
       { type: 'text', heading: 'What is an Index?', body: `An index is a data structure that speeds up data retrieval at the cost of additional storage and slower writes.\n\nWithout index: Full table scan O(N)\nWith index: O(log N) for B-tree, O(1) for hash` },
       { type: 'text', heading: 'Index Types', body: `**B-Tree Index** — Default in most SQL DBs. Balanced tree structure. Good for range queries (>, <, BETWEEN), equality, ORDER BY.\n\n**Hash Index** — O(1) lookups. Only for equality queries (=). Not for ranges.\n\n**Composite Index** — Index on multiple columns. Column order matters — leftmost prefix rule.\n\n**Covering Index** — Index includes all columns needed by a query. No table lookup needed.\n\n**Full-Text Index** — For text search (LIKE '%word%'). Used in Elasticsearch, MySQL FULLTEXT.` },
@@ -216,7 +210,7 @@ export const TOPICS = {
     slug: 'numbers-to-know',
     title: 'Numbers to Know',
     subtitle: 'Latency numbers, storage sizes, and back-of-envelope math',
-    duration: '10 min', difficulty: 'Beginner', icon: '🔢',
+    duration: '10 min', difficulty: 'Beginner',
     sections: [
       { type: 'text', heading: 'Latency Numbers (2024)', body: `**L1 cache reference:** 1 ns\n**L2 cache reference:** 4 ns\n**RAM access:** 100 ns\n**SSD random read:** 100 μs (100,000 ns)\n**HDD seek:** 10 ms (10,000,000 ns)\n**Network: same datacenter:** 0.5 ms\n**Network: cross-region:** 150 ms\n**Network: cross-continent:** 300 ms\n\nKey insight: Memory is 1000x faster than SSD. SSD is 100x faster than HDD.` },
       { type: 'text', heading: 'Storage Sizes', body: `**1 KB** = 1,000 bytes ≈ a short email\n**1 MB** = 1,000 KB ≈ a photo thumbnail\n**1 GB** = 1,000 MB ≈ a movie\n**1 TB** = 1,000 GB ≈ 1000 movies\n**1 PB** = 1,000 TB ≈ Facebook stores ~100 PB of photos\n\n**Common sizes:**\n- Tweet: ~280 bytes\n- User profile: ~1 KB\n- Profile photo: ~200 KB\n- HD video: ~1 GB/hour` },
@@ -230,7 +224,7 @@ export const TOPICS = {
 Object.assign(TOPICS, {
 
   'pattern-realtime-updates': {
-    slug: 'pattern-realtime-updates', title: 'Real-time Updates', subtitle: 'WebSockets, SSE, long polling — when to use what', duration: '20 min', difficulty: 'Intermediate', icon: '⚡',
+    slug: 'pattern-realtime-updates', title: 'Real-time Updates', subtitle: 'WebSockets, SSE, long polling — when to use what', duration: '20 min', difficulty: 'Intermediate',
     sections: [
       { type: 'text', heading: 'The Problem', body: `HTTP is request-response. The client must ask for data. But many features need the server to push data to clients:\n- Chat messages\n- Live sports scores\n- Stock prices\n- Collaborative editing\n- Notifications` },
       { type: 'text', heading: 'Long Polling', body: `Client sends request. Server holds it open until data is available (or timeout).\nClient immediately sends another request after receiving response.\n\n**Pros:** Works everywhere, simple\n**Cons:** High server connections, latency (one round trip per message)\n\n**Use when:** Simple notifications, low-frequency updates, broad browser support needed` },
@@ -241,7 +235,7 @@ Object.assign(TOPICS, {
   },
 
   'pattern-scaling-reads': {
-    slug: 'pattern-scaling-reads', title: 'Scaling Reads', subtitle: 'Read replicas, caching, CDN, and CQRS', duration: '20 min', difficulty: 'Intermediate', icon: '📖',
+    slug: 'pattern-scaling-reads', title: 'Scaling Reads', subtitle: 'Read replicas, caching, CDN, and CQRS', duration: '20 min', difficulty: 'Intermediate',
     sections: [
       { type: 'text', heading: 'Read-Heavy Systems', body: `Most web applications have 10:1 to 100:1 read:write ratios. Scaling reads is usually the first bottleneck.\n\n**Techniques in order of complexity:**\n1. Caching (Redis, Memcached)\n2. Read replicas\n3. CDN for static content\n4. CQRS (separate read/write models)\n5. Denormalization` },
       { type: 'text', heading: 'Read Replicas', body: `Add replica databases that receive a copy of all writes from the primary.\nRoute all read queries to replicas.\n\n**Benefits:**\n- Scale reads horizontally\n- Replicas can be in different regions\n- Failover if primary dies\n\n**Trade-off:**\nReplication lag — replicas may be slightly behind primary (usually <1 second)\nNot suitable for reads that must see the latest write` },
@@ -250,7 +244,7 @@ Object.assign(TOPICS, {
   },
 
   'pattern-scaling-writes': {
-    slug: 'pattern-scaling-writes', title: 'Scaling Writes', subtitle: 'Sharding, write-ahead logs, and async processing', duration: '20 min', difficulty: 'Advanced', icon: '✍️',
+    slug: 'pattern-scaling-writes', title: 'Scaling Writes', subtitle: 'Sharding, write-ahead logs, and async processing', duration: '20 min', difficulty: 'Advanced',
     sections: [
       { type: 'text', heading: 'Write Bottlenecks', body: `Writes are harder to scale than reads because:\n- Must be consistent\n- Can't serve stale data\n- Require coordination\n\n**Common write bottlenecks:**\n- Single primary DB\n- Synchronous writes to multiple systems\n- Hot partitions (all writes to one shard)` },
       { type: 'text', heading: 'Async Write Processing', body: `Don't make users wait for slow operations.\n\n**Pattern:**\n1. Write to fast store (Redis, Kafka)\n2. Return success to user immediately\n3. Background worker processes and writes to DB\n\n**Examples:**\n- Like/view counts: increment Redis counter, batch write to DB every minute\n- Email sending: queue message, return success, send async\n- Analytics events: write to Kafka, process in batch` },
@@ -259,7 +253,7 @@ Object.assign(TOPICS, {
   },
 
   'pattern-large-blobs': {
-    slug: 'pattern-large-blobs', title: 'Handling Large Blobs', subtitle: 'Storing and serving images, videos, and files', duration: '15 min', difficulty: 'Intermediate', icon: '🗂️',
+    slug: 'pattern-large-blobs', title: 'Handling Large Blobs', subtitle: 'Storing and serving images, videos, and files', duration: '15 min', difficulty: 'Intermediate',
     sections: [
       { type: 'text', heading: 'Never Store Blobs in Your DB', body: `Storing large files in a relational DB:\n- Bloats DB size\n- Slows down backups\n- Can't use CDN\n- Expensive\n\n**Always use object storage:** S3, GCS, Azure Blob Storage\nStore only the URL/key in your DB.` },
       { type: 'text', heading: 'Upload Pattern', body: `**Direct upload to S3 (best):**\n1. Client requests pre-signed URL from your server\n2. Server generates pre-signed URL (valid for 15 min)\n3. Client uploads directly to S3 (bypasses your servers)\n4. S3 notifies your server on completion\n5. Server saves metadata to DB\n\n**Benefits:** Your servers don't handle large file transfers. S3 handles bandwidth.` },
@@ -268,7 +262,7 @@ Object.assign(TOPICS, {
   },
 
   'pattern-long-running-tasks': {
-    slug: 'pattern-long-running-tasks', title: 'Managing Long Running Tasks', subtitle: 'Async job processing, progress tracking, and retries', duration: '15 min', difficulty: 'Intermediate', icon: '⏳',
+    slug: 'pattern-long-running-tasks', title: 'Managing Long Running Tasks', subtitle: 'Async job processing, progress tracking, and retries', duration: '15 min', difficulty: 'Intermediate',
     sections: [
       { type: 'text', heading: 'The Problem', body: `Some operations take too long for a synchronous HTTP request:\n- Video transcoding (minutes)\n- Report generation (seconds to minutes)\n- Sending bulk emails\n- ML model inference\n- Data exports\n\nHTTP timeout is typically 30-60 seconds. Don't make users wait.` },
       { type: 'text', heading: 'Async Job Pattern', body: `1. Client submits job → server returns job_id immediately (202 Accepted)\n2. Job added to queue (Kafka, SQS, Redis)\n3. Worker picks up job, processes it\n4. Worker updates job status in DB\n5. Client polls GET /jobs/{job_id} for status\n   OR server pushes update via WebSocket/SSE\n\n**Job states:** PENDING → RUNNING → COMPLETED / FAILED` },
@@ -277,7 +271,7 @@ Object.assign(TOPICS, {
   },
 
   'pattern-multi-step-processes': {
-    slug: 'pattern-multi-step-processes', title: 'Multi-step Processes', subtitle: 'Sagas, distributed transactions, and workflow orchestration', duration: '20 min', difficulty: 'Advanced', icon: '🔗',
+    slug: 'pattern-multi-step-processes', title: 'Multi-step Processes', subtitle: 'Sagas, distributed transactions, and workflow orchestration', duration: '20 min', difficulty: 'Advanced',
     sections: [
       { type: 'text', heading: 'The Problem', body: `Some operations span multiple services:\n- Order: reserve inventory → charge payment → send confirmation\n- User signup: create account → send email → create profile\n\nIf step 2 fails, how do you undo step 1?\nDistributed transactions (2PC) are slow and fragile.` },
       { type: 'text', heading: 'Saga Pattern', body: `Break the transaction into a sequence of local transactions.\nEach step publishes an event that triggers the next step.\nIf a step fails, execute compensating transactions to undo previous steps.\n\n**Choreography:** Each service listens for events and reacts\n**Orchestration:** Central coordinator tells each service what to do\n\n**Example — Order Saga:**\n1. Create order (PENDING)\n2. Reserve inventory → success → continue / fail → cancel order\n3. Charge payment → success → continue / fail → release inventory\n4. Send confirmation → mark order COMPLETED` },
@@ -290,7 +284,7 @@ Object.assign(TOPICS, {
 Object.assign(TOPICS, {
 
   'tech-redis': {
-    slug: 'tech-redis', title: 'Redis', subtitle: 'In-memory data store — caching, queues, pub/sub, and more', duration: '20 min', difficulty: 'Intermediate', icon: '🔴',
+    slug: 'tech-redis', title: 'Redis', subtitle: 'In-memory data store — caching, queues, pub/sub, and more', duration: '20 min', difficulty: 'Intermediate',
     sections: [
       { type: 'text', heading: 'What is Redis?', body: `Redis is an in-memory data structure store. It's used as a cache, message broker, and database.\n\n**Key properties:**\n- Sub-millisecond latency\n- Rich data structures\n- Optional persistence\n- Pub/Sub messaging\n- Lua scripting\n- Atomic operations` },
       { type: 'text', heading: 'Data Structures', body: `**String** — Simple key-value. Counters, sessions, cached objects.\n**List** — Ordered list. Message queues, activity feeds.\n**Set** — Unique values. Tags, unique visitors.\n**Sorted Set** — Set with scores. Leaderboards, rate limiting.\n**Hash** — Field-value pairs. User profiles, objects.\n**Bitmap** — Bit array. Feature flags, daily active users.\n**HyperLogLog** — Approximate cardinality. Unique visitor counts.` },
@@ -300,7 +294,7 @@ Object.assign(TOPICS, {
   },
 
   'tech-kafka': {
-    slug: 'tech-kafka', title: 'Kafka', subtitle: 'Distributed event streaming for high-throughput pipelines', duration: '25 min', difficulty: 'Advanced', icon: '📨',
+    slug: 'tech-kafka', title: 'Kafka', subtitle: 'Distributed event streaming for high-throughput pipelines', duration: '25 min', difficulty: 'Advanced',
     sections: [
       { type: 'text', heading: 'What is Kafka?', body: `Kafka is a distributed event streaming platform. It's a durable, ordered, append-only log.\n\n**Core concepts:**\n- **Topic** — Named stream of events\n- **Partition** — Topic split into ordered partitions for parallelism\n- **Producer** — Writes events to topics\n- **Consumer** — Reads events from topics\n- **Consumer Group** — Multiple consumers sharing work` },
       { type: 'animation', id: 'message-queue', heading: 'Kafka Architecture', body: 'Producers write to topics. Consumers read at their own pace. Messages persist for configurable retention.' },
@@ -311,7 +305,7 @@ Object.assign(TOPICS, {
   },
 
   'tech-elasticsearch': {
-    slug: 'tech-elasticsearch', title: 'Elasticsearch', subtitle: 'Full-text search and analytics at scale', duration: '20 min', difficulty: 'Intermediate', icon: '🔍',
+    slug: 'tech-elasticsearch', title: 'Elasticsearch', subtitle: 'Full-text search and analytics at scale', duration: '20 min', difficulty: 'Intermediate',
     sections: [
       { type: 'text', heading: 'What is Elasticsearch?', body: `Elasticsearch is a distributed search and analytics engine built on Apache Lucene.\n\n**Use cases:**\n- Full-text search (product search, document search)\n- Log analytics (ELK stack)\n- Geospatial search\n- Time-series analytics\n- Autocomplete` },
       { type: 'text', heading: 'How It Works', body: `**Inverted Index:**\nFor each word, store a list of documents containing it.\n"apple" → [doc1, doc3, doc7]\n"banana" → [doc2, doc3]\n\nSearch "apple banana" → find intersection → [doc3]\n\n**Relevance Scoring:**\nTF-IDF (term frequency × inverse document frequency)\nBM25 (improved TF-IDF, default in modern ES)` },
@@ -321,7 +315,7 @@ Object.assign(TOPICS, {
   },
 
   'tech-postgresql': {
-    slug: 'tech-postgresql', title: 'PostgreSQL', subtitle: 'The world\'s most advanced open-source relational database', duration: '20 min', difficulty: 'Intermediate', icon: '🐘',
+    slug: 'tech-postgresql', title: 'PostgreSQL', subtitle: 'The world\'s most advanced open-source relational database', duration: '20 min', difficulty: 'Intermediate',
     sections: [
       { type: 'text', heading: 'Why PostgreSQL?', body: `PostgreSQL is the go-to relational database for most applications.\n\n**Strengths:**\n- Full ACID compliance\n- Rich data types (JSON, arrays, UUID, geometric)\n- Advanced indexing (B-tree, Hash, GiST, GIN, BRIN)\n- Full-text search built-in\n- PostGIS for geospatial\n- Excellent performance\n- Open source, no licensing costs` },
       { type: 'text', heading: 'Key Features for System Design', body: `**JSONB:** Store and query JSON documents. Indexed. Good for semi-structured data.\n\n**Partitioning:** Range, list, or hash partitioning. Built-in table partitioning.\n\n**Logical Replication:** Stream changes to replicas or external systems (CDC).\n\n**Connection Pooling:** Use PgBouncer. PostgreSQL has high per-connection overhead.\n\n**VACUUM:** Background process that reclaims space from deleted rows. Important for write-heavy tables.` },
@@ -330,7 +324,7 @@ Object.assign(TOPICS, {
   },
 
   'tech-cassandra': {
-    slug: 'tech-cassandra', title: 'Cassandra', subtitle: 'Wide-column store for write-heavy, time-series workloads', duration: '20 min', difficulty: 'Advanced', icon: '💎',
+    slug: 'tech-cassandra', title: 'Cassandra', subtitle: 'Wide-column store for write-heavy, time-series workloads', duration: '20 min', difficulty: 'Advanced',
     sections: [
       { type: 'text', heading: 'What is Cassandra?', body: `Cassandra is a distributed wide-column store designed for:\n- Write-heavy workloads\n- Time-series data\n- High availability (no single point of failure)\n- Linear horizontal scalability\n\n**Used by:** Netflix, Apple, Instagram, Discord` },
       { type: 'text', heading: 'Data Model', body: `**Keyspace** → **Table** → **Row**\n\nRows identified by **partition key** (determines which node stores the data)\nWithin a partition, rows sorted by **clustering key**\n\n**Design principle:** Model your data around your queries, not your relationships.\nDenormalize aggressively. Joins don't exist.\n\n**Example — Messages:**\nPartition key: conversation_id\nClustering key: timestamp DESC\nQuery: "Get last 50 messages in conversation X" → single partition read` },
@@ -340,7 +334,7 @@ Object.assign(TOPICS, {
   },
 
   'tech-dynamodb': {
-    slug: 'tech-dynamodb', title: 'DynamoDB', subtitle: 'AWS managed NoSQL — serverless, scalable key-value store', duration: '15 min', difficulty: 'Intermediate', icon: '⚡',
+    slug: 'tech-dynamodb', title: 'DynamoDB', subtitle: 'AWS managed NoSQL — serverless, scalable key-value store', duration: '15 min', difficulty: 'Intermediate',
     sections: [
       { type: 'text', heading: 'What is DynamoDB?', body: `DynamoDB is AWS's fully managed NoSQL database.\n\n**Key features:**\n- Single-digit millisecond latency at any scale\n- Serverless (no capacity planning)\n- Auto-scaling\n- Global tables (multi-region)\n- Streams (CDC)\n- On-demand or provisioned capacity` },
       { type: 'text', heading: 'Data Model', body: `**Table** → **Item** (row) → **Attributes** (columns)\n\n**Primary key:**\n- Simple: Partition key only\n- Composite: Partition key + Sort key\n\n**Access patterns:**\nDesign your table around your access patterns.\nUse GSI (Global Secondary Index) for alternate access patterns.\n\n**Single-table design:**\nStore multiple entity types in one table\nUse PK/SK patterns to model relationships` },
@@ -349,7 +343,7 @@ Object.assign(TOPICS, {
   },
 
   'tech-api-gateway': {
-    slug: 'tech-api-gateway', title: 'API Gateway', subtitle: 'Single entry point for all client requests', duration: '15 min', difficulty: 'Intermediate', icon: '🚪',
+    slug: 'tech-api-gateway', title: 'API Gateway', subtitle: 'Single entry point for all client requests', duration: '15 min', difficulty: 'Intermediate',
     sections: [
       { type: 'text', heading: 'What is an API Gateway?', body: `An API Gateway is a server that acts as the single entry point for all client requests.\n\n**Functions:**\n- Request routing\n- Authentication/Authorization\n- Rate limiting\n- SSL termination\n- Request/response transformation\n- Logging and monitoring\n- Load balancing` },
       { type: 'text', heading: 'Benefits', body: `**Decoupling:** Clients don't know about internal service structure\n**Cross-cutting concerns:** Auth, rate limiting, logging in one place\n**Protocol translation:** REST → gRPC, HTTP/1.1 → HTTP/2\n**Versioning:** Route /v1 and /v2 to different services\n\n**Examples:** AWS API Gateway, Kong, Nginx, Envoy, Traefik` },
@@ -358,7 +352,7 @@ Object.assign(TOPICS, {
   },
 
   'tech-zookeeper': {
-    slug: 'tech-zookeeper', title: 'ZooKeeper', subtitle: 'Distributed coordination service', duration: '15 min', difficulty: 'Advanced', icon: '🦁',
+    slug: 'tech-zookeeper', title: 'ZooKeeper', subtitle: 'Distributed coordination service', duration: '15 min', difficulty: 'Advanced',
     sections: [
       { type: 'text', heading: 'What is ZooKeeper?', body: `ZooKeeper is a distributed coordination service. It provides:\n- Distributed configuration management\n- Service discovery\n- Leader election\n- Distributed locks\n- Naming registry` },
       { type: 'text', heading: 'How It Works', body: `ZooKeeper maintains a hierarchical namespace (like a filesystem).\nNodes (znodes) can store small amounts of data.\n\n**Ephemeral nodes:** Deleted when client disconnects. Used for service registration.\n**Persistent nodes:** Survive client disconnects. Used for configuration.\n**Watches:** Clients can watch znodes for changes. Enables event-driven coordination.` },
@@ -371,7 +365,7 @@ Object.assign(TOPICS, {
 Object.assign(TOPICS, {
 
   'advanced-time-series': {
-    slug: 'advanced-time-series', title: 'Time Series Databases', subtitle: 'Storing and querying time-stamped data at scale', duration: '20 min', difficulty: 'Advanced', icon: '📈',
+    slug: 'advanced-time-series', title: 'Time Series Databases', subtitle: 'Storing and querying time-stamped data at scale', duration: '20 min', difficulty: 'Advanced',
     sections: [
       { type: 'text', heading: 'What is Time Series Data?', body: `Time series data is a sequence of data points indexed by time.\n\n**Examples:**\n- Server metrics (CPU, memory, requests/sec)\n- IoT sensor readings\n- Financial tick data\n- Application logs\n- User activity events\n\n**Characteristics:**\n- Write-heavy (continuous stream of data)\n- Rarely updated (append-only)\n- Queried by time range\n- Old data can be downsampled or deleted` },
       { type: 'text', heading: 'Why Not Use a Regular DB?', body: `Regular databases struggle with time series because:\n- Massive write throughput (millions of points/sec)\n- Queries are always time-range based\n- Data compression is critical (timestamps are sequential)\n- Retention policies (auto-delete old data)\n- Downsampling (aggregate old data to save space)\n\nTime series DBs are optimized for all of these.` },
@@ -381,7 +375,7 @@ Object.assign(TOPICS, {
   },
 
   'advanced-data-structures': {
-    slug: 'advanced-data-structures', title: 'Data Structures for Big Data', subtitle: 'Bloom filters, HyperLogLog, Count-Min Sketch', duration: '20 min', difficulty: 'Advanced', icon: '🧮',
+    slug: 'advanced-data-structures', title: 'Data Structures for Big Data', subtitle: 'Bloom filters, HyperLogLog, Count-Min Sketch', duration: '20 min', difficulty: 'Advanced',
     sections: [
       { type: 'text', heading: 'Probabilistic Data Structures', body: `When exact answers are too expensive, use probabilistic data structures.\nThey trade a small error rate for massive memory savings.\n\n**Use cases:**\n- "Has this URL been crawled?" (Bloom filter)\n- "How many unique visitors today?" (HyperLogLog)\n- "What are the most frequent search terms?" (Count-Min Sketch)` },
       { type: 'text', heading: 'Bloom Filter', body: `A space-efficient probabilistic set.\n\n**Operations:** Add element, Check if element exists\n**False positives:** Possible (says "yes" when answer is "no")\n**False negatives:** Impossible (never says "no" when answer is "yes")\n\n**How it works:** Multiple hash functions map element to bit array positions. Set those bits to 1.\nTo check: if all positions are 1, element "probably" exists.\n\n**Use cases:** Web crawlers (skip already-crawled URLs), DB query optimization (skip disk reads for non-existent keys), spam filters` },
@@ -391,7 +385,7 @@ Object.assign(TOPICS, {
   },
 
   'advanced-vector-db': {
-    slug: 'advanced-vector-db', title: 'Vector Databases', subtitle: 'Semantic search and AI-powered similarity matching', duration: '20 min', difficulty: 'Advanced', icon: '🤖',
+    slug: 'advanced-vector-db', title: 'Vector Databases', subtitle: 'Semantic search and AI-powered similarity matching', duration: '20 min', difficulty: 'Advanced',
     sections: [
       { type: 'text', heading: 'What is a Vector Database?', body: `A vector database stores and queries high-dimensional vectors (embeddings).\n\n**What are embeddings?**\nML models convert text, images, audio into dense numerical vectors.\nSimilar items have similar vectors (close in vector space).\n\n**Example:**\n"cat" → [0.2, 0.8, 0.1, ...] (1536 dimensions)\n"kitten" → [0.21, 0.79, 0.11, ...] (very similar)\n"car" → [0.9, 0.1, 0.7, ...] (very different)` },
       { type: 'text', heading: 'Use Cases', body: `**Semantic Search:** Find documents by meaning, not keywords\n"Show me articles about machine learning" → finds articles about "AI", "neural networks", "deep learning"\n\n**Recommendation Systems:** Find similar products/content\n"Users who liked X also liked Y" based on embedding similarity\n\n**RAG (Retrieval Augmented Generation):** Give LLMs access to your data\nStore your docs as embeddings, retrieve relevant ones for each query\n\n**Image Search:** Find visually similar images\n**Anomaly Detection:** Find unusual patterns` },
