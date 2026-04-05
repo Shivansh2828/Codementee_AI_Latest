@@ -45,6 +45,7 @@ const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const RefundPolicy = lazy(() => import("./pages/RefundPolicy"));
 const ContactUs = lazy(() => import("./pages/ContactUs"));
+const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 
 // Admin pages - Lazy load (not needed for initial load)
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -131,6 +132,7 @@ function App() {
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/refund-policy" element={<RefundPolicy />} />
             <Route path="/contact" element={<ContactUs />} />
+            <Route path="/payment/success" element={<PaymentSuccess />} />
 
             {/* Admin Routes */}
             <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />

@@ -204,7 +204,7 @@ const AdminPricing = () => {
           <div>
             <h1 className={`text-3xl font-bold ${theme.text.primary}`}>Pricing Management</h1>
             <p className={theme.text.secondary}>
-              Manage interview preparation plans
+              Manage interview preparation and AI agent plans
               {lastSyncTime && (
                 <span className="ml-3 text-xs text-green-400">
                   • Last synced: {lastSyncTime.toLocaleTimeString()}
@@ -363,8 +363,15 @@ const AdminPricing = () => {
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {pricingPlans.map((plan) => {
+        {/* Interview Plans Section */}
+        {pricingPlans.some(p => !p.plan_id.startsWith('agent_')) && (
+          <div>
+            <h2 className={`text-xl font-semibold ${theme.text.primary} mb-4 flex items-center gap-2`}>
+              <Sparkles className="w-5 h-5 text-[#06b6d4]" />
+              Interview Preparation Plans
+            </h2>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {pricingPlans.filter(p => !p.plan_id.startsWith('agent_')).map((plan) => {
             const Icon = planIcons[plan.plan_id] || DollarSign;
             const iconColor = planColors[plan.plan_id] || 'text-[#06b6d4]';
             const isPopular = plan.plan_id === 'pro';
@@ -494,6 +501,149 @@ const AdminPricing = () => {
             );
           })}
         </div>
+          </div>
+        )}
+
+        {/* AI Agent Plans Section */}
+        {pricingPlans.some(p => p.plan_id.startsWith('agent_')) && (
+          <div>
+            <h2 className={`text-xl font-semibold ${theme.text.primary} mb-4 flex items-center gap-2`}>
+              <Bot className="w-5 h-5 text-purple-400" />
+              AI Agent Plans
+            </h2>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {pricingPlans.filter(p => p.plan_id.startsWith('agent_')).map((plan) => {
+            const Icon = planIcons[plan.plan_id] || Bot;
+            const iconColor = planColors[plan.plan_id] || 'text-purple-400';
+            const isPopular = plan.plan_id === 'agent_monthly';
+            
+            return (
+              <Card key={plan.id} className={`relative ${theme.bg.card} ${theme.border.primary} border ${isPopular ? 'ring-2 ring-purple-400' : ''}`}>
+                {isPopular && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <Badge className="bg-purple-500 text-white px-3 py-1">Popular</Badge>
+                  </div>
+                )}
+                <CardHeader>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg ${theme.bg.secondary} flex items-center justify-center`}>
+                        <Icon className={`w-5 h-5 ${iconColor}`} />
+                      </div>
+                      <CardTitle className={theme.text.primary}>{plan.name}</CardTitle>
+                    </div>
+                    {plan.is_active ? (
+                      <Badge variant="default" className="bg-green-500/20 text-green-400 border-green-500/30">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Active
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="bg-red-500/20 text-red-400 border-red-500/30">
+                        <XCircle className="w-3 h-3 mr-1" />
+                        Inactive
+                      </Badge>
+                    )}
+                  </div>
+                  <CardDescription className={theme.text.secondary}>
+                    Plan ID: {plan.plan_id} • Order: {plan.display_order}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className={`text-xs ${theme.text.muted} mb-1`}>India Price</p>
+                        <div className="flex items-baseline gap-1">
+                          <span className={`${theme.text.secondary} text-lg`}>₹</span>
+                          <span className={`text-3xl font-bold ${theme.text.primary}`}>
+                            {(plan.price / 100).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <p className={`text-xs ${theme.text.muted} mb-1`}>International Price</p>
+                        <div className="flex items-baseline gap-1">
+                          <span className={`${theme.text.secondary} text-lg`}>$</span>
+                          <span className={`text-3xl font-bold ${theme.text.primary}`}>
+                            {plan.price_usd ? (plan.price_usd / 100).toFixed(0) : 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {plan.features && plan.features.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className={`font-medium ${theme.text.primary} text-sm`}>Features:</h4>
+                        <ul className="text-sm space-y-2">
+                          {plan.features.map((feature, index) => (
+                            <li key={index} className="flex items-start gap-2">
+                              <CheckCircle className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
+                              <span className={theme.text.secondary}>{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    {plan.limits && Object.keys(plan.limits).length > 0 && (
+                      <div className={`space-y-2 pt-2 border-t ${theme.border.primary}`}>
+                        <h4 className={`font-medium ${theme.text.primary} text-sm`}>Usage Limits:</h4>
+                        <div className="text-sm space-y-1">
+                          {Object.entries(plan.limits).map(([key, value]) => (
+                            <div key={key} className={`flex justify-between ${theme.text.secondary}`}>
+                              <span className="capitalize">{key.replace(/_/g, ' ')}:</span>
+                              <span className="font-medium text-purple-400">
+                                {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex gap-2 pt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(plan)}
+                        className="flex-1"
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="sm">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className={`${theme.bg.card} ${theme.border.primary} border`}>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className={theme.text.primary}>Delete Pricing Plan</AlertDialogTitle>
+                            <AlertDialogDescription className={theme.text.secondary}>
+                              Are you sure you want to delete "{plan.name}"? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDelete(plan.plan_id)}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+          </div>
+        )}
 
         {pricingPlans.length === 0 && (
           <Card className={`${theme.bg.card} ${theme.border.primary} border`}>

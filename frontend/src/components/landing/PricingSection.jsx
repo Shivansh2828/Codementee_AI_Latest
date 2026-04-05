@@ -122,11 +122,13 @@ const PricingSection = () => {
       setLoading(false);
     } catch (error) {
       // Fallback to default plans if API fails
+      const isUSD = currency === 'USD';
       const fallbackPlans = [
         {
           id: 'starter',
           name: 'Mock Starter',
-          price: '2,999',
+          price: isUSD ? '24' : '2,999',
+          currencySymbol: isUSD ? '$' : '₹',
           features: [
             '1 MAANG-Level Mock Interview',
             'Detailed Feedback Report',
@@ -143,7 +145,8 @@ const PricingSection = () => {
         {
           id: 'pro',
           name: 'Interview Pro',
-          price: '6,999',
+          price: isUSD ? '84' : '6,999',
+          currencySymbol: isUSD ? '$' : '₹',
           features: [
             '3 MAANG-Level Mock Interviews',
             'Improvement Tracking Between Mocks',
@@ -162,7 +165,8 @@ const PricingSection = () => {
         {
           id: 'elite',
           name: 'Interview Elite',
-          price: '14,999',
+          price: isUSD ? '180' : '14,999',
+          currencySymbol: isUSD ? '$' : '₹',
           features: [
             '6 MAANG-Level Mock Interviews',
             'Live Resume Review Session',

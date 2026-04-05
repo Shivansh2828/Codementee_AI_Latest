@@ -15,6 +15,7 @@ const AgentPurchasePage = () => {
   const { currency, formatPrice, currencySymbol } = useCurrency();
   const [isLoading, setIsLoading] = useState(false);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  const [cashfreeLoaded, setCashfreeLoaded] = useState(false);
   const [agentPlans, setAgentPlans] = useState({});
   const [loadingPlans, setLoadingPlans] = useState(true);
   const selectedPlanId = searchParams.get('plan') || 'agent_monthly';
@@ -35,15 +36,20 @@ const AgentPurchasePage = () => {
         if (plan.plan_id.startsWith('agent_')) {
           planMap[plan.plan_id] = {
             name: plan.name,
-            price: plan.price, // Keep in cents/paise, formatPrice will divide by 100
+            price: plan.price,
             duration: plan.duration_months === 1 ? '1 month' : `${plan.duration_months} months`,
             features: plan.features || [],
             tag: plan.plan_id === 'agent_monthly' ? 'Popular' : 
                  plan.plan_id === 'agent_quarterly' ? 'Save' : 'Try it out',
-            savings: plan.plan_id === 'agent_quarterly' ? (currency === 'USD' ? 200 : 9800) : null // Savings in cents/paise
+            savings: null
           };
         }
       });
+      // Calculate savings dynamically: 3 × monthly - quarterly
+      const monthlyPrice = planMap['agent_monthly']?.price || 0;
+      if (planMap['agent_quarterly'] && monthlyPrice) {
+        planMap['agent_quarterly'].savings = (monthlyPrice * 3) - planMap['agent_quarterly'].price;
+      }
       
       setAgentPlans(planMap);
     } catch (error) {
@@ -83,14 +89,26 @@ const AgentPurchasePage = () => {
     if (p && agentPlans[p]) setFormData(prev => ({ ...prev, selectedPlan: p }));
   }, [searchParams, agentPlans]);
 
-  // Load Razorpay script
+  // Load payment scripts
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    script.onload = () => setRazorpayLoaded(true);
-    document.body.appendChild(script);
-    return () => document.body.removeChild(script);
+    // Load Razorpay
+    const rzpScript = document.createElement('script');
+    rzpScript.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    rzpScript.async = true;
+    rzpScript.onload = () => setRazorpayLoaded(true);
+    document.body.appendChild(rzpScript);
+
+    // Load Cashfree
+    const cfScript = document.createElement('script');
+    cfScript.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+    cfScript.async = true;
+    cfScript.onload = () => setCashfreeLoaded(true);
+    document.body.appendChild(cfScript);
+
+    return () => {
+      document.body.removeChild(rzpScript);
+      document.body.removeChild(cfScript);
+    };
   }, []);
 
   const handleInputChange = (e) => {
@@ -117,9 +135,11 @@ const AgentPurchasePage = () => {
     );
   }
 
+  const paymentReady = currency === 'USD' ? cashfreeLoaded : razorpayLoaded;
+
   const handlePayment = async (e) => {
     e.preventDefault();
-    if (!razorpayLoaded) { toast.error('Payment system is loading. Please try again.'); return; }
+    if (!paymentReady) { toast.error('Payment system is loading. Please try again.'); return; }
     if (!isAuthenticated && formData.password.length < 6) { toast.error('Password must be at least 6 characters'); return; }
 
     setIsLoading(true);
@@ -134,39 +154,64 @@ const AgentPurchasePage = () => {
         is_upgrade: isAuthenticated,
       });
 
-      const { order_id, razorpay_order_id, razorpay_key_id, amount, currency } = orderRes.data;
+      const orderData = orderRes.data;
+      const payment_gateway = orderData.payment_gateway;
 
-      const options = {
-        key: razorpay_key_id,
-        amount,
-        currency,
-        name: 'Codementee',
-        description: currentPlan.name,
-        order_id: razorpay_order_id,
-        prefill: { name: formData.name, email: formData.email },
-        theme: { color: '#06b6d4' },
-        handler: async function (response) {
-          try {
-            const verifyRes = await api.post('/payment/verify', {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              order_id,
-            });
-            if (verifyRes.data.success) {
-              localStorage.setItem('token', verifyRes.data.access_token);
-              toast.success('Payment successful! Welcome to AI Agents.');
-              setTimeout(() => { window.location.href = '/mentee/job-search'; }, 1000);
+      if (payment_gateway === 'razorpay') {
+        // Handle Razorpay payment (India)
+        const { order_id, razorpay_order_id, razorpay_key_id, amount } = orderData;
+
+        const options = {
+          key: razorpay_key_id,
+          amount,
+          currency: 'INR',
+          name: 'Codementee',
+          description: currentPlan.name,
+          order_id: razorpay_order_id,
+          prefill: { name: formData.name, email: formData.email },
+          theme: { color: '#06b6d4' },
+          handler: async function (response) {
+            try {
+              const verifyRes = await api.post('/payment/verify', {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                order_id,
+              });
+              if (verifyRes.data.success) {
+                localStorage.setItem('token', verifyRes.data.access_token);
+                toast.success('Payment successful! Welcome to AI Agents.');
+                setTimeout(() => { window.location.href = '/mentee/job-search'; }, 1000);
+              }
+            } catch (err) {
+              toast.error(err.response?.data?.detail || 'Payment verification failed');
             }
-          } catch (err) {
-            toast.error(err.response?.data?.detail || 'Payment verification failed');
-          }
-        },
-        modal: { ondismiss: () => { setIsLoading(false); toast.error('Payment cancelled'); } },
-      };
+          },
+          modal: { ondismiss: () => { setIsLoading(false); toast.error('Payment cancelled'); } },
+        };
 
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
+        const razorpay = new window.Razorpay(options);
+        razorpay.open();
+      } else if (payment_gateway === 'cashfree') {
+        // Handle Cashfree payment (International)
+        const { order_id, payment_session_id } = orderData;
+
+        const cashfree = new window.Cashfree({
+          mode: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
+        });
+
+        cashfree.checkout({
+          paymentSessionId: payment_session_id,
+          returnUrl: `${window.location.origin}/payment/success?order_id=${order_id}`,
+          redirectTarget: '_self'
+        }).then(() => {
+          console.log('Cashfree payment initiated');
+        }).catch((error) => {
+          console.error('Cashfree payment error:', error);
+          toast.error('Failed to initiate payment');
+          setIsLoading(false);
+        });
+      }
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to create order');
       setIsLoading(false);
@@ -274,7 +319,7 @@ const AgentPurchasePage = () => {
                 </div>
               </div>
 
-              <button type="submit" disabled={isLoading || !razorpayLoaded || !currentPlan} className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-bold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all text-lg disabled:opacity-50 disabled:cursor-not-allowed">
+              <button type="submit" disabled={isLoading || !paymentReady || !currentPlan} className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-bold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all text-lg disabled:opacity-50 disabled:cursor-not-allowed">
                 {isLoading ? <><Loader2 size={20} className="animate-spin" /> Processing...</> : <><CreditCard size={20} /> Pay {formatPrice(currentPlan?.price || 0)}</>}
               </button>
 
