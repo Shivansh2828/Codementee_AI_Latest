@@ -67,9 +67,6 @@ security = HTTPBearer()
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
-# Log payment gateway configuration status at startup
-logger.info(f"Payment config: Razorpay={'configured' if RAZORPAY_KEY_ID else 'MISSING'}, Cashfree={'configured' if CASHFREE_APP_ID else 'MISSING'}")
-
 # Add validation error handler for better debugging
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
