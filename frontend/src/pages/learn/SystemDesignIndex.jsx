@@ -89,7 +89,6 @@ const SystemDesignIndex = () => {
                 <div key={section.id}>
                   {/* Section header */}
                   <div className="flex items-center gap-3 mb-4 flex-wrap">
-                    <span className="text-2xl">{section.icon}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h2 className={`text-xl font-bold ${theme.text.primary}`}>{section.title}</h2>
@@ -120,7 +119,7 @@ const SystemDesignIndex = () => {
                             key={slug}
                             className={`flex items-start gap-3 p-4 rounded-xl ${theme.bg.card} border border-gray-700/50 opacity-60 cursor-not-allowed`}
                           >
-                            <span className="text-xl shrink-0 mt-0.5 grayscale">{topic.icon}</span>
+                            
                             <div className="flex-1 min-w-0">
                               <p className={`font-medium text-sm ${theme.text.muted} truncate`}>{topic.title}</p>
                               <div className="flex items-center gap-2 mt-1">
@@ -139,7 +138,7 @@ const SystemDesignIndex = () => {
                           to={`/learn/system-design/${slug}`}
                           className={`flex items-start gap-3 p-4 rounded-xl ${theme.bg.card} border ${sectionBorderColor[section.color]} transition-all duration-200 group`}
                         >
-                          <span className="text-xl shrink-0 mt-0.5">{topic.icon}</span>
+                          <span className="text-xl shrink-0 mt-0.5"></span>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
                               <p className={`font-medium text-sm ${theme.text.primary} group-hover:text-[#06b6d4] transition-colors truncate`}>
@@ -147,6 +146,9 @@ const SystemDesignIndex = () => {
                               </p>
                               {access === 'preview' && (
                                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-semibold shrink-0">Preview</span>
+                              )}
+                              {topic.comingSoon && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-500/20 text-gray-400 font-semibold shrink-0">Coming Soon</span>
                               )}
                             </div>
                             <div className="flex items-center gap-2 mt-1">
@@ -164,7 +166,8 @@ const SystemDesignIndex = () => {
             })}
           </div>
 
-          {/* Bottom CTA */}
+          {/* Bottom CTA — hide for elite users */}
+          {user?.plan_id !== 'elite' && (
           <div className={`mt-14 p-8 rounded-2xl ${theme.bg.card} border-2 border-amber-500/20 text-center`}>
             <Crown className="w-8 h-8 text-amber-500 mx-auto mb-3" />
             <h3 className={`text-xl font-bold ${theme.text.primary} mb-2`}>
@@ -190,6 +193,7 @@ const SystemDesignIndex = () => {
               </Link>
             </div>
           </div>
+          )}
 
         </div>
       </main>

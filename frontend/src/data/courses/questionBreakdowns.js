@@ -3,7 +3,7 @@ export const QUESTION_BREAKDOWN_TOPICS = {
 // ── BIT.LY ─────────────────────────────────────────────────────────────────
 'design-bitly': {
   slug: 'design-bitly', title: 'Design Bit.ly', subtitle: 'URL shortening service at scale',
-  duration: '35 min', difficulty: 'Intermediate', icon: '🔗',
+  duration: '35 min', difficulty: 'Intermediate',
   sections: [
     {
       type: 'requirements', heading: 'Understanding the Problem',
@@ -129,7 +129,7 @@ export const QUESTION_BREAKDOWN_TOPICS = {
 // ── TICKETMASTER ───────────────────────────────────────────────────────────
 'design-ticketmaster': {
   slug: 'design-ticketmaster', title: 'Design Ticketmaster', subtitle: 'Event ticketing with high-concurrency seat selection',
-  duration: '40 min', difficulty: 'Advanced', icon: '🎫',
+  duration: '40 min', difficulty: 'Advanced',
   sections: [
     {
       type: 'requirements', heading: 'Understanding the Problem',
@@ -264,7 +264,7 @@ export const QUESTION_BREAKDOWN_TOPICS = {
 // ── FB NEWS FEED ───────────────────────────────────────────────────────────
 'design-fb-news-feed': {
   slug: 'design-fb-news-feed', title: 'Design FB News Feed', subtitle: 'Personalized social media feed at scale',
-  duration: '40 min', difficulty: 'Advanced', icon: '📰',
+  duration: '40 min', difficulty: 'Advanced',
   sections: [
     {
       type: 'requirements', heading: 'Understanding the Problem',
@@ -393,7 +393,7 @@ export const QUESTION_BREAKDOWN_TOPICS = {
 // ── RATE LIMITER ───────────────────────────────────────────────────────────
 'design-rate-limiter': {
   slug: 'design-rate-limiter', title: 'Design a Rate Limiter', subtitle: 'Protect APIs from abuse and ensure fair usage',
-  duration: '30 min', difficulty: 'Intermediate', icon: '🚦',
+  duration: '30 min', difficulty: 'Intermediate',
   sections: [
     {
       type: 'requirements', heading: 'Understanding the Problem',
@@ -487,7 +487,7 @@ export const QUESTION_BREAKDOWN_TOPICS = {
 // ── DROPBOX ────────────────────────────────────────────────────────────────
 'design-dropbox': {
   slug: 'design-dropbox', title: 'Design Dropbox', subtitle: 'Cloud file storage and sync',
-  duration: '45 min', difficulty: 'Advanced', icon: '📦',
+  duration: '45 min', difficulty: 'Advanced',
   sections: [
     {
       type: 'requirements', heading: 'Understanding the Problem',
@@ -572,3 +572,110 @@ export const QUESTION_BREAKDOWN_TOPICS = {
 },
 
 }; // end QUESTION_BREAKDOWN_TOPICS
+
+// ── COMING SOON PLACEHOLDERS ───────────────────────────────────────────────
+// These will be expanded with full content in future updates
+
+Object.assign(QUESTION_BREAKDOWN_TOPICS, {
+
+  'design-tinder': {
+    slug: 'design-tinder', title: 'Design Tinder', subtitle: 'Location-based matching with swipe mechanics',
+    duration: '40 min', difficulty: 'Advanced', comingSoon: true,
+    sections: [
+      { type: 'requirements', heading: 'Understanding the Problem',
+        functional: ['Users can create a profile with photos and bio', 'Users see nearby profiles and swipe left (pass) or right (like)', 'When two users both swipe right, it\'s a match', 'Matched users can chat'],
+        nonFunctional: ['100M users, 50M DAU', 'Low latency profile loading (<200ms)', 'Location-based — show users within configurable radius', 'High availability'] },
+      { type: 'text', heading: 'Key Challenges', body: `**Geospatial matching** — Efficiently find users within a radius using geohashing or PostGIS.\n\n**Recommendation engine** — Who to show next? Balance between showing popular profiles and giving everyone visibility.\n\n**Swipe deduplication** — Never show the same profile twice. Track seen profiles per user.\n\n**Match detection** — When user A likes user B, check if B already liked A. Use Redis sets for O(1) lookup.\n\n**Full content coming soon — check back for the complete breakdown with API design, schema, deep dives, and level expectations.**` },
+    ],
+  },
+
+  'design-whatsapp': {
+    slug: 'design-whatsapp', title: 'Design WhatsApp', subtitle: 'Real-time messaging at scale',
+    duration: '40 min', difficulty: 'Advanced', comingSoon: true,
+    sections: [
+      { type: 'requirements', heading: 'Understanding the Problem',
+        functional: ['1:1 messaging', 'Group messaging (up to 256 members)', 'Message delivery receipts (sent, delivered, read)', 'Media sharing', 'Online/last seen status'],
+        nonFunctional: ['2B users, 100M DAU', '100B messages/day', 'Low latency (<100ms)', 'Messages never lost'] },
+      { type: 'animation', id: 'message-queue', heading: 'Message Flow', body: 'Sender → Server → Queue → Recipient. Queue ensures delivery even when recipient is offline.' },
+      { type: 'text', heading: 'Key Challenges', body: `**Online delivery** — WebSocket for real-time push.\n**Offline delivery** — Store in DB, push when recipient reconnects.\n**Delivery receipts** — ✓ Sent (server received), ✓✓ Delivered (device received), ✓✓ blue (read).\n**Group fan-out** — For groups up to 256, fan-out on write to each member's queue.\n**End-to-end encryption** — Signal Protocol. Server only sees encrypted blobs.\n\n**Full content coming soon — check back for the complete breakdown with API design, schema, deep dives, and level expectations.**` },
+    ],
+  },
+
+  'design-youtube': {
+    slug: 'design-youtube', title: 'Design YouTube', subtitle: 'Video upload, processing, and streaming at scale',
+    duration: '45 min', difficulty: 'Advanced', comingSoon: true,
+    sections: [
+      { type: 'requirements', heading: 'Understanding the Problem',
+        functional: ['Upload videos', 'Stream videos', 'Search videos', 'Recommendations', 'Comments, likes'],
+        nonFunctional: ['2B users, 500M DAU', '500 hours of video uploaded per minute', '1B hours watched per day', 'Low latency streaming globally'] },
+      { type: 'text', heading: 'Key Challenges', body: `**Video processing pipeline** — Upload → Transcoding (multiple resolutions) → Thumbnail generation → CDN distribution. Use Kafka between steps.\n\n**Adaptive bitrate streaming** — Split video into 2-10 second segments at multiple qualities. Client switches quality based on bandwidth (HLS/DASH).\n\n**CDN** — Store popular video segments at edge nodes. Cache hit rate is critical for cost.\n\n**Storage** — 500 hours/min × 60 × 24 = 720K hours/day. At 1GB/hour compressed, ~720TB/day. Multiple resolutions = 3-5 PB/day.\n\n**Full content coming soon.**` },
+    ],
+  },
+
+  'design-uber': {
+    slug: 'design-uber', title: 'Design Uber', subtitle: 'Real-time ride matching and location tracking',
+    duration: '45 min', difficulty: 'Advanced', comingSoon: true,
+    sections: [
+      { type: 'requirements', heading: 'Understanding the Problem',
+        functional: ['Rider requests a ride', 'Match rider with nearby driver', 'Real-time location tracking', 'ETA calculation', 'Pricing'],
+        nonFunctional: ['100M users, 10M drivers', 'Match within 1 second', 'Location updates every 4 seconds', 'High availability'] },
+      { type: 'text', heading: 'Key Challenges', body: `**Location storage** — 10M drivers × 1 update/4sec = 2.5M updates/sec. Use Redis Geospatial (GEOADD, GEORADIUS) for real-time.\n\n**Matching algorithm** — Find available drivers within radius, filter by rating/car type, rank by ETA, send to top N simultaneously.\n\n**Geohashing** — Divide world into grid cells. Nearby locations share prefix. Efficient spatial queries.\n\n**Surge pricing** — Supply/demand ratio per geohash cell. Update every few minutes.\n\n**Full content coming soon.**` },
+    ],
+  },
+
+  'design-web-crawler': {
+    slug: 'design-web-crawler', title: 'Design a Web Crawler', subtitle: 'Systematically browse and index the web',
+    duration: '35 min', difficulty: 'Advanced', comingSoon: true,
+    sections: [
+      { type: 'requirements', heading: 'Understanding the Problem',
+        functional: ['Start from seed URLs', 'Download web pages', 'Extract links from pages', 'Store page content', 'Revisit pages periodically'],
+        nonFunctional: ['Crawl 1B pages/month', 'Politeness (don\'t overwhelm servers)', 'Handle duplicates', 'Distributed, fault-tolerant'] },
+      { type: 'text', heading: 'Key Challenges', body: `**URL Frontier** — Priority queue of URLs to crawl. Prioritize by PageRank, freshness.\n**Politeness** — Max 1 request/second per domain. Respect robots.txt.\n**Deduplication** — Bloom filter to check if URL already crawled.\n**Spider traps** — Infinite URL generators (calendars, infinite scroll). Detect by URL depth limit.\n**Scale** — 1B pages/month = 400 pages/sec. Partition by domain hash across crawler nodes.\n\n**Full content coming soon.**` },
+    ],
+  },
+
+  'design-instagram': {
+    slug: 'design-instagram', title: 'Design Instagram', subtitle: 'Photo sharing with feed, stories, and explore',
+    duration: '40 min', difficulty: 'Advanced', comingSoon: true,
+    sections: [
+      { type: 'requirements', heading: 'Understanding the Problem',
+        functional: ['Upload photos/videos', 'Follow users', 'View feed (posts from followed users)', 'Stories (24-hour expiry)', 'Explore/discover', 'Likes, comments'],
+        nonFunctional: ['2B users, 500M DAU', '100M photos uploaded/day', 'Feed load < 2 seconds'] },
+      { type: 'text', heading: 'Key Challenges', body: `**Photo storage** — Direct upload to S3 via pre-signed URLs. Processing pipeline: resize, compress, thumbnails. CDN for serving.\n**Storage tiers** — Hot (recent, CDN), Warm (1-6 months, standard S3), Cold (older, Glacier).\n**Feed generation** — Same fan-out problem as FB News Feed. Hybrid push/pull for celebrities.\n**Stories** — TTL in Redis/Cassandra. Background cleanup of expired stories.\n\n**Full content coming soon.**` },
+    ],
+  },
+
+  'design-google-docs': {
+    slug: 'design-google-docs', title: 'Design Google Docs', subtitle: 'Real-time collaborative document editing',
+    duration: '45 min', difficulty: 'Advanced', comingSoon: true,
+    sections: [
+      { type: 'requirements', heading: 'Understanding the Problem',
+        functional: ['Create/edit documents', 'Real-time collaboration (multiple users simultaneously)', 'See other users\' cursors', 'Version history', 'Comments'],
+        nonFunctional: ['Changes appear in < 100ms', 'No data loss', 'Conflict resolution'] },
+      { type: 'text', heading: 'Key Challenges', body: `**Operational Transformation (OT)** — Transform concurrent operations so they converge to the same state.\n**CRDTs** — Conflict-free Replicated Data Types. Data structures that merge automatically. Used by Figma, Notion.\n**WebSocket rooms** — All editors of a document connected to same server.\n**Operation log** — Store all operations in order. New clients replay log.\n**Cursor sharing** — Broadcast cursor position via WebSocket. Throttle to 10 updates/sec.\n\n**Full content coming soon.**` },
+    ],
+  },
+
+  'design-distributed-cache': {
+    slug: 'design-distributed-cache', title: 'Design a Distributed Cache', subtitle: 'Build a Redis-like distributed caching system',
+    duration: '40 min', difficulty: 'Advanced', comingSoon: true,
+    sections: [
+      { type: 'requirements', heading: 'Understanding the Problem',
+        functional: ['GET/SET/DELETE key-value pairs', 'TTL (time-to-live) support', 'Eviction when memory full'],
+        nonFunctional: ['Sub-millisecond latency', 'High availability', 'Horizontal scalability', '1M QPS'] },
+      { type: 'text', heading: 'Key Challenges', body: `**Consistent hashing** — Distribute keys across nodes. Virtual nodes for even distribution.\n**Replication** — Each key on N nodes (typically 3). Write to primary, async replicate.\n**LRU eviction** — Doubly-linked list + hash map for O(1) get/put. Redis uses approximate LRU (sample N random keys).\n**Thundering herd on restart** — Warm up cache gradually, use circuit breakers, or persistent cache (Redis AOF/RDB).\n\n**Full content coming soon.**` },
+    ],
+  },
+
+  'design-payment-system': {
+    slug: 'design-payment-system', title: 'Design a Payment System', subtitle: 'Reliable, consistent payment processing',
+    duration: '40 min', difficulty: 'Advanced', comingSoon: true,
+    sections: [
+      { type: 'requirements', heading: 'Understanding the Problem',
+        functional: ['Process payments (credit card, UPI, wallet)', 'Handle refunds', 'Payment history', 'Idempotent operations'],
+        nonFunctional: ['Exactly-once processing (no double charges)', 'High availability', 'Audit trail', 'PCI DSS compliance'] },
+      { type: 'text', heading: 'Key Challenges', body: `**Idempotency** — Client generates unique key per payment attempt. Server stores key + result. Same key = return stored result.\n**Payment flow** — Create record (PENDING) → Call gateway → Update (COMPLETED/FAILED). Handle timeouts with webhook callbacks.\n**Double-spend prevention** — SELECT FOR UPDATE to lock balance row during debit. Optimistic locking as alternative.\n\n**Full content coming soon.**` },
+    ],
+  },
+
+});
