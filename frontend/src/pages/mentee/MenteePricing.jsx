@@ -347,7 +347,7 @@ const MenteePricing = () => {
             <div className="text-center">
               <Shield className="w-8 h-8 text-[#06b6d4] mx-auto mb-2" />
               <p className={`${theme.text.primary} font-semibold mb-1`}>Secure Payment</p>
-              <p className={`${theme.text.muted} text-sm`}>Powered by Razorpay</p>
+              <p className={`${theme.text.muted} text-sm`}>Powered by {currency === 'USD' ? 'Cashfree' : 'Razorpay'}</p>
             </div>
             <div className="text-center">
               <Award className="w-8 h-8 text-[#06b6d4] mx-auto mb-2" />
