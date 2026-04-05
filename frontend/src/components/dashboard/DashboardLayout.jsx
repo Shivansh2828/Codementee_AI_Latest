@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useCurrency } from '../../contexts/CurrencyContext';
-import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus, DollarSign, FileText, MessageCircle, BarChart3, TrendingUp, ChevronDown, Bug, Briefcase, Target, Crown, Headphones, Search, Lock } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus, DollarSign, FileText, MessageCircle, BarChart3, TrendingUp, ChevronDown, Bug, Briefcase, Target, Crown, Headphones, Search, Lock, GraduationCap } from 'lucide-react';
 import ThemeToggle from '../ui/ThemeToggle';
 import { Badge } from '../ui/badge';
 import BugReportModal from '../BugReportModal';
@@ -129,6 +129,7 @@ const DashboardLayout = ({ children, title }) => {
           ]
         },
         { path: '/mentee/community', label: 'Community', icon: MessageCircle, isLocked: true },
+        { path: '/learn/system-design', label: 'Courses', icon: GraduationCap },
       ];
     } else {
       // Check if user is free or paid
@@ -151,6 +152,7 @@ const DashboardLayout = ({ children, title }) => {
           ]
         },
         { path: '/mentee/community', label: 'Community', icon: MessageCircle },
+        { path: '/learn/system-design', label: 'Courses', icon: GraduationCap },
       ];
     }
   };
