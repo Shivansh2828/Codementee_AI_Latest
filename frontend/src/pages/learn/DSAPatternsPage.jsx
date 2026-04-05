@@ -26,7 +26,7 @@ const ProblemRow = ({ problem, theme }) => (
     href={problem.url}
     target="_blank"
     rel="noopener noreferrer"
-    className={`flex items-center justify-between px-4 py-2.5 rounded-lg ${theme.bg.secondary} hover:bg-gray-800 transition-colors group`}
+    className={`flex items-center justify-between px-4 py-2.5 rounded-lg ${theme.bg.secondary} ${theme.bg.hover} transition-colors group`}
   >
     <span className={`text-sm ${theme.text.primary} group-hover:text-[#06b6d4] transition-colors`}>
       {problem.name}
@@ -35,7 +35,7 @@ const ProblemRow = ({ problem, theme }) => (
       <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${diffColors[problem.difficulty]}`}>
         {problem.difficulty}
       </span>
-      <ExternalLink className="w-3.5 h-3.5 text-gray-600 group-hover:text-[#06b6d4] transition-colors" />
+      <ExternalLink className={`w-3.5 h-3.5 ${theme.text.muted} group-hover:text-[#06b6d4] transition-colors`} />
     </div>
   </a>
 );
