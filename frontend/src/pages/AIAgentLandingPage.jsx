@@ -66,11 +66,15 @@ const AIAgentLandingPage = () => {
           agentPlanMap.quarterly = {
             price: plan.price,
             name: plan.name,
-            features: plan.features,
-            savings: currency === 'USD' ? 200 : 9800 // Savings in cents/paise
+            features: plan.features
           };
         }
       });
+      
+      // Calculate savings dynamically: 3 × monthly - quarterly
+      if (agentPlanMap.monthly && agentPlanMap.quarterly) {
+        agentPlanMap.quarterly.savings = (agentPlanMap.monthly.price * 3) - agentPlanMap.quarterly.price;
+      }
       
       setAgentPlans(agentPlanMap);
     } catch (error) {
@@ -428,7 +432,7 @@ const AIAgentLandingPage = () => {
               <div className={`rounded-2xl p-7 ${theme.bg.card} ${theme.border.primary} border hover:border-[#06b6d4]/40 transition-all duration-300`}>
                 <div className="mb-5">
                   <span className="text-xs font-semibold text-green-500 uppercase tracking-wider">
-                    Save {formatPrice(agentPlans.quarterly?.savings || (currency === 'USD' ? 2 : 98))}
+                    Save {formatPrice(agentPlans.quarterly?.savings || 0)}
                   </span>
                   <h4 className={`text-xl font-bold ${theme.text.primary} mt-1`}>3 Months</h4>
                 </div>
@@ -437,7 +441,7 @@ const AIAgentLandingPage = () => {
                   <span className={`${theme.text.muted} text-sm`}>/3 months</span>
                 </div>
                 <p className={`text-xs ${theme.text.muted} mb-5`}>
-                  ~{currency === 'USD' ? '$3' : '₹200'}/month
+                  ~{formatPrice(Math.round(getPrice('quarterly') / 3))}/month
                 </p>
                 <ul className="space-y-3 mb-7">
                   {(agentPlans.quarterly?.features || ['AI Job Search Agent', 'AI Referral Finder', 'Daily email digest', 'LinkedIn referral drafts', 'Resume parsing & scoring']).map((f, i) => (

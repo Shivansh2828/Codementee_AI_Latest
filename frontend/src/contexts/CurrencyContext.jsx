@@ -62,6 +62,8 @@ export const CurrencyProvider = ({ children }) => {
     return curr === 'USD' ? '$' : '₹';
   };
 
+  const currencySymbol = currency === 'USD' ? '$' : '₹';
+
   return (
     <CurrencyContext.Provider 
       value={{ 
@@ -71,6 +73,7 @@ export const CurrencyProvider = ({ children }) => {
         countryCode,
         formatPrice,
         getCurrencySymbol,
+        currencySymbol,
         detectCurrency
       }}
     >

@@ -194,11 +194,14 @@ class PricingPlanCreate(BaseModel):
     plan_id: str
     name: str
     price: int  # in paise
+    price_inr: Optional[int] = None  # INR in paise
+    price_usd: Optional[int] = None  # USD in cents
     duration_months: int
     features: List[str] = []
     limits: dict = {}
     is_active: bool = True
     display_order: int = 1
+    currencies: Optional[List[str]] = None
 
 class PricingPlanUpdate(BaseModel):
     name: Optional[str] = None
@@ -3710,11 +3713,14 @@ async def create_pricing_plan(data: PricingPlanCreate, user=Depends(get_current_
         "plan_id": data.plan_id,
         "name": data.name,
         "price": data.price,
+        "price_inr": data.price_inr if data.price_inr else data.price,
+        "price_usd": data.price_usd if data.price_usd else int(data.price * 0.012),
         "duration_months": data.duration_months,
         "features": data.features,
         "limits": data.limits,
         "is_active": data.is_active,
         "display_order": data.display_order,
+        "currencies": data.currencies or ["INR", "USD"],
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
@@ -6839,6 +6845,99 @@ async def cashfree_webhook(request: Request):
     except Exception as e:
         logger.error(f"Cashfree webhook error: {e}")
         return {"status": "error", "message": str(e)}
+
+# ============ CASHFREE ORDER STATUS CHECK ============
+@api_router.get("/payment/cashfree-status/{order_id}")
+async def cashfree_order_status(order_id: str):
+    """Check Cashfree order status - used by frontend after redirect"""
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    if order["status"] == "paid":
+        # Generate token for the user
+        user = await db.users.find_one({"email": order["email"]})
+        token = None
+        if user:
+            token = create_access_token({"sub": user["email"], "role": user["role"]})
+        return {
+            "status": "paid",
+            "message": "Payment successful",
+            "access_token": token
+        }
+    
+    # If still pending, try to check with Cashfree API
+    if order["status"] == "pending" and order.get("cashfree_order_id"):
+        try:
+            import httpx
+            headers = {
+                "x-client-id": CASHFREE_APP_ID,
+                "x-client-secret": CASHFREE_SECRET_KEY,
+                "x-api-version": "2023-08-01"
+            }
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    f"{CASHFREE_BASE_URL}/orders/{order['cashfree_order_id']}",
+                    headers=headers
+                )
+                if resp.status_code == 200:
+                    cf_data = resp.json()
+                    if cf_data.get("order_status") == "PAID":
+                        # Process the payment (same as webhook)
+                        await db.orders.update_one(
+                            {"id": order_id},
+                            {"$set": {
+                                "status": "paid",
+                                "paid_at": datetime.now(timezone.utc).isoformat()
+                            }}
+                        )
+                        # Activate user
+                        existing_user = await db.users.find_one({"email": order["email"]})
+                        if existing_user:
+                            plan_info = await get_pricing_plan(order["plan_id"])
+                            quota = plan_info.get("limits", {}).get("mock_interviews", 3) if plan_info else 3
+                            await db.users.update_one(
+                                {"email": order["email"]},
+                                {"$set": {
+                                    "status": "Active",
+                                    "plan_id": order["plan_id"],
+                                    "plan_name": order.get("plan_name", ""),
+                                    "interview_quota_total": quota,
+                                    "interview_quota_remaining": quota,
+                                    "updated_at": datetime.now(timezone.utc).isoformat()
+                                }}
+                            )
+                        else:
+                            plan_info = await get_pricing_plan(order["plan_id"])
+                            quota = plan_info.get("limits", {}).get("mock_interviews", 3) if plan_info else 3
+                            user_doc = {
+                                "id": str(uuid.uuid4()),
+                                "name": order["name"],
+                                "email": order["email"],
+                                "password": order.get("password"),
+                                "role": "mentee",
+                                "status": "Active",
+                                "plan_id": order["plan_id"],
+                                "plan_name": order.get("plan_name", ""),
+                                "current_role": order.get("current_role", ""),
+                                "target_role": order.get("target_role", ""),
+                                "interview_quota_total": quota,
+                                "interview_quota_remaining": quota,
+                                "created_at": datetime.now(timezone.utc).isoformat()
+                            }
+                            await db.users.insert_one(user_doc)
+                        
+                        user = await db.users.find_one({"email": order["email"]})
+                        token = create_access_token({"sub": user["email"], "role": user["role"]}) if user else None
+                        return {
+                            "status": "paid",
+                            "message": "Payment successful",
+                            "access_token": token
+                        }
+        except Exception as e:
+            logger.error(f"Cashfree status check error: {e}")
+    
+    return {"status": "pending", "message": "Payment is being processed"}
 
 # ============ MENTOR PAYOUT TRACKING SYSTEM ============
 
