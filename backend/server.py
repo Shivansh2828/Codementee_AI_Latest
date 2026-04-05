@@ -67,6 +67,9 @@ security = HTTPBearer()
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+# Log payment gateway configuration status at startup
+logger.info(f"Payment config: Razorpay={'configured' if RAZORPAY_KEY_ID else 'MISSING'}, Cashfree={'configured' if CASHFREE_APP_ID else 'MISSING'}")
+
 # Add validation error handler for better debugging
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -465,6 +468,9 @@ def get_currency_for_country(country_code: str) -> str:
 
 async def create_cashfree_order(amount_usd: int, customer_details: dict, order_id: str):
     """Create Cashfree payment order for international users"""
+    if not CASHFREE_APP_ID or not CASHFREE_SECRET_KEY:
+        logger.error(f"Cashfree credentials missing: APP_ID={'set' if CASHFREE_APP_ID else 'MISSING'}, SECRET={'set' if CASHFREE_SECRET_KEY else 'MISSING'}")
+        raise HTTPException(status_code=500, detail="International payments not configured. Please contact support.")
     try:
         import httpx
         import time
@@ -507,8 +513,9 @@ async def create_cashfree_order(amount_usd: int, customer_details: dict, order_i
             if response.status_code in [200, 201]:
                 return response.json()
             else:
-                logger.error(f"Cashfree order creation failed: {response.text}")
-                raise HTTPException(status_code=500, detail="Failed to create payment order")
+                error_detail = response.text
+                logger.error(f"Cashfree order creation failed (HTTP {response.status_code}): {error_detail}")
+                raise HTTPException(status_code=500, detail=f"Cashfree error: {error_detail}")
                 
     except Exception as e:
         logger.error(f"Cashfree order creation error: {e}")
