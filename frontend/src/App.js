@@ -37,6 +37,9 @@ const AgentPurchasePage = lazy(() => import("./pages/AgentPurchasePage"));
 const AIAgentLandingPage = lazy(() => import("./pages/AIAgentLandingPage"));
 const SystemDesignIndex = lazy(() => import("./pages/learn/SystemDesignIndex"));
 const SystemDesignLesson = lazy(() => import("./pages/learn/SystemDesignLesson"));
+const DSAPatternsPage = lazy(() => import("./pages/learn/DSAPatternsPage"));
+const CoursesLandingPage = lazy(() => import("./pages/learn/CoursesLandingPage"));
+const BehavioralPrepPage = lazy(() => import("./pages/learn/BehavioralPrepPage"));
 const ConfirmationPage = lazy(() => import("./pages/ConfirmationPage"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
@@ -117,8 +120,11 @@ function App() {
             <Route path="/apply" element={<ApplyPage />} />
             <Route path="/agent-purchase" element={<AgentPurchasePage />} />
             <Route path="/ai-agents" element={<AIAgentLandingPage />} />
+            <Route path="/learn" element={<CoursesLandingPage />} />
             <Route path="/learn/system-design" element={<SystemDesignIndex />} />
             <Route path="/learn/system-design/:slug" element={<SystemDesignLesson />} />
+            <Route path="/learn/dsa-patterns" element={<DSAPatternsPage />} />
+            <Route path="/learn/behavioral" element={<BehavioralPrepPage />} />
             <Route path="/confirmation" element={<ConfirmationPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
