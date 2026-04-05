@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, ChevronRight, BookOpen, Zap, Users, ArrowRight, Lock, Crown } from 'lucide-react';
+import { Clock, ChevronRight, BookOpen, Zap, Users, ArrowRight, ArrowLeft, Lock, Crown } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -47,6 +47,12 @@ const SystemDesignIndex = () => {
       <Header />
       <main className="pt-24 pb-20">
         <div className="container max-w-5xl mx-auto px-4">
+
+          {/* Back to Courses */}
+          <Link to="/learn" className={`inline-flex items-center gap-2 text-sm ${theme.text.muted} hover:text-[#06b6d4] transition-colors mb-8`}>
+            <ArrowLeft className="w-4 h-4" />
+            All Courses
+          </Link>
 
           {/* Hero */}
           <div className="text-center mb-14">

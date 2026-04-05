@@ -28,7 +28,7 @@ const Header = () => {
 
   const navLinks = [
     { href: '/ai-agents', label: 'AI Agents' },
-    { href: '/learn/system-design', label: 'Courses' },
+    { href: '/learn', label: 'Courses' },
     { href: '/#pricing', label: 'Pricing' },
   ];
 

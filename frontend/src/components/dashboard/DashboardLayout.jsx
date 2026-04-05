@@ -129,7 +129,16 @@ const DashboardLayout = ({ children, title }) => {
           ]
         },
         { path: '/mentee/community', label: 'Community', icon: MessageCircle, isLocked: true },
-        { path: '/learn/system-design', label: 'Courses', icon: GraduationCap },
+        { 
+          label: 'Courses', 
+          icon: GraduationCap, 
+          isSection: true,
+          items: [
+            { path: '/learn/system-design', label: 'System Design', icon: GraduationCap },
+            { path: '/learn/dsa-patterns', label: 'DSA Patterns', icon: GraduationCap },
+            { path: '/learn/behavioral', label: 'Behavioral', icon: GraduationCap },
+          ]
+        },
       ];
     } else {
       // Check if user is free or paid
@@ -152,7 +161,16 @@ const DashboardLayout = ({ children, title }) => {
           ]
         },
         { path: '/mentee/community', label: 'Community', icon: MessageCircle },
-        { path: '/learn/system-design', label: 'Courses', icon: GraduationCap },
+        { 
+          label: 'Courses', 
+          icon: GraduationCap, 
+          isSection: true,
+          items: [
+            { path: '/learn/system-design', label: 'System Design', icon: GraduationCap },
+            { path: '/learn/dsa-patterns', label: 'DSA Patterns', icon: GraduationCap },
+            { path: '/learn/behavioral', label: 'Behavioral', icon: GraduationCap },
+          ]
+        },
       ];
     }
   };

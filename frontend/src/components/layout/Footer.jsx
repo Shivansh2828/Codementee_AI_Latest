@@ -33,6 +33,11 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
+                <Link to="/learn" className={`${theme.text.secondary} hover:${theme.text.accent} transition-colors text-sm`}>
+                  Courses
+                </Link>
+              </li>
+              <li>
                 <a href="/#pricing" className={`${theme.text.secondary} hover:${theme.text.accent} transition-colors text-sm`}>
                   Pricing
                 </a>
