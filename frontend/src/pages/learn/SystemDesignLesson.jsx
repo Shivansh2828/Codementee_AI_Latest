@@ -24,19 +24,26 @@ const RichText = ({ text, theme }) => {
             </pre>
           );
         }
-        // Inline bold + newlines
+        // Inline bold, links + newlines
         const lines = part.split('\n');
         return (
           <span key={i}>
             {lines.map((line, li) => {
-              const boldParts = line.split(/(\*\*[^*]+\*\*)/g);
+              // Split on bold (**text**) and links ([text](url))
+              const tokens = line.split(/(\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\))/g);
               return (
                 <span key={li}>
-                  {boldParts.map((bp, bi) =>
-                    bp.startsWith('**') && bp.endsWith('**')
-                      ? <strong key={bi} className={`${theme.text.primary} font-semibold`}>{bp.slice(2, -2)}</strong>
-                      : <span key={bi}>{bp}</span>
-                  )}
+                  {tokens.map((tok, ti) => {
+                    if (tok.startsWith('**') && tok.endsWith('**')) {
+                      return <strong key={ti} className={`${theme.text.primary} font-semibold`}>{tok.slice(2, -2)}</strong>;
+                    }
+                    const linkMatch = tok.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+                    if (linkMatch) {
+                      const isExternal = linkMatch[2].startsWith('http');
+                      return <a key={ti} href={linkMatch[2]} className="text-blue-500 hover:text-blue-400 hover:underline" {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>{linkMatch[1]}</a>;
+                    }
+                    return <span key={ti}>{tok}</span>;
+                  })}
                   {li < lines.length - 1 && <br />}
                 </span>
               );
@@ -53,6 +60,209 @@ const calloutStyles = {
   warning: { bg: 'bg-yellow-500/10 border-yellow-500/30', label: '⚠️ Watch Out', labelColor: 'text-yellow-400' },
   info:    { bg: 'bg-blue-500/10 border-blue-500/30',    label: 'ℹ️ Note',      labelColor: 'text-blue-400' },
   example: { bg: 'bg-purple-500/10 border-purple-500/30', label: '📌 Example',   labelColor: 'text-purple-400' },
+};
+
+// ── Diagram component (static visual diagrams) ──────────────────────────────
+const DiagramSection = ({ section, theme }) => {
+  return (
+    <div className={`mb-8 ${theme.bg.card} ${theme.border.primary} border rounded-2xl overflow-hidden`}>
+      {section.heading && (
+        <div className={`px-6 py-3 border-b ${theme.border.primary}`}>
+          <h3 className={`font-semibold ${theme.text.primary}`}>{section.heading}</h3>
+          {section.caption && <p className={`text-sm ${theme.text.muted} mt-1`}>{section.caption}</p>}
+        </div>
+      )}
+      <div className="p-6">
+        {section.variant === 'osi-layers' && (
+          <div className="flex flex-col items-center gap-1.5 max-w-md mx-auto">
+            {[
+              { num: 7, name: 'Application Layer', examples: 'HTTP, DNS, WS, gRPC', color: 'bg-blue-400/20 border-blue-400/50 text-blue-300', important: true },
+              { num: 6, name: 'Presentation Layer', examples: 'SSL/TLS, Encryption', color: `${theme.bg.secondary} ${theme.border.primary} ${theme.text.muted}` },
+              { num: 5, name: 'Session Layer', examples: 'Session mgmt', color: `${theme.bg.secondary} ${theme.border.primary} ${theme.text.muted}` },
+              { num: 4, name: 'Transport Layer', examples: 'TCP, UDP, QUIC', color: 'bg-green-400/20 border-green-400/50 text-green-300', important: true },
+              { num: 3, name: 'Network Layer', examples: 'IP, Routing', color: 'bg-pink-400/20 border-pink-400/50 text-pink-300', important: true },
+              { num: 2, name: 'Data Link Layer', examples: 'Ethernet, MAC', color: `${theme.bg.secondary} ${theme.border.primary} ${theme.text.muted}` },
+              { num: 1, name: 'Physical Layer', examples: 'Cables, WiFi, Fiber', color: `${theme.bg.secondary} ${theme.border.primary} ${theme.text.muted}` },
+            ].map((l) => (
+              <div key={l.num} className={`w-full border rounded-lg px-4 py-2.5 flex items-center justify-between ${l.color} ${l.important ? 'ring-1 ring-offset-1 ring-offset-transparent' : ''}`}
+                style={{ maxWidth: `${280 + (7 - l.num) * 25}px` }}>
+                <span className="text-sm font-bold">{l.name} ({l.num})</span>
+                <span className="text-xs opacity-70">{l.examples}</span>
+              </div>
+            ))}
+            <div className={`mt-3 text-xs ${theme.text.muted} text-center`}>
+              Colored layers are the ones that matter most for system design interviews
+            </div>
+          </div>
+        )}
+
+        {section.variant === 'url-journey' && (
+          <div className="flex flex-col gap-3 max-w-lg mx-auto">
+            {[
+              { step: '1', label: 'Browser', action: 'User types URL', color: 'blue' },
+              { step: '2', label: 'DNS', action: 'Resolve domain → IP address', color: 'purple' },
+              { step: '3', label: 'TCP', action: '3-way handshake (SYN → SYN-ACK → ACK)', color: 'cyan' },
+              { step: '4', label: 'TLS', action: 'Encrypt connection (HTTPS)', color: 'green' },
+              { step: '5', label: 'HTTP', action: 'Send GET request with headers', color: 'orange' },
+              { step: '6', label: 'Server', action: 'Process request, query DB, build response', color: 'red' },
+              { step: '7', label: 'Response', action: '200 OK + HTML/JSON body', color: 'green' },
+              { step: '8', label: 'Render', action: 'Parse HTML, fetch CSS/JS/images, paint page', color: 'blue' },
+            ].map((s, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-full bg-${s.color}-500/20 border border-${s.color}-500/40 flex items-center justify-center shrink-0`}>
+                  <span className={`text-xs font-bold text-${s.color}-400`}>{s.step}</span>
+                </div>
+                <div className="flex-1">
+                  <span className={`text-sm font-semibold text-${s.color}-400`}>{s.label}</span>
+                  <span className={`text-sm ${theme.text.secondary} ml-2`}>{s.action}</span>
+                </div>
+                {i < 7 && <div className={`text-xs ${theme.text.muted}`}>↓</div>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {section.variant === 'scaling-types' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+            <div className={`${theme.bg.secondary} rounded-xl p-5 border ${theme.border.primary}`}>
+              <div className="text-center mb-3">
+                <span className="text-2xl">⬆️</span>
+                <h4 className={`font-bold text-orange-400 mt-1`}>Vertical Scaling</h4>
+                <p className={`text-xs ${theme.text.muted}`}>Scale Up — Bigger machine</p>
+              </div>
+              <div className="flex flex-col items-center gap-2 mb-3">
+                <div className="w-16 h-16 bg-orange-500/20 border border-orange-500/40 rounded-lg flex items-center justify-center">
+                  <span className={`text-xs font-bold text-orange-300`}>64 CPU<br/>512GB</span>
+                </div>
+              </div>
+              <div className={`text-xs ${theme.text.secondary} space-y-1`}>
+                <p>✅ Simple — no code changes</p>
+                <p>✅ No distributed complexity</p>
+                <p>❌ Hardware limits (ceiling)</p>
+                <p>❌ Single point of failure</p>
+                <p>❌ Expensive at high end</p>
+              </div>
+            </div>
+            <div className={`${theme.bg.secondary} rounded-xl p-5 border ${theme.border.primary}`}>
+              <div className="text-center mb-3">
+                <span className="text-2xl">➡️</span>
+                <h4 className={`font-bold text-green-400 mt-1`}>Horizontal Scaling</h4>
+                <p className={`text-xs ${theme.text.muted}`}>Scale Out — More machines</p>
+              </div>
+              <div className="flex items-center justify-center gap-1 mb-3">
+                {[1,2,3,4].map(n => (
+                  <div key={n} className="w-10 h-10 bg-green-500/20 border border-green-500/40 rounded flex items-center justify-center">
+                    <span className={`text-[9px] font-bold text-green-300`}>4CPU</span>
+                  </div>
+                ))}
+              </div>
+              <div className={`text-xs ${theme.text.secondary} space-y-1`}>
+                <p>✅ Theoretically unlimited</p>
+                <p>✅ No single point of failure</p>
+                <p>✅ Cost-effective (commodity HW)</p>
+                <p>❌ Requires load balancing</p>
+                <p>❌ Distributed system complexity</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {section.variant === 'lb-algorithms' && (
+          <div className="max-w-lg mx-auto">
+            <div className="space-y-3">
+              {[
+                { name: 'Round Robin', desc: 'Requests go to servers in rotation: 1 → 2 → 3 → 1 → 2 → 3', best: 'Stateless services, equal server capacity', visual: '①→②→③→①→②→③' },
+                { name: 'Least Connections', desc: 'Route to the server with fewest active connections', best: 'WebSockets, long-lived connections, uneven request durations', visual: '①(2) ②(5) ③(1) → pick ③' },
+                { name: 'IP Hash', desc: 'Hash client IP to always route same client to same server', best: 'Session affinity, sticky sessions', visual: 'hash(IP) % N → always same server' },
+                { name: 'Weighted Round Robin', desc: 'Servers with more capacity get proportionally more requests', best: 'Mixed hardware (some servers are bigger)', visual: '①①①→②②→③ (3:2:1 ratio)' },
+                { name: 'Random', desc: 'Pick a random server for each request', best: 'Surprisingly effective at scale, simple', visual: 'random(1,2,3) each time' },
+              ].map((alg, i) => (
+                <div key={i} className={`${theme.bg.secondary} rounded-lg p-4 border ${theme.border.primary}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-sm font-semibold ${theme.text.primary}`}>{alg.name}</span>
+                    <code className={`text-[10px] font-mono ${theme.text.muted}`}>{alg.visual}</code>
+                  </div>
+                  <p className={`text-xs ${theme.text.secondary} mb-1`}>{alg.desc}</p>
+                  <p className={`text-[10px] text-cyan-400`}>Best for: {alg.best}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── Quiz component ───────────────────────────────────────────────────────────
+const QuizSection = ({ section, theme }) => {
+  const [answers, setAnswers] = useState({});
+  const [showResults, setShowResults] = useState(false);
+
+  const handleSelect = (qIdx, optIdx) => {
+    if (showResults) return;
+    setAnswers(prev => ({ ...prev, [qIdx]: optIdx }));
+  };
+
+  const score = section.questions.reduce((s, q, i) => s + (answers[i] === q.correct ? 1 : 0), 0);
+
+  return (
+    <div className={`mb-8 ${theme.bg.card} ${theme.border.primary} border rounded-2xl overflow-hidden`}>
+      <div className="px-6 py-4 bg-gradient-to-r from-purple-500/10 to-transparent border-b border-purple-500/20">
+        <h2 className={`text-lg font-bold ${theme.text.primary}`}>📝 {section.heading || 'Test Your Knowledge'}</h2>
+        {section.description && <p className={`text-sm ${theme.text.muted} mt-1`}>{section.description}</p>}
+      </div>
+      <div className="p-6 space-y-6">
+        {section.questions.map((q, qIdx) => (
+          <div key={qIdx}>
+            <p className={`text-sm font-medium ${theme.text.primary} mb-3`}>{qIdx + 1}. {q.question}</p>
+            <div className="space-y-2">
+              {q.options.map((opt, optIdx) => {
+                const isSelected = answers[qIdx] === optIdx;
+                const isCorrect = q.correct === optIdx;
+                let optClass = `${theme.bg.secondary} ${theme.border.primary} border`;
+                if (showResults && isSelected && isCorrect) optClass = 'bg-green-500/20 border-green-500/40 border';
+                else if (showResults && isSelected && !isCorrect) optClass = 'bg-red-500/20 border-red-500/40 border';
+                else if (showResults && isCorrect) optClass = 'bg-green-500/10 border-green-500/30 border';
+                else if (isSelected) optClass = 'bg-[#06b6d4]/20 border-[#06b6d4]/40 border';
+
+                return (
+                  <button key={optIdx} onClick={() => handleSelect(qIdx, optIdx)}
+                    className={`w-full text-left px-4 py-2.5 rounded-lg text-sm transition-all ${optClass} ${!showResults ? 'cursor-pointer hover:border-[#06b6d4]/50' : 'cursor-default'}`}>
+                    <span className={`${theme.text.primary}`}>{opt}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {showResults && answers[qIdx] !== undefined && answers[qIdx] !== q.correct && q.explanation && (
+              <p className={`text-xs ${theme.text.muted} mt-2 pl-4 border-l-2 border-red-500/30`}>{q.explanation}</p>
+            )}
+            {showResults && answers[qIdx] === q.correct && q.explanation && (
+              <p className={`text-xs text-green-400 mt-2 pl-4 border-l-2 border-green-500/30`}>{q.explanation}</p>
+            )}
+          </div>
+        ))}
+        <div className="flex items-center justify-between pt-4 border-t border-purple-500/20">
+          {!showResults ? (
+            <button onClick={() => setShowResults(true)}
+              disabled={Object.keys(answers).length < section.questions.length}
+              className={`px-6 py-2.5 rounded-xl font-semibold text-sm transition-all ${Object.keys(answers).length >= section.questions.length ? 'bg-purple-500 text-white hover:bg-purple-600' : `${theme.bg.secondary} ${theme.text.muted} cursor-not-allowed`}`}>
+              Check Answers
+            </button>
+          ) : (
+            <div className="flex items-center gap-3">
+              <span className={`text-sm font-bold ${score === section.questions.length ? 'text-green-400' : score >= section.questions.length / 2 ? 'text-yellow-400' : 'text-red-400'}`}>
+                {score}/{section.questions.length} correct
+              </span>
+              <button onClick={() => { setAnswers({}); setShowResults(false); }} className={`text-xs ${theme.text.muted} hover:text-[#06b6d4] transition-colors`}>
+                Try Again
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // ── Section renderer ─────────────────────────────────────────────────────────
@@ -277,6 +487,12 @@ const Section = ({ section, theme }) => {
           </div>
         </div>
       );
+
+    case 'quiz':
+      return <QuizSection section={section} theme={theme} />;
+
+    case 'diagram':
+      return <DiagramSection section={section} theme={theme} />;
 
     default:
       return null;
