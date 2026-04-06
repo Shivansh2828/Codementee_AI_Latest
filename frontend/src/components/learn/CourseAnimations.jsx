@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 // Animated arrow between two boxes
 const Arrow = ({ label, animated = true }) => (
@@ -54,13 +55,14 @@ export const ClientServerAnimation = () => {
 // ── Scaling Comparison ───────────────────────────────────────────────────────
 export const ScalingComparisonAnimation = () => {
   const [mode, setMode] = useState('vertical');
+  const { theme } = useTheme();
   return (
     <div className="flex flex-col items-center gap-4 py-4">
       <div className="flex gap-3">
-        <button onClick={() => setMode('vertical')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${mode === 'vertical' ? 'bg-cyan-500 text-white' : 'bg-gray-700 text-gray-300'}`}>
+        <button onClick={() => setMode('vertical')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${mode === 'vertical' ? 'bg-cyan-500 text-white' : `${theme.bg.tertiary} ${theme.text.secondary}`}`}>
           Vertical Scale ↑
         </button>
-        <button onClick={() => setMode('horizontal')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${mode === 'horizontal' ? 'bg-cyan-500 text-white' : 'bg-gray-700 text-gray-300'}`}>
+        <button onClick={() => setMode('horizontal')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${mode === 'horizontal' ? 'bg-cyan-500 text-white' : `${theme.bg.tertiary} ${theme.text.secondary}`}`}>
           Horizontal Scale →
         </button>
       </div>
@@ -68,7 +70,7 @@ export const ScalingComparisonAnimation = () => {
         <div className="flex flex-col items-center gap-2">
           <Box label="Big Server" sublabel="32 CPU, 256GB RAM" color="orange" icon="🖥️" />
           <div className="text-xs text-orange-400">⚠️ Single point of failure</div>
-          <div className="text-xs text-gray-400">Max: ~$50k/month hardware</div>
+          <div className={`text-xs ${theme.text.secondary}`}>Max: ~$50k/month hardware</div>
         </div>
       ) : (
         <div className="flex flex-col items-center gap-3">
@@ -112,6 +114,7 @@ export const LoadBalancerAnimation = () => {
 // ── DB Replication Animation ─────────────────────────────────────────────────
 export const DBReplicationAnimation = () => {
   const [step, setStep] = useState(0);
+  const { theme } = useTheme();
   useEffect(() => {
     const t = setInterval(() => setStep(s => (s + 1) % 3), 1500);
     return () => clearInterval(t);
@@ -135,7 +138,7 @@ export const DBReplicationAnimation = () => {
           </div>
         </div>
       </div>
-      <div className="text-xs text-gray-400">Primary replicates to replicas asynchronously</div>
+      <div className={`text-xs ${theme.text.secondary}`}>Primary replicates to replicas asynchronously</div>
     </div>
   );
 };
@@ -144,6 +147,7 @@ export const DBReplicationAnimation = () => {
 export const CacheFlowAnimation = () => {
   const [scenario, setScenario] = useState('hit');
   const [step, setStep] = useState(0);
+  const { theme } = useTheme();
   useEffect(() => {
     setStep(0);
     const t = setInterval(() => setStep(s => s < 3 ? s + 1 : 0), 1000);
@@ -155,10 +159,10 @@ export const CacheFlowAnimation = () => {
   return (
     <div className="flex flex-col items-center gap-4 py-4">
       <div className="flex gap-3">
-        <button onClick={() => setScenario('hit')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${scenario === 'hit' ? 'bg-green-500 text-white' : 'bg-gray-700 text-gray-300'}`}>
+        <button onClick={() => setScenario('hit')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${scenario === 'hit' ? 'bg-green-500 text-white' : `${theme.bg.tertiary} ${theme.text.secondary}`}`}>
           Cache Hit
         </button>
-        <button onClick={() => setScenario('miss')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${scenario === 'miss' ? 'bg-red-500 text-white' : 'bg-gray-700 text-gray-300'}`}>
+        <button onClick={() => setScenario('miss')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${scenario === 'miss' ? 'bg-red-500 text-white' : `${theme.bg.tertiary} ${theme.text.secondary}`}`}>
           Cache Miss
         </button>
       </div>
@@ -179,6 +183,7 @@ export const CacheFlowAnimation = () => {
 export const MessageQueueAnimation = () => {
   const [messages, setMessages] = useState([1, 2, 3]);
   const [processing, setProcessing] = useState(null);
+  const { theme } = useTheme();
   useEffect(() => {
     const t = setInterval(() => {
       setMessages(prev => {
@@ -197,8 +202,8 @@ export const MessageQueueAnimation = () => {
         <Box label="Producer" sublabel="API Server" color="blue" icon="📤" />
         <Arrow label="push" animated />
         <div className="flex flex-col items-center">
-          <div className="text-xs text-gray-400 mb-1">Queue</div>
-          <div className="flex gap-1 p-2 bg-gray-800 rounded-lg border border-gray-600 min-w-[120px] min-h-[44px] items-center">
+          <div className={`text-xs ${theme.text.secondary} mb-1`}>Queue</div>
+          <div className={`flex gap-1 p-2 ${theme.bg.tertiary} rounded-lg border ${theme.border.primary} min-w-[120px] min-h-[44px] items-center`}>
             {messages.map(m => (
               <div key={m} className="w-8 h-8 bg-cyan-500/30 border border-cyan-500/50 rounded text-xs flex items-center justify-center text-cyan-300 font-bold">
                 {m}
@@ -209,7 +214,7 @@ export const MessageQueueAnimation = () => {
         <Arrow label="pull" animated />
         <Box label="Consumer" sublabel={processing ? `Processing ${processing}` : 'Waiting'} color={processing ? 'green' : 'gray'} icon="📥" pulse={!!processing} />
       </div>
-      <div className="text-xs text-gray-400">{messages.length} messages in queue</div>
+      <div className={`text-xs ${theme.text.secondary}`}>{messages.length} messages in queue</div>
     </div>
   );
 };

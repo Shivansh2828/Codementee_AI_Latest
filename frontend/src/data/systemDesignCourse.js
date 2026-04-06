@@ -20,7 +20,7 @@ export const SECTIONS = [
     description: 'The essentials — get interview-ready fast',
     color: 'cyan',
     access: 'free',  // free for everyone
-    topics: ['introduction', 'how-to-prep', 'delivery-framework'],
+    topics: ['introduction', 'how-to-prep', 'delivery-framework', 'core-concepts-overview', 'key-technologies-overview', 'common-patterns-overview'],
   },
   {
     id: 'core-concepts',

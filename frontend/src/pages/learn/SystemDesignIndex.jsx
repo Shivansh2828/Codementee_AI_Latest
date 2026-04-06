@@ -123,7 +123,7 @@ const SystemDesignIndex = () => {
                         return (
                           <div
                             key={slug}
-                            className={`flex items-start gap-3 p-4 rounded-xl ${theme.bg.card} border border-gray-700/50 opacity-60 cursor-not-allowed`}
+                            className={`flex items-start gap-3 p-4 rounded-xl ${theme.bg.card} border ${theme.border.primary} opacity-60 cursor-not-allowed`}
                           >
                             
                             <div className="flex-1 min-w-0">
@@ -133,7 +133,7 @@ const SystemDesignIndex = () => {
                                 <span className={`text-xs ${theme.text.muted}`}>· {topic.duration}</span>
                               </div>
                             </div>
-                            <Lock className="w-4 h-4 text-gray-600 shrink-0 mt-1" />
+                            <Lock className={`w-4 h-4 ${theme.text.muted} shrink-0 mt-1`} />
                           </div>
                         );
                       }
