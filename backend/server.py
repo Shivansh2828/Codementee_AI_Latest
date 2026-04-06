@@ -7629,6 +7629,75 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ============ LEARNING PROGRESS ENDPOINTS ============
+
+@api_router.get("/learning/progress")
+async def get_learning_progress(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get user's learning progress (completed problems, topics)"""
+    user = await get_current_user(credentials)
+    progress = await db.learning_progress.find_one({"user_id": user["id"]})
+    if not progress:
+        return {"completed_problems": [], "completed_topics": [], "notes": {}}
+    return {
+        "completed_problems": progress.get("completed_problems", []),
+        "completed_topics": progress.get("completed_topics", []),
+        "notes": progress.get("notes", {}),
+    }
+
+@api_router.post("/learning/progress/toggle")
+async def toggle_learning_item(body: dict, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Toggle a problem or topic as completed/uncompleted"""
+    user = await get_current_user(credentials)
+    item_id = body.get("item_id")  # problem URL or topic slug
+    item_type = body.get("item_type", "problem")  # "problem" or "topic"
+    
+    if not item_id:
+        raise HTTPException(status_code=400, detail="item_id required")
+    
+    field = "completed_problems" if item_type == "problem" else "completed_topics"
+    
+    progress = await db.learning_progress.find_one({"user_id": user["id"]})
+    if not progress:
+        await db.learning_progress.insert_one({
+            "user_id": user["id"],
+            field: [item_id],
+            "completed_problems": [] if item_type != "problem" else [item_id],
+            "completed_topics": [] if item_type != "topic" else [item_id],
+            "notes": {},
+        })
+        return {"completed": True}
+    
+    current = progress.get(field, [])
+    if item_id in current:
+        await db.learning_progress.update_one(
+            {"user_id": user["id"]},
+            {"$pull": {field: item_id}}
+        )
+        return {"completed": False}
+    else:
+        await db.learning_progress.update_one(
+            {"user_id": user["id"]},
+            {"$addToSet": {field: item_id}}
+        )
+        return {"completed": True}
+
+@api_router.post("/learning/progress/note")
+async def save_learning_note(body: dict, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Save a personal note on a problem"""
+    user = await get_current_user(credentials)
+    item_id = body.get("item_id")
+    note = body.get("note", "")
+    
+    if not item_id:
+        raise HTTPException(status_code=400, detail="item_id required")
+    
+    await db.learning_progress.update_one(
+        {"user_id": user["id"]},
+        {"$set": {f"notes.{item_id.replace('.', '_')}": note}},
+        upsert=True
+    )
+    return {"saved": True}
+
 @app.on_event("startup")
 async def startup_scheduler():
     """Start the background scheduler on application startup"""
