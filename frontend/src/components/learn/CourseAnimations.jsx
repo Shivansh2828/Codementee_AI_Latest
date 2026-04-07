@@ -250,10 +250,277 @@ export const URLShortenerAnimation = () => {
   );
 };
 
+// ── DNS Resolution Animation ─────────────────────────────────────────────────
+export const DNSResolutionAnimation = () => {
+  const [step, setStep] = useState(0);
+  const { theme } = useTheme();
+  useEffect(() => {
+    const t = setInterval(() => setStep(s => (s + 1) % 6), 1200);
+    return () => clearInterval(t);
+  }, []);
+  const steps = [
+    { label: 'Browser checks cache', active: [0] },
+    { label: 'Query recursive resolver', active: [0, 1] },
+    { label: 'Query root nameserver', active: [1, 2] },
+    { label: 'Query TLD nameserver (.com)', active: [2, 3] },
+    { label: 'Query authoritative NS', active: [3, 4] },
+    { label: 'IP address returned!', active: [4, 0] },
+  ];
+  const nodes = [
+    { label: 'Browser', color: 'blue' },
+    { label: 'Resolver', color: 'cyan' },
+    { label: 'Root NS', color: 'purple' },
+    { label: '.com NS', color: 'orange' },
+    { label: 'Auth NS', color: 'green' },
+  ];
+  return (
+    <div className="flex flex-col items-center gap-4 py-4">
+      <div className="flex items-center gap-1 flex-wrap justify-center">
+        {nodes.map((n, i) => (
+          <React.Fragment key={i}>
+            <Box label={n.label} color={n.color} pulse={steps[step].active.includes(i)} />
+            {i < nodes.length - 1 && <Arrow animated={steps[step].active.includes(i) && steps[step].active.includes(i + 1)} />}
+          </React.Fragment>
+        ))}
+      </div>
+      <div className={`text-sm font-medium ${theme.text.primary} h-6`}>{steps[step].label}</div>
+    </div>
+  );
+};
+
+// ── TCP Handshake Animation ──────────────────────────────────────────────────
+export const TCPHandshakeAnimation = () => {
+  const [step, setStep] = useState(0);
+  const { theme } = useTheme();
+  useEffect(() => {
+    const t = setInterval(() => setStep(s => (s + 1) % 4), 1500);
+    return () => clearInterval(t);
+  }, []);
+  const messages = ['Idle', 'SYN →', '← SYN-ACK', 'ACK → Connected!'];
+  return (
+    <div className="flex flex-col items-center gap-4 py-4">
+      <div className="flex items-center gap-4 flex-wrap justify-center">
+        <Box label="Client" color="blue" pulse={step === 1 || step === 3} />
+        <div className="flex flex-col items-center min-w-[120px]">
+          {step >= 1 && <div className="text-xs text-cyan-400 mb-1">SYN →</div>}
+          {step >= 2 && <div className="text-xs text-green-400 mb-1">← SYN-ACK</div>}
+          {step >= 3 && <div className="text-xs text-purple-400">ACK →</div>}
+        </div>
+        <Box label="Server" color="cyan" pulse={step === 2} />
+      </div>
+      <div className={`text-sm font-medium h-6 ${step === 3 ? 'text-green-400' : theme.text.primary}`}>{messages[step]}</div>
+    </div>
+  );
+};
+
+// ── HTTP Request/Response Animation ──────────────────────────────────────────
+export const HTTPRequestAnimation = () => {
+  const [step, setStep] = useState(0);
+  const { theme } = useTheme();
+  useEffect(() => {
+    const t = setInterval(() => setStep(s => (s + 1) % 5), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const labels = [
+    'User types URL',
+    'DNS resolves → 142.250.80.46',
+    'TCP + TLS handshake',
+    'GET /api/users HTTP/1.1',
+    '200 OK { "users": [...] }',
+  ];
+  return (
+    <div className="flex flex-col items-center gap-4 py-4">
+      <div className="flex items-center gap-2 flex-wrap justify-center">
+        <Box label="Browser" color="blue" pulse={step <= 1} />
+        <Arrow label={step === 1 ? 'DNS' : step === 2 ? 'TCP/TLS' : step === 3 ? 'GET' : step === 4 ? '200 OK' : ''} animated={step >= 1} />
+        <Box label="Server" color="cyan" pulse={step >= 3} />
+      </div>
+      <div className={`text-sm font-medium h-6 ${step === 4 ? 'text-green-400' : theme.text.primary}`}>{labels[step]}</div>
+    </div>
+  );
+};
+
+// ── OSI Layers Animation ─────────────────────────────────────────────────────
+export const OSILayersAnimation = () => {
+  const [activeLayer, setActiveLayer] = useState(null);
+  const { theme } = useTheme();
+  const layers = [
+    { num: 7, name: 'Application', examples: 'HTTP, DNS, WebSocket', color: 'purple' },
+    { num: 4, name: 'Transport', examples: 'TCP, UDP', color: 'cyan' },
+    { num: 3, name: 'Network', examples: 'IP, Routing', color: 'blue' },
+    { num: 1, name: 'Physical', examples: 'Cables, WiFi, Fiber', color: 'gray' },
+  ];
+  return (
+    <div className="flex flex-col items-center gap-1 py-4">
+      <div className={`text-xs ${theme.text.muted} mb-2`}>Click a layer to learn more</div>
+      {layers.map((l) => (
+        <button key={l.num} onClick={() => setActiveLayer(activeLayer === l.num ? null : l.num)}
+          className={`w-full max-w-sm px-4 py-3 rounded-lg border text-center transition-all ${
+            activeLayer === l.num
+              ? `bg-${l.color}-500/20 border-${l.color}-500/50 scale-105`
+              : `${theme.bg.secondary} ${theme.border.primary} hover:border-${l.color}-500/30`
+          }`}>
+          <div className="flex items-center justify-between">
+            <span className={`text-xs font-bold text-${l.color}-400`}>L{l.num}</span>
+            <span className={`text-sm font-semibold ${theme.text.primary}`}>{l.name}</span>
+            <span className={`text-xs ${theme.text.muted}`}>{l.examples}</span>
+          </div>
+          {activeLayer === l.num && (
+            <div className={`text-xs ${theme.text.secondary} mt-2 text-left`}>
+              {l.num === 7 && 'Your application code lives here. HTTP requests, DNS lookups, WebSocket messages — all Layer 7. L7 load balancers can inspect these.'}
+              {l.num === 4 && 'TCP provides reliable delivery. UDP provides speed. L4 load balancers route based on IP/port without reading HTTP content.'}
+              {l.num === 3 && 'IP addresses and routing. Packets hop through routers to reach their destination. Public vs private IPs live here.'}
+              {l.num === 1 && 'The physical medium — electrical signals on copper, light pulses in fiber, radio waves for WiFi. You rarely think about this in system design.'}
+            </div>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+};
+
+// ── Load Balancer L4 vs L7 Animation ─────────────────────────────────────────
+export const LoadBalancerTypesAnimation = () => {
+  const [mode, setMode] = useState('l7');
+  const { theme } = useTheme();
+  return (
+    <div className="flex flex-col items-center gap-4 py-4">
+      <div className="flex gap-3">
+        <button onClick={() => setMode('l7')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${mode === 'l7' ? 'bg-cyan-500 text-white' : `${theme.bg.secondary} ${theme.text.secondary}`}`}>
+          Layer 7 (HTTP)
+        </button>
+        <button onClick={() => setMode('l4')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${mode === 'l4' ? 'bg-purple-500 text-white' : `${theme.bg.secondary} ${theme.text.secondary}`}`}>
+          Layer 4 (TCP)
+        </button>
+      </div>
+      <div className="flex items-start gap-2 flex-wrap justify-center">
+        <Box label="Client" color="blue" />
+        <Arrow label={mode === 'l7' ? 'HTTP' : 'TCP'} animated />
+        <div className="flex flex-col items-center gap-1">
+          <Box label={mode === 'l7' ? 'L7 LB' : 'L4 LB'} sublabel={mode === 'l7' ? 'Reads HTTP' : 'TCP only'} color={mode === 'l7' ? 'cyan' : 'purple'} />
+          <div className={`text-[10px] ${theme.text.muted} max-w-[140px] text-center`}>
+            {mode === 'l7' ? 'Routes by URL, headers, cookies' : 'Routes by IP/port only'}
+          </div>
+        </div>
+        <Arrow animated />
+        <div className="flex flex-col gap-2">
+          <Box label="/api → API" color="green" />
+          <Box label="/web → Web" color="orange" />
+        </div>
+      </div>
+      <div className={`text-xs ${theme.text.secondary} max-w-md text-center`}>
+        {mode === 'l7'
+          ? 'L7 load balancers terminate the client connection and create new ones to backends. They can route /api to API servers and /static to CDN. Best for HTTP traffic.'
+          : 'L4 load balancers pass TCP connections through without inspecting content. The client has a direct TCP connection to the backend. Best for WebSockets and persistent connections.'}
+      </div>
+    </div>
+  );
+};
+
+// ── VPC / Network Architecture Animation ─────────────────────────────────────
+export const VPCArchitectureAnimation = () => {
+  const { theme } = useTheme();
+  return (
+    <div className="flex flex-col items-center gap-3 py-4">
+      <div className={`text-xs font-semibold text-red-400 uppercase tracking-wider`}>Public Internet</div>
+      <Box label="Users" color="blue" />
+      <Arrow label="HTTPS" animated />
+      <div className={`border-2 border-dashed border-cyan-500/30 rounded-xl p-4 w-full max-w-lg`}>
+        <div className={`text-xs font-semibold text-cyan-400 mb-3 text-center`}>VPC (Private Network)</div>
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2">
+            <Box label="Load Balancer" sublabel="Public IP" color="cyan" />
+          </div>
+          <Arrow animated />
+          <div className="flex gap-2 flex-wrap justify-center">
+            <Box label="App Server 1" sublabel="10.0.1.x" color="green" />
+            <Box label="App Server 2" sublabel="10.0.1.x" color="green" />
+          </div>
+          <Arrow animated />
+          <div className="flex gap-2 flex-wrap justify-center">
+            <Box label="Database" sublabel="10.0.2.x" color="purple" />
+            <Box label="Redis" sublabel="10.0.2.x" color="orange" />
+          </div>
+        </div>
+      </div>
+      <div className={`text-xs ${theme.text.muted} text-center max-w-sm`}>
+        Only the load balancer has a public IP. App servers and databases use private IPs and are not accessible from the internet.
+      </div>
+    </div>
+  );
+};
+
+// ── Circuit Breaker Animation ────────────────────────────────────────────────
+export const CircuitBreakerAnimation = () => {
+  const [state, setState] = useState('closed');
+  const [failures, setFailures] = useState(0);
+  const { theme } = useTheme();
+
+  const simulateRequest = () => {
+    if (state === 'open') {
+      // After cooldown, try half-open
+      setState('half-open');
+      return;
+    }
+    if (state === 'half-open') {
+      // Test request — 50% chance of success
+      if (Math.random() > 0.5) {
+        setState('closed');
+        setFailures(0);
+      } else {
+        setState('open');
+      }
+      return;
+    }
+    // Closed state — simulate failure
+    const newFailures = failures + 1;
+    setFailures(newFailures);
+    if (newFailures >= 3) {
+      setState('open');
+    }
+  };
+
+  const stateColors = { closed: 'text-green-400', open: 'text-red-400', 'half-open': 'text-yellow-400' };
+  const stateBg = { closed: 'bg-green-500/20 border-green-500/40', open: 'bg-red-500/20 border-red-500/40', 'half-open': 'bg-yellow-500/20 border-yellow-500/40' };
+
+  return (
+    <div className="flex flex-col items-center gap-4 py-4">
+      <div className={`px-6 py-4 rounded-xl border ${stateBg[state]} text-center min-w-[200px]`}>
+        <div className={`text-lg font-bold ${stateColors[state]} uppercase`}>{state}</div>
+        <div className={`text-xs ${theme.text.muted} mt-1`}>
+          {state === 'closed' && `Failures: ${failures}/3`}
+          {state === 'open' && 'All requests fail fast'}
+          {state === 'half-open' && 'Testing with one request...'}
+        </div>
+      </div>
+      <button onClick={simulateRequest}
+        className={`px-4 py-2 rounded-lg text-sm font-medium bg-cyan-500 text-white hover:bg-cyan-600 transition-all`}>
+        {state === 'open' ? 'Try Recovery' : state === 'half-open' ? 'Send Test Request' : 'Simulate Failure'}
+      </button>
+      <button onClick={() => { setState('closed'); setFailures(0); }}
+        className={`text-xs ${theme.text.muted} hover:text-cyan-400 transition-colors`}>
+        Reset
+      </button>
+      <div className={`text-xs ${theme.text.secondary} max-w-sm text-center`}>
+        {state === 'closed' && 'Circuit is closed — requests flow normally. After 3 failures, it trips open.'}
+        {state === 'open' && 'Circuit is open — all requests immediately fail without calling the dependency. Click "Try Recovery" to enter half-open state.'}
+        {state === 'half-open' && 'Circuit is half-open — one test request is allowed through. If it succeeds, circuit closes. If it fails, circuit stays open.'}
+      </div>
+    </div>
+  );
+};
+
 // Animation registry
 export const ANIMATIONS = {
   'client-server': ClientServerAnimation,
   'scaling-comparison': ScalingComparisonAnimation,
+  'dns-resolution': DNSResolutionAnimation,
+  'tcp-handshake': TCPHandshakeAnimation,
+  'http-request': HTTPRequestAnimation,
+  'osi-layers': OSILayersAnimation,
+  'load-balancer-types': LoadBalancerTypesAnimation,
+  'vpc-architecture': VPCArchitectureAnimation,
+  'circuit-breaker': CircuitBreakerAnimation,
   'load-balancer': LoadBalancerAnimation,
   'db-replication': DBReplicationAnimation,
   'cache-flow': CacheFlowAnimation,
