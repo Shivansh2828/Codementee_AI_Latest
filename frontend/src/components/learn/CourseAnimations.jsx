@@ -510,6 +510,129 @@ export const CircuitBreakerAnimation = () => {
   );
 };
 
+// ── REST Request Flow Animation ──────────────────────────────────────────────
+const RESTRequestFlowAnimation = () => {
+  const { theme } = useTheme();
+  const [step, setStep] = useState(0);
+  const steps = [
+    { label: 'Client', detail: 'PATCH /users/42', color: 'blue' },
+    { label: 'Auth Middleware', detail: 'Verify JWT token', color: 'yellow' },
+    { label: 'Rate Limiter', detail: 'Check: 73/100 remaining', color: 'orange' },
+    { label: 'Router', detail: 'Match → UsersController.update', color: 'purple' },
+    { label: 'Validation', detail: 'Validate body schema', color: 'cyan' },
+    { label: 'Business Logic', detail: 'Update user in DB', color: 'green' },
+    { label: 'Response', detail: '200 OK + updated user JSON', color: 'green' },
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => setStep(s => (s + 1) % steps.length), 1500);
+    return () => clearInterval(timer);
+  }, [steps.length]);
+
+  return (
+    <div className="flex flex-col items-center gap-2 py-4">
+      {steps.map((s, i) => (
+        <React.Fragment key={i}>
+          <div className={`w-full max-w-xs px-4 py-3 rounded-lg border transition-all duration-500 ${
+            i === step
+              ? `bg-${s.color}-500/20 border-${s.color}-500/50 scale-105`
+              : i < step
+                ? `${theme.bg.secondary} ${theme.border.primary} opacity-50`
+                : `${theme.bg.secondary} ${theme.border.primary} opacity-30`
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className={`text-sm font-semibold ${i === step ? `text-${s.color}-400` : theme.text.secondary}`}>{s.label}</span>
+              <span className={`text-xs font-mono ${i === step ? `text-${s.color}-300` : theme.text.muted}`}>{s.detail}</span>
+            </div>
+          </div>
+          {i < steps.length - 1 && (
+            <div className={`text-xs transition-all duration-300 ${i < step ? 'text-green-400' : theme.text.muted}`}>
+              {i < step ? '✓' : '↓'}
+            </div>
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
+
+// ── GraphQL vs REST Comparison Animation ─────────────────────────────────────
+const GraphQLvsRESTAnimation = () => {
+  const { theme } = useTheme();
+  const [mode, setMode] = useState('rest');
+  const [restStep, setRestStep] = useState(0);
+  const [gqlDone, setGqlDone] = useState(false);
+
+  const restCalls = [
+    { endpoint: 'GET /users/42', data: '{ id, name, email, bio, avatar, ... }', label: 'User profile (30 fields)' },
+    { endpoint: 'GET /users/42/posts?limit=5', data: '{ posts: [{ id, title, body, ... }] }', label: 'User posts' },
+    { endpoint: 'GET /users/42/followers/count', data: '{ count: 1284 }', label: 'Follower count' },
+  ];
+
+  useEffect(() => {
+    if (mode === 'rest') {
+      setRestStep(0);
+      setGqlDone(false);
+      const timer = setInterval(() => setRestStep(s => { if (s < 2) return s + 1; clearInterval(timer); return s; }), 1200);
+      return () => clearInterval(timer);
+    } else {
+      setRestStep(0);
+      setGqlDone(false);
+      const timer = setTimeout(() => setGqlDone(true), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [mode]);
+
+  return (
+    <div className="py-4">
+      <div className="flex justify-center gap-2 mb-6">
+        <button onClick={() => setMode('rest')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${mode === 'rest' ? 'bg-blue-500 text-white' : `${theme.bg.secondary} ${theme.text.secondary}`}`}>REST</button>
+        <button onClick={() => setMode('graphql')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${mode === 'graphql' ? 'bg-purple-500 text-white' : `${theme.bg.secondary} ${theme.text.secondary}`}`}>GraphQL</button>
+      </div>
+
+      {mode === 'rest' ? (
+        <div className="space-y-3 max-w-md mx-auto">
+          <div className={`text-xs text-center ${theme.text.muted} mb-2`}>3 separate requests needed</div>
+          {restCalls.map((call, i) => (
+            <div key={i} className={`px-4 py-3 rounded-lg border transition-all duration-500 ${
+              i <= restStep ? 'bg-blue-500/15 border-blue-500/40' : `${theme.bg.secondary} ${theme.border.primary} opacity-30`
+            }`}>
+              <div className="flex items-center justify-between">
+                <code className={`text-xs font-mono ${i <= restStep ? 'text-blue-400' : theme.text.muted}`}>{call.endpoint}</code>
+                {i <= restStep && <span className="text-green-400 text-xs">✓</span>}
+              </div>
+              <div className={`text-[10px] mt-1 ${theme.text.muted}`}>{call.label}</div>
+            </div>
+          ))}
+          <div className={`text-center text-xs ${theme.text.muted} mt-3`}>
+            {restStep >= 2 ? '~150ms total (3 round trips)' : `Request ${restStep + 1} of 3...`}
+          </div>
+        </div>
+      ) : (
+        <div className="max-w-md mx-auto">
+          <div className={`text-xs text-center ${theme.text.muted} mb-2`}>1 request, exact data needed</div>
+          <div className={`px-4 py-3 rounded-lg border transition-all duration-500 ${gqlDone ? 'bg-purple-500/15 border-purple-500/40' : `${theme.bg.secondary} ${theme.border.primary}`}`}>
+            <code className={`text-xs font-mono block ${gqlDone ? 'text-purple-400' : theme.text.muted}`}>
+              {'POST /graphql'}
+            </code>
+            <pre className={`text-[10px] mt-2 font-mono ${theme.text.secondary}`}>{`query {
+  user(id: "42") {
+    name, avatar
+    posts(limit: 5) { title }
+    followersCount
+  }
+}`}</pre>
+            {gqlDone && <div className="flex items-center gap-1 mt-2"><span className="text-green-400 text-xs">✓</span><span className={`text-[10px] ${theme.text.muted}`}>Only requested fields returned</span></div>}
+          </div>
+          <div className={`text-center text-xs ${theme.text.muted} mt-3`}>
+            {gqlDone ? '~50ms total (1 round trip, no over-fetching)' : 'Sending query...'}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Animation registry
 export const ANIMATIONS = {
   'client-server': ClientServerAnimation,
@@ -526,4 +649,6 @@ export const ANIMATIONS = {
   'cache-flow': CacheFlowAnimation,
   'message-queue': MessageQueueAnimation,
   'url-shortener': URLShortenerAnimation,
+  'rest-request-flow': RESTRequestFlowAnimation,
+  'graphql-vs-rest': GraphQLvsRESTAnimation,
 };
