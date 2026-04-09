@@ -189,6 +189,122 @@ const DiagramSection = ({ section, theme }) => {
             </div>
           </div>
         )}
+
+        {section.variant === 'status-code-tree' && (
+          <div className="max-w-lg mx-auto">
+            <div className="space-y-2">
+              {[
+                { code: '200', label: 'OK', when: 'GET/PUT/PATCH/DELETE succeeded', color: 'green' },
+                { code: '201', label: 'Created', when: 'POST created a new resource', color: 'green' },
+                { code: '204', label: 'No Content', when: 'DELETE succeeded, nothing to return', color: 'green' },
+                { code: '400', label: 'Bad Request', when: 'Invalid input, missing fields, wrong types', color: 'yellow' },
+                { code: '401', label: 'Unauthorized', when: 'No auth token or token is invalid', color: 'red' },
+                { code: '403', label: 'Forbidden', when: 'Authenticated but lacks permission', color: 'red' },
+                { code: '404', label: 'Not Found', when: 'Resource does not exist', color: 'yellow' },
+                { code: '409', label: 'Conflict', when: 'Duplicate creation, state conflict', color: 'orange' },
+                { code: '429', label: 'Too Many Requests', when: 'Rate limit exceeded', color: 'orange' },
+                { code: '500', label: 'Internal Error', when: 'Server bug — client did nothing wrong', color: 'red' },
+              ].map((s, i) => (
+                <div key={i} className={`flex items-center gap-3 px-4 py-2.5 rounded-lg ${theme.bg.secondary} border ${theme.border.primary}`}>
+                  <span className={`text-sm font-bold font-mono w-10 text-${s.color}-400`}>{s.code}</span>
+                  <span className={`text-sm font-semibold ${theme.text.primary} w-32 shrink-0`}>{s.label}</span>
+                  <span className={`text-xs ${theme.text.muted} flex-1`}>{s.when}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {section.variant === 'api-paradigms-comparison' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-2xl mx-auto">
+            {[
+              { name: 'REST', format: 'JSON', transport: 'HTTP/1.1', style: 'Resource-based', perf: 'Good', browser: '✅ Native', debug: '✅ Easy (curl)', best: 'Public APIs, CRUD, web apps', color: 'blue' },
+              { name: 'GraphQL', format: 'JSON', transport: 'HTTP', style: 'Query-based', perf: 'Good', browser: '✅ Native', debug: '⚠️ Moderate', best: 'Complex UIs, mobile, multi-client', color: 'purple' },
+              { name: 'gRPC', format: 'Protobuf (binary)', transport: 'HTTP/2', style: 'RPC (function calls)', perf: '5-10x faster', browser: '❌ Needs proxy', debug: '❌ Hard', best: 'Internal microservices, streaming', color: 'orange' },
+            ].map((p, i) => (
+              <div key={i} className={`${theme.bg.secondary} rounded-xl p-4 border ${theme.border.primary}`}>
+                <h4 className={`font-bold text-${p.color}-400 text-center mb-3`}>{p.name}</h4>
+                <div className={`space-y-2 text-xs ${theme.text.secondary}`}>
+                  <div><span className={`${theme.text.muted}`}>Format:</span> {p.format}</div>
+                  <div><span className={`${theme.text.muted}`}>Transport:</span> {p.transport}</div>
+                  <div><span className={`${theme.text.muted}`}>Style:</span> {p.style}</div>
+                  <div><span className={`${theme.text.muted}`}>Performance:</span> {p.perf}</div>
+                  <div><span className={`${theme.text.muted}`}>Browser:</span> {p.browser}</div>
+                  <div><span className={`${theme.text.muted}`}>Debugging:</span> {p.debug}</div>
+                  <div className={`pt-2 border-t ${theme.border.primary} text-${p.color}-400 font-medium`}>Best for: {p.best}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {section.variant === 'pagination-types' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+            <div className={`${theme.bg.secondary} rounded-xl p-5 border ${theme.border.primary}`}>
+              <h4 className="font-bold text-blue-400 text-center mb-3">Offset Pagination</h4>
+              <div className="flex flex-col items-center gap-2 mb-3">
+                <code className={`text-xs font-mono ${theme.text.muted}`}>GET /users?page=3&limit=20</code>
+                <div className="flex gap-1">
+                  {[1,2,3,4,5].map(n => (
+                    <div key={n} className={`w-8 h-8 rounded flex items-center justify-center text-[10px] font-bold ${n === 3 ? 'bg-blue-500/30 border border-blue-500/50 text-blue-300' : `${theme.bg.primary} ${theme.border.primary} border ${theme.text.muted}`}`}>
+                      P{n}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className={`text-xs ${theme.text.secondary} space-y-1`}>
+                <p>✅ Simple, jump to any page</p>
+                <p>✅ Easy to implement</p>
+                <p>❌ Slow at large offsets</p>
+                <p>❌ Inconsistent with inserts/deletes</p>
+              </div>
+            </div>
+            <div className={`${theme.bg.secondary} rounded-xl p-5 border ${theme.border.primary}`}>
+              <h4 className="font-bold text-green-400 text-center mb-3">Cursor Pagination</h4>
+              <div className="flex flex-col items-center gap-2 mb-3">
+                <code className={`text-xs font-mono ${theme.text.muted}`}>GET /users?after=eyJ...&limit=20</code>
+                <div className="flex items-center gap-1">
+                  <div className={`w-8 h-8 rounded flex items-center justify-center text-[10px] ${theme.bg.primary} ${theme.border.primary} border ${theme.text.muted} opacity-40`}>...</div>
+                  <div className="text-green-400 text-xs">→</div>
+                  <div className="w-8 h-8 rounded flex items-center justify-center text-[10px] font-bold bg-green-500/30 border border-green-500/50 text-green-300">42</div>
+                  <div className="text-green-400 text-xs">→</div>
+                  <div className={`w-8 h-8 rounded flex items-center justify-center text-[10px] ${theme.bg.primary} ${theme.border.primary} border ${theme.text.muted} opacity-40`}>...</div>
+                </div>
+              </div>
+              <div className={`text-xs ${theme.text.secondary} space-y-1`}>
+                <p>✅ Consistent performance (O(1))</p>
+                <p>✅ No duplicates or gaps</p>
+                <p>✅ Works with infinite scroll</p>
+                <p>❌ Cannot jump to arbitrary page</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {section.variant === 'jwt-auth-flow' && (
+          <div className="flex flex-col gap-3 max-w-lg mx-auto">
+            {[
+              { step: '1', label: 'Login', action: 'POST /auth/login { email, password }', color: 'blue' },
+              { step: '2', label: 'Verify', action: 'Server validates credentials against DB', color: 'purple' },
+              { step: '3', label: 'Sign JWT', action: 'Create token: { userId, role, exp } + secret', color: 'cyan' },
+              { step: '4', label: 'Return', action: '200 OK { access_token, refresh_token }', color: 'green' },
+              { step: '5', label: 'API Call', action: 'GET /users/me — Authorization: Bearer eyJ...', color: 'orange' },
+              { step: '6', label: 'Validate', action: 'Verify signature + check expiration (no DB hit)', color: 'yellow' },
+              { step: '7', label: 'Respond', action: '200 OK { id, name, email, role }', color: 'green' },
+            ].map((s, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-full bg-${s.color}-500/20 border border-${s.color}-500/40 flex items-center justify-center shrink-0`}>
+                  <span className={`text-xs font-bold text-${s.color}-400`}>{s.step}</span>
+                </div>
+                <div className="flex-1">
+                  <span className={`text-sm font-semibold text-${s.color}-400`}>{s.label}</span>
+                  <span className={`text-sm ${theme.text.secondary} ml-2`}>{s.action}</span>
+                </div>
+                {i < 6 && <div className={`text-xs ${theme.text.muted}`}>↓</div>}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
