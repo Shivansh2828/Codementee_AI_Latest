@@ -12,17 +12,17 @@ const Arrow = ({ label, animated = true }) => (
 );
 
 const Box = ({ label, sublabel, color = 'blue', icon, pulse = false }) => {
-  const colors = {
-    blue: 'bg-blue-500/20 border-blue-500/40 text-blue-300',
-    cyan: 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300',
-    green: 'bg-green-500/20 border-green-500/40 text-green-300',
-    purple: 'bg-purple-500/20 border-purple-500/40 text-purple-300',
-    orange: 'bg-orange-500/20 border-orange-500/40 text-orange-300',
-    gray: 'bg-gray-500/20 border-gray-500/40 text-gray-300',
-    red: 'bg-red-500/20 border-red-500/40 text-red-300',
+  const colorMap = {
+    blue: 'bg-[var(--blue-bg)] border-[var(--blue-border)] text-[var(--blue)]',
+    cyan: 'bg-[var(--cyan-bg)] border-[var(--cyan-border)] text-[var(--cyan)]',
+    green: 'bg-[var(--green-bg)] border-[var(--green-border)] text-[var(--green)]',
+    purple: 'bg-[var(--purple-bg)] border-[var(--purple-border)] text-[var(--purple)]',
+    orange: 'bg-[var(--orange-bg)] border-[var(--orange-border)] text-[var(--orange)]',
+    gray: 'bg-[var(--bg-tertiary)] border-[var(--border-primary)] text-[var(--text-muted)]',
+    red: 'bg-[var(--red-bg)] border-[var(--red-border)] text-[var(--red)]',
   };
   return (
-    <div className={`flex flex-col items-center justify-center px-4 py-3 rounded-xl border ${colors[color]} ${pulse ? 'animate-pulse' : ''} min-w-[90px] text-center`}>
+    <div className={`flex flex-col items-center justify-center px-4 py-3 rounded-xl border ${colorMap[color] || colorMap.blue} ${pulse ? 'animate-pulse' : ''} min-w-[90px] text-center`}>
       {icon && <span className="text-2xl mb-1">{icon}</span>}
       <span className="text-sm font-semibold">{label}</span>
       {sublabel && <span className="text-xs opacity-70 mt-0.5">{sublabel}</span>}
@@ -205,7 +205,7 @@ export const MessageQueueAnimation = () => {
           <div className={`text-xs ${theme.text.secondary} mb-1`}>Queue</div>
           <div className={`flex gap-1 p-2 ${theme.bg.tertiary} rounded-lg border ${theme.border.primary} min-w-[120px] min-h-[44px] items-center`}>
             {messages.map(m => (
-              <div key={m} className="w-8 h-8 bg-cyan-500/30 border border-cyan-500/50 rounded text-xs flex items-center justify-center text-cyan-300 font-bold">
+              <div key={m} className="w-8 h-8 bg-[var(--cyan-bg)] border border-[var(--cyan-border)] rounded text-xs flex items-center justify-center text-[var(--cyan)] font-bold">
                 {m}
               </div>
             ))}
@@ -345,10 +345,22 @@ export const OSILayersAnimation = () => {
   const [activeLayer, setActiveLayer] = useState(null);
   const { theme } = useTheme();
   const layers = [
-    { num: 7, name: 'Application', examples: 'HTTP, DNS, WebSocket', color: 'purple' },
-    { num: 4, name: 'Transport', examples: 'TCP, UDP', color: 'cyan' },
-    { num: 3, name: 'Network', examples: 'IP, Routing', color: 'blue' },
-    { num: 1, name: 'Physical', examples: 'Cables, WiFi, Fiber', color: 'gray' },
+    { num: 7, name: 'Application', examples: 'HTTP, DNS, WebSocket',
+      active: 'bg-[var(--purple-bg)] border-[var(--purple-border)]',
+      hover: 'hover:border-[var(--purple-border)]',
+      label: 'text-[var(--purple)]' },
+    { num: 4, name: 'Transport', examples: 'TCP, UDP',
+      active: 'bg-[var(--cyan-bg)] border-[var(--cyan-border)]',
+      hover: 'hover:border-[var(--cyan-border)]',
+      label: 'text-[var(--cyan)]' },
+    { num: 3, name: 'Network', examples: 'IP, Routing',
+      active: 'bg-[var(--blue-bg)] border-[var(--blue-border)]',
+      hover: 'hover:border-[var(--blue-border)]',
+      label: 'text-[var(--blue)]' },
+    { num: 1, name: 'Physical', examples: 'Cables, WiFi, Fiber',
+      active: 'bg-[var(--bg-tertiary)] border-[var(--border-secondary)]',
+      hover: 'hover:border-[var(--border-secondary)]',
+      label: 'text-[var(--text-muted)]' },
   ];
   return (
     <div className="flex flex-col items-center gap-1 py-4">
@@ -357,11 +369,11 @@ export const OSILayersAnimation = () => {
         <button key={l.num} onClick={() => setActiveLayer(activeLayer === l.num ? null : l.num)}
           className={`w-full max-w-sm px-4 py-3 rounded-lg border text-center transition-all ${
             activeLayer === l.num
-              ? `bg-${l.color}-500/20 border-${l.color}-500/50 scale-105`
-              : `${theme.bg.secondary} ${theme.border.primary} hover:border-${l.color}-500/30`
+              ? `${l.active} scale-105`
+              : `${theme.bg.secondary} ${theme.border.primary} ${l.hover}`
           }`}>
           <div className="flex items-center justify-between">
-            <span className={`text-xs font-bold text-${l.color}-400`}>L{l.num}</span>
+            <span className={`text-xs font-bold ${l.label}`}>L{l.num}</span>
             <span className={`text-sm font-semibold ${theme.text.primary}`}>{l.name}</span>
             <span className={`text-xs ${theme.text.muted}`}>{l.examples}</span>
           </div>
@@ -480,8 +492,8 @@ export const CircuitBreakerAnimation = () => {
     }
   };
 
-  const stateColors = { closed: 'text-green-400', open: 'text-red-400', 'half-open': 'text-yellow-400' };
-  const stateBg = { closed: 'bg-green-500/20 border-green-500/40', open: 'bg-red-500/20 border-red-500/40', 'half-open': 'bg-yellow-500/20 border-yellow-500/40' };
+  const stateColors = { closed: 'text-[var(--success)]', open: 'text-[var(--error)]', 'half-open': 'text-[var(--warning)]' };
+  const stateBg = { closed: 'bg-[var(--success-bg)] border-[var(--success-border)]', open: 'bg-[var(--error-bg)] border-[var(--error-border)]', 'half-open': 'bg-[var(--warning-bg)] border-[var(--warning-border)]' };
 
   return (
     <div className="flex flex-col items-center gap-4 py-4">
@@ -511,6 +523,15 @@ export const CircuitBreakerAnimation = () => {
 };
 
 // ── REST Request Flow Animation ──────────────────────────────────────────────
+const STEP_COLORS = {
+  blue:   { bg: 'bg-[var(--blue-bg)]', border: 'border-[var(--blue-border)]', text: 'text-[var(--blue)]', detail: 'text-[var(--blue)]' },
+  yellow: { bg: 'bg-[var(--yellow-bg)]', border: 'border-[var(--yellow-border)]', text: 'text-[var(--yellow)]', detail: 'text-[var(--yellow)]' },
+  orange: { bg: 'bg-[var(--orange-bg)]', border: 'border-[var(--orange-border)]', text: 'text-[var(--orange)]', detail: 'text-[var(--orange)]' },
+  purple: { bg: 'bg-[var(--purple-bg)]', border: 'border-[var(--purple-border)]', text: 'text-[var(--purple)]', detail: 'text-[var(--purple)]' },
+  cyan:   { bg: 'bg-[var(--cyan-bg)]', border: 'border-[var(--cyan-border)]', text: 'text-[var(--cyan)]', detail: 'text-[var(--cyan)]' },
+  green:  { bg: 'bg-[var(--green-bg)]', border: 'border-[var(--green-border)]', text: 'text-[var(--green)]', detail: 'text-[var(--green)]' },
+};
+
 const RESTRequestFlowAnimation = () => {
   const { theme } = useTheme();
   const [step, setStep] = useState(0);
@@ -531,27 +552,30 @@ const RESTRequestFlowAnimation = () => {
 
   return (
     <div className="flex flex-col items-center gap-2 py-4">
-      {steps.map((s, i) => (
+      {steps.map((s, i) => {
+        const sc = STEP_COLORS[s.color] || STEP_COLORS.blue;
+        return (
         <React.Fragment key={i}>
           <div className={`w-full max-w-xs px-4 py-3 rounded-lg border transition-all duration-500 ${
             i === step
-              ? `bg-${s.color}-500/20 border-${s.color}-500/50 scale-105`
+              ? `${sc.bg} ${sc.border} scale-105`
               : i < step
                 ? `${theme.bg.secondary} ${theme.border.primary} opacity-50`
                 : `${theme.bg.secondary} ${theme.border.primary} opacity-30`
           }`}>
             <div className="flex items-center justify-between">
-              <span className={`text-sm font-semibold ${i === step ? `text-${s.color}-400` : theme.text.secondary}`}>{s.label}</span>
-              <span className={`text-xs font-mono ${i === step ? `text-${s.color}-300` : theme.text.muted}`}>{s.detail}</span>
+              <span className={`text-sm font-semibold ${i === step ? sc.text : theme.text.secondary}`}>{s.label}</span>
+              <span className={`text-xs font-mono ${i === step ? sc.detail : theme.text.muted}`}>{s.detail}</span>
             </div>
           </div>
           {i < steps.length - 1 && (
-            <div className={`text-xs transition-all duration-300 ${i < step ? 'text-green-400' : theme.text.muted}`}>
+            <div className={`text-xs transition-all duration-300 ${i < step ? 'text-[var(--success)]' : theme.text.muted}`}>
               {i < step ? '✓' : '↓'}
             </div>
           )}
         </React.Fragment>
-      ))}
+      );
+      })}
     </div>
   );
 };
@@ -595,11 +619,11 @@ const GraphQLvsRESTAnimation = () => {
           <div className={`text-xs text-center ${theme.text.muted} mb-2`}>3 separate requests needed</div>
           {restCalls.map((call, i) => (
             <div key={i} className={`px-4 py-3 rounded-lg border transition-all duration-500 ${
-              i <= restStep ? 'bg-blue-500/15 border-blue-500/40' : `${theme.bg.secondary} ${theme.border.primary} opacity-30`
+              i <= restStep ? 'bg-[var(--blue-bg)] border-[var(--blue-border)]' : `${theme.bg.secondary} ${theme.border.primary} opacity-30`
             }`}>
               <div className="flex items-center justify-between">
-                <code className={`text-xs font-mono ${i <= restStep ? 'text-blue-400' : theme.text.muted}`}>{call.endpoint}</code>
-                {i <= restStep && <span className="text-green-400 text-xs">✓</span>}
+                <code className={`text-xs font-mono ${i <= restStep ? 'text-[var(--blue)]' : theme.text.muted}`}>{call.endpoint}</code>
+                {i <= restStep && <span className="text-[var(--success)] text-xs">✓</span>}
               </div>
               <div className={`text-[10px] mt-1 ${theme.text.muted}`}>{call.label}</div>
             </div>
@@ -611,8 +635,8 @@ const GraphQLvsRESTAnimation = () => {
       ) : (
         <div className="max-w-md mx-auto">
           <div className={`text-xs text-center ${theme.text.muted} mb-2`}>1 request, exact data needed</div>
-          <div className={`px-4 py-3 rounded-lg border transition-all duration-500 ${gqlDone ? 'bg-purple-500/15 border-purple-500/40' : `${theme.bg.secondary} ${theme.border.primary}`}`}>
-            <code className={`text-xs font-mono block ${gqlDone ? 'text-purple-400' : theme.text.muted}`}>
+          <div className={`px-4 py-3 rounded-lg border transition-all duration-500 ${gqlDone ? 'bg-[var(--purple-bg)] border-[var(--purple-border)]' : `${theme.bg.secondary} ${theme.border.primary}`}`}>
+            <code className={`text-xs font-mono block ${gqlDone ? 'text-[var(--purple)]' : theme.text.muted}`}>
               {'POST /graphql'}
             </code>
             <pre className={`text-[10px] mt-2 font-mono ${theme.text.secondary}`}>{`query {
@@ -622,7 +646,7 @@ const GraphQLvsRESTAnimation = () => {
     followersCount
   }
 }`}</pre>
-            {gqlDone && <div className="flex items-center gap-1 mt-2"><span className="text-green-400 text-xs">✓</span><span className={`text-[10px] ${theme.text.muted}`}>Only requested fields returned</span></div>}
+            {gqlDone && <div className="flex items-center gap-1 mt-2"><span className="text-[var(--success)] text-xs">✓</span><span className={`text-[10px] ${theme.text.muted}`}>Only requested fields returned</span></div>}
           </div>
           <div className={`text-center text-xs ${theme.text.muted} mt-3`}>
             {gqlDone ? '~50ms total (1 round trip, no over-fetching)' : 'Sending query...'}
