@@ -46,6 +46,10 @@ const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const RefundPolicy = lazy(() => import("./pages/RefundPolicy"));
 const ContactUs = lazy(() => import("./pages/ContactUs"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
+const MockInterviewPage = lazy(() => import("./pages/MockInterviewPage"));
+const PracticePage = lazy(() => import("./pages/PracticePage"));
+const MentorshipPage = lazy(() => import("./pages/MentorshipPage"));
+const ResumeReviewPage = lazy(() => import("./pages/ResumeReviewPage"));
 
 // Admin pages - Lazy load (not needed for initial load)
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -66,6 +70,7 @@ const AdminSlots = lazy(() => import("./pages/admin/AdminSlots"));
 const AdminBugReports = lazy(() => import("./pages/admin/AdminBugReports"));
 const AdminBookingAnalytics = lazy(() => import("./pages/admin/AdminBookingAnalytics"));
 const AdminRevenueTracker = lazy(() => import("./pages/admin/AdminRevenueTracker"));
+const AdminMentorship = lazy(() => import("./pages/admin/AdminMentorship"));
 
 // Mentor pages - Lazy load
 const MentorDashboard = lazy(() => import("./pages/mentor/MentorDashboard"));
@@ -77,6 +82,7 @@ const MentorBugReports = lazy(() => import("./pages/mentor/MentorBugReports"));
 const MentorBookingRequests = lazy(() => import("./pages/mentor/MentorBookingRequests"));
 const MentorSlotsUnified = lazy(() => import("./pages/mentor/MentorSlotsUnified"));
 const MentorBookings = lazy(() => import("./pages/mentor/MentorBookings"));
+const MentorMentorship = lazy(() => import("./pages/mentor/MentorMentorship"));
 
 // Mentee pages - Lazy load
 const MenteeDashboard = lazy(() => import("./pages/mentee/MenteeDashboard"));
@@ -90,6 +96,8 @@ const MenteeMentorSelection = lazy(() => import("./pages/mentee/MenteeMentorSele
 const MenteeSlotBrowsing = lazy(() => import("./pages/mentee/MenteeSlotBrowsing"));
 const MenteeJobSearch = lazy(() => import("./pages/mentee/MenteeJobSearch"));
 const MenteeReferralFinder = lazy(() => import("./pages/mentee/MenteeReferralFinder"));
+const MenteeTransactions = lazy(() => import("./pages/mentee/MenteeTransactions"));
+const MenteeMentorship = lazy(() => import("./pages/mentee/MenteeMentorship"));
 
 console.log('🚀 APP.JS: All imports loaded successfully');
 
@@ -133,6 +141,10 @@ function App() {
             <Route path="/refund-policy" element={<RefundPolicy />} />
             <Route path="/contact" element={<ContactUs />} />
             <Route path="/payment/success" element={<PaymentSuccess />} />
+            <Route path="/mock-interviews" element={<MockInterviewPage />} />
+            <Route path="/practice" element={<PracticePage />} />
+            <Route path="/mentorship" element={<MentorshipPage />} />
+            <Route path="/resume-review" element={<ResumeReviewPage />} />
 
             {/* Admin Routes */}
             <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
@@ -153,6 +165,7 @@ function App() {
             <Route path="/admin/revenue" element={<ProtectedRoute allowedRoles={['admin']}><AdminRevenueTracker /></ProtectedRoute>} />
             <Route path="/admin/bug-reports" element={<ProtectedRoute allowedRoles={['admin']}><AdminBugReports /></ProtectedRoute>} />
             <Route path="/admin/slots" element={<ProtectedRoute allowedRoles={['admin']}><AdminSlots /></ProtectedRoute>} />
+            <Route path="/admin/mentorship" element={<ProtectedRoute allowedRoles={['admin']}><AdminMentorship /></ProtectedRoute>} />
 
             {/* Mentor Routes */}
             <Route path="/mentor" element={<ProtectedRoute allowedRoles={['mentor']}><MentorDashboard /></ProtectedRoute>} />
@@ -163,6 +176,7 @@ function App() {
             <Route path="/mentor/payouts" element={<ProtectedRoute allowedRoles={['mentor']}><MentorPayouts /></ProtectedRoute>} />
             <Route path="/mentor/feedbacks" element={<ProtectedRoute allowedRoles={['mentor']}><MentorFeedbacks /></ProtectedRoute>} />
             <Route path="/mentor/bug-reports" element={<ProtectedRoute allowedRoles={['mentor']}><MentorBugReports /></ProtectedRoute>} />
+            <Route path="/mentor/mentorship" element={<ProtectedRoute allowedRoles={['mentor']}><MentorMentorship /></ProtectedRoute>} />
 
             {/* Mentee Routes */}
             <Route path="/mentee" element={<ProtectedRoute allowedRoles={['mentee', 'agent_user']}><MenteeDashboard /></ProtectedRoute>} />
@@ -176,6 +190,8 @@ function App() {
             <Route path="/mentee/bug-reports" element={<ProtectedRoute allowedRoles={['mentee', 'agent_user']}><MenteeBugReports /></ProtectedRoute>} />
             <Route path="/mentee/job-search" element={<ProtectedRoute allowedRoles={['mentee', 'agent_user']}><MenteeJobSearch /></ProtectedRoute>} />
             <Route path="/mentee/referral-finder" element={<ProtectedRoute allowedRoles={['mentee', 'agent_user']}><MenteeReferralFinder /></ProtectedRoute>} />
+            <Route path="/mentee/transactions" element={<ProtectedRoute allowedRoles={['mentee', 'agent_user']}><MenteeTransactions /></ProtectedRoute>} />
+            <Route path="/mentee/mentorship" element={<ProtectedRoute allowedRoles={['mentee', 'agent_user']}><MenteeMentorship /></ProtectedRoute>} />
 
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/" replace />} />
