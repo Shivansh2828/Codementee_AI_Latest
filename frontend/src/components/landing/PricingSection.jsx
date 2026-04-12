@@ -1,17 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Sparkles, TrendingUp, Crown } from 'lucide-react';
+import { Check, Sparkles, TrendingUp, Crown, BookOpen, Code, MessageSquare } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useCurrency } from '../../contexts/CurrencyContext';
-import { useFoundingSlots } from '../../hooks/useFoundingSlots';
 import axios from 'axios';
 
 const PricingSection = () => {
   const { theme } = useTheme();
-  const { currency, isIndia, loading: currencyLoading, formatPrice, getCurrencySymbol } = useCurrency();
-  const { remaining, total, sold_out } = useFoundingSlots(30000);
+  const { currency, loading: currencyLoading } = useCurrency();
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Free tier features
+  const freeFeatures = [
+    { icon: BookOpen, label: 'Course Content' },
+    { icon: Code, label: 'DSA Patterns' },
+    { icon: MessageSquare, label: 'Behavioral Prep' },
+  ];
 
   // Icon and color mapping for plan IDs
   const planConfig = {
@@ -60,7 +65,8 @@ const PricingSection = () => {
         },
         params: {
           _t: new Date().getTime(), // Cache buster
-          currency: currency // Pass currency parameter
+          currency: currency, // Pass currency parameter
+          service_type: 'mock_interview' // Only fetch mock interview tiers
         }
       });
       
@@ -68,12 +74,16 @@ const PricingSection = () => {
         throw new Error('No pricing data');
       }
       
+      // Only show the 3 main mock interview tiers
+      const allowedPlanIds = ['starter', 'pro', 'elite'];
+      
       // Map API data to component format - handle any field names
       const mappedPlans = response.data
         .filter(plan => {
           // Check both is_active and active fields
           const isActive = plan.is_active !== undefined ? plan.is_active : plan.active;
-          return isActive !== false;
+          const planId = plan.plan_id || plan.id;
+          return isActive !== false && allowedPlanIds.includes(planId);
         })
         .sort((a, b) => {
           const orderA = a.display_order || a.displayOrder || 0;
@@ -127,7 +137,7 @@ const PricingSection = () => {
         {
           id: 'starter',
           name: 'Mock Starter',
-          price: isUSD ? '24' : '2,999',
+          price: isUSD ? '19' : '2,499',
           currencySymbol: isUSD ? '$' : '₹',
           features: [
             '1 MAANG-Level Mock Interview',
@@ -145,7 +155,7 @@ const PricingSection = () => {
         {
           id: 'pro',
           name: 'Interview Pro',
-          price: isUSD ? '84' : '6,999',
+          price: isUSD ? '45' : '6,999',
           currencySymbol: isUSD ? '$' : '₹',
           features: [
             '3 MAANG-Level Mock Interviews',
@@ -165,7 +175,7 @@ const PricingSection = () => {
         {
           id: 'elite',
           name: 'Interview Elite',
-          price: isUSD ? '180' : '14,999',
+          price: isUSD ? '123' : '9,999',
           currencySymbol: isUSD ? '$' : '₹',
           features: [
             '6 MAANG-Level Mock Interviews',
@@ -210,22 +220,35 @@ const PricingSection = () => {
             Pricing
           </span>
           
-          {/* Founding Slots Badge */}
-          {!sold_out && remaining <= 10 && (
-            <div className="inline-flex items-center gap-2 mb-4 px-4 py-2 rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg animate-pulse-glow">
-              <span className="text-lg">🚀</span>
-              <span className="text-sm font-bold">
-                Only {remaining} of {total} Founding Seats Left
-              </span>
-            </div>
-          )}
-          
           <h2 className={`text-3xl md:text-5xl font-bold mb-6 ${theme.text.primary}`}>
             Simple, Outcome-Based Pricing
           </h2>
           <p className={`text-lg md:text-xl ${theme.text.secondary}`}>
             One-time payment. No subscriptions. No hidden fees.
           </p>
+        </div>
+
+        {/* Free Tier Indicator */}
+        <div className={`max-w-2xl mx-auto mb-12 rounded-2xl ${theme.bg.card} border ${theme.border.primary} p-6`}>
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-sm font-semibold border border-emerald-500/20">
+                Free
+              </span>
+              <span className={`text-lg font-semibold ${theme.text.primary}`}>Start learning at no cost</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 sm:ml-auto">
+              {freeFeatures.map((item, idx) => {
+                const FeatureIcon = item.icon;
+                return (
+                  <span key={idx} className={`inline-flex items-center gap-1.5 text-sm ${theme.text.secondary}`}>
+                    <FeatureIcon size={14} className="text-[#06b6d4]" />
+                    {item.label}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Pricing Cards */}
@@ -326,11 +349,8 @@ const PricingSection = () => {
 
         {/* Bottom Note */}
         <div className="text-center">
-          <p className={`text-sm ${theme.text.muted} mb-2`}>
+          <p className={`text-sm ${theme.text.muted}`}>
             One-time payment • No subscriptions • No hidden fees
-          </p>
-          <p className={`text-xs ${theme.text.muted} italic`}>
-            ⚡ Prices may increase as more engineers join
           </p>
         </div>
       </div>

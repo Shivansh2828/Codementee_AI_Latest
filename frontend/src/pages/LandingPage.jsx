@@ -3,17 +3,11 @@ import { useTheme } from '../contexts/ThemeContext';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import HeroSection from '../components/landing/HeroSection';
-import DeliverablesSection from '../components/landing/DeliverablesSection';
-import ProblemSection from '../components/landing/ProblemSection';
-import SolutionSection from '../components/landing/SolutionSection';
-import WhoSection from '../components/landing/WhoSection';
+import LearningShowcaseSection from '../components/landing/LearningShowcaseSection';
+import MockInterviewProcessSection from '../components/landing/MockInterviewProcessSection';
 import PricingSection from '../components/landing/PricingSection';
 import TestimonialsSection from '../components/landing/TestimonialsSection';
 import CTASection from '../components/landing/CTASection';
-import MockInterviewProcessSection from '../components/landing/MockInterviewProcessSection';
-import AIFeaturesSection from '../components/landing/AIFeaturesSection';
-import SocialProofPopup from '../components/SocialProofPopup';
-import UrgencyNotification from '../components/UrgencyNotification';
 
 const LandingPage = () => {
   const { theme } = useTheme();
@@ -23,23 +17,13 @@ const LandingPage = () => {
       <Header />
       <main>
         <HeroSection />
+        <LearningShowcaseSection />
         <MockInterviewProcessSection />
-        <DeliverablesSection />
-        <ProblemSection />
-        <SolutionSection />
-        <WhoSection />
-        <AIFeaturesSection />
         <PricingSection />
         <TestimonialsSection />
         <CTASection />
       </main>
       <Footer />
-      
-      {/* Social Proof Popup */}
-      <SocialProofPopup />
-      
-      {/* Urgency Notification */}
-      <UrgencyNotification />
     </div>
   );
 };

@@ -28,8 +28,8 @@ const Footer = () => {
             <h4 className={`${theme.text.primary} font-semibold mb-4`}>Quick Links</h4>
             <ul className="space-y-3">
               <li>
-                <Link to="/ai-agents" className={`${theme.text.secondary} hover:${theme.text.accent} transition-colors text-sm`}>
-                  AI Agents
+                <Link to="/mock-interviews" className={`${theme.text.secondary} hover:${theme.text.accent} transition-colors text-sm`}>
+                  Mock Interviews
                 </Link>
               </li>
               <li>
@@ -38,14 +38,14 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
+                <Link to="/practice" className={`${theme.text.secondary} hover:${theme.text.accent} transition-colors text-sm`}>
+                  Practice
+                </Link>
+              </li>
+              <li>
                 <a href="/#pricing" className={`${theme.text.secondary} hover:${theme.text.accent} transition-colors text-sm`}>
                   Pricing
                 </a>
-              </li>
-              <li>
-                <Link to="/apply" className={`${theme.text.secondary} hover:${theme.text.accent} transition-colors text-sm`}>
-                  Apply Now
-                </Link>
               </li>
               <li>
                 <Link to="/login" className={`${theme.text.secondary} hover:${theme.text.accent} transition-colors text-sm`}>

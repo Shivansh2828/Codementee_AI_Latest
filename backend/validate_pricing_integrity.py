@@ -79,7 +79,6 @@ async def validate_pricing_integrity():
                 issues_found = True
                 print(f"⚠️  Duplicate plan name found: '{name}' ({len(doc_ids)} instances)")
                 print(f"   Document IDs: {doc_ids}")
-                # Note: We don't auto-delete by name as names might be intentionally similar
         
         # Validate required fields
         required_fields = ['plan_id', 'name', 'price', 'duration_months']

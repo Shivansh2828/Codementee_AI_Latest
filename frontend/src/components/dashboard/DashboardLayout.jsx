@@ -3,12 +3,13 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useCurrency } from '../../contexts/CurrencyContext';
-import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus, DollarSign, FileText, MessageCircle, BarChart3, TrendingUp, ChevronDown, Bug, Briefcase, Target, Crown, Headphones, Search, Lock, GraduationCap } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus, DollarSign, FileText, MessageCircle, BarChart3, TrendingUp, ChevronDown, ChevronRight, Bug, Briefcase, Target, Crown, Headphones, Search, Lock, GraduationCap, Server, Code, Layers, Receipt } from 'lucide-react';
 import ThemeToggle from '../ui/ThemeToggle';
 import { Badge } from '../ui/badge';
 import BugReportModal from '../BugReportModal';
 import NotificationBell from '../NotificationBell';
 import api from '../../utils/api';
+import { sidebarConfig } from '../../data/navigationConfig';
 
 const DashboardLayout = ({ children, title }) => {
   const { user, logout } = useAuth();
@@ -20,7 +21,21 @@ const DashboardLayout = ({ children, title }) => {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [bugReportOpen, setBugReportOpen] = useState(false);
   const [starterPrice, setStarterPrice] = useState(null);
+  const [expandedSections, setExpandedSections] = useState({ learn: true, coaching: true, community: true });
   const dropdownRef = useRef(null);
+
+  // Map icon string names from navigationConfig to Lucide components
+  const iconMap = {
+    LayoutDashboard, GraduationCap, Server, Code, MessageSquare, Layers,
+    Target, FileText, Search, Headphones, CalendarPlus, Calendar,
+    Users, MessageCircle, Receipt,
+  };
+
+  const getIcon = (iconName) => iconMap[iconName] || LayoutDashboard;
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
   // Fetch starter plan price
   useEffect(() => {
@@ -80,6 +95,7 @@ const DashboardLayout = ({ children, title }) => {
         { path: '/admin/orders', label: 'Orders', icon: ShoppingCart },
         { path: '/admin/pricing', label: 'Pricing', icon: DollarSign },
         { path: '/admin/bookings', label: 'Bookings', icon: ClipboardList },
+        { path: '/admin/mentorship', label: 'Mentorship', icon: Users },
         { path: '/admin/resume-reviews', label: 'Resume Reviews', icon: FileText },
         { path: '/admin/payouts', label: 'Mentor Payouts', icon: DollarSign },
         { path: '/admin/companies', label: 'Companies', icon: Building2 },
@@ -105,6 +121,7 @@ const DashboardLayout = ({ children, title }) => {
         { path: '/mentor', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/mentor/slots', label: 'Manage Slots', icon: Clock },
         { path: '/mentor/bookings', label: 'My Bookings', icon: Calendar },
+        { path: '/mentor/mentorship', label: 'Mentorship Sessions', icon: Users },
         { path: '/mentor/mocks', label: 'My Sessions', icon: Calendar },
         { path: '/mentor/mentees', label: 'My Mentees', icon: Users },
         { path: '/mentor/payouts', label: 'My Payouts', icon: DollarSign },
@@ -141,37 +158,8 @@ const DashboardLayout = ({ children, title }) => {
         },
       ];
     } else {
-      // Check if user is free or paid
-      const isFreeUser = user?.status === 'Free' || !user?.plan_id;
-      
-      return [
-        { path: '/mentee', label: 'Dashboard', icon: LayoutDashboard },
-        { path: isFreeUser ? '/mentee/book' : '/mentee/slots', label: isFreeUser ? 'Upgrade Plan' : 'Book Interview', icon: CalendarPlus },
-        { path: '/mentee/mocks', label: 'My Interviews', icon: Calendar },
-        { path: '/mentee/feedbacks', label: 'My Feedbacks', icon: MessageSquare },
-        { path: '/mentee/resume-review', label: 'Resume Review', icon: FileText },
-        { path: '/mentee/bug-reports', label: 'Support & Help', icon: Headphones },
-        { 
-          label: 'AI Tools', 
-          icon: Search, 
-          isSection: true,
-          items: [
-            { path: '/mentee/job-search', label: 'AI Job Search', icon: Briefcase },
-            { path: '/mentee/referral-finder', label: 'Referral Finder', icon: Target },
-          ]
-        },
-        { path: '/mentee/community', label: 'Community', icon: MessageCircle },
-        { 
-          label: 'Courses', 
-          icon: GraduationCap, 
-          isSection: true,
-          items: [
-            { path: '/learn/system-design', label: 'System Design', icon: GraduationCap },
-            { path: '/learn/dsa-patterns', label: 'DSA Patterns', icon: GraduationCap },
-            { path: '/learn/behavioral', label: 'Behavioral', icon: GraduationCap },
-          ]
-        },
-      ];
+      // Mentee nav is now config-driven, rendered separately
+      return null;
     }
   };
 
@@ -213,7 +201,75 @@ const DashboardLayout = ({ children, title }) => {
           
           {/* Navigation - Scrollable */}
           <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
-            {navItems.map((item, index) => {
+            {navItems === null ? (
+              /* Config-driven mentee sidebar with collapsible sections */
+              sidebarConfig.mentee.map((item, index) => {
+                if (item.collapsible) {
+                  const SectionIcon = getIcon(item.icon);
+                  const isExpanded = expandedSections[item.section];
+                  const hasActiveChild = item.items.some(child => location.pathname === child.path);
+                  return (
+                    <div key={item.section} className="space-y-1">
+                      <button
+                        onClick={() => toggleSection(item.section)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                          hasActiveChild
+                            ? `${theme.text.primary} ${theme.bg.hover}`
+                            : `${theme.text.secondary} ${theme.bg.hover}`
+                        }`}
+                      >
+                        <SectionIcon size={20} />
+                        <span className="flex-1 text-left font-medium">{item.label}</span>
+                        <ChevronRight
+                          size={16}
+                          className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                        />
+                      </button>
+                      {isExpanded && item.items.map((child) => {
+                        const ChildIcon = getIcon(child.icon);
+                        const isActive = location.pathname === child.path;
+                        return (
+                          <Link
+                            key={child.path}
+                            to={child.path}
+                            onClick={() => setSidebarOpen(false)}
+                            className={`flex items-center gap-3 px-8 py-2 rounded-lg transition-all duration-200 ${
+                              isActive
+                                ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md'
+                                : `${theme.text.secondary} ${theme.bg.hover}`
+                            }`}
+                          >
+                            <ChildIcon size={18} />
+                            {child.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  );
+                } else {
+                  // Top-level non-collapsible item (e.g. Dashboard)
+                  const Icon = getIcon(item.icon);
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setSidebarOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                        isActive
+                          ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md'
+                          : `${theme.text.secondary} ${theme.bg.hover}`
+                      }`}
+                    >
+                      <Icon size={20} />
+                      {item.label}
+                    </Link>
+                  );
+                }
+              })
+            ) : (
+              /* Admin, mentor, agent_user — existing rendering */
+              navItems.map((item, index) => {
               if (item.isSection) {
                 return (
                   <div key={index} className="space-y-1">
@@ -291,7 +347,8 @@ const DashboardLayout = ({ children, title }) => {
                   </Link>
                 );
               }
-            })}
+            })
+            )}
           </nav>
 
           {/* Report Bug Button - Fixed at Bottom */}
@@ -422,6 +479,16 @@ const DashboardLayout = ({ children, title }) => {
                     <div className={`p-2 border-t ${theme.border.primary}`}>
                       {user?.role === 'mentee' && (
                         <>
+                          {/* Transactions link */}
+                          <Link 
+                            to="/mentee/transactions"
+                            onClick={() => setProfileDropdownOpen(false)}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg ${theme.bg.hover} ${theme.text.secondary} transition-colors w-full mb-1`}
+                          >
+                            <Receipt size={16} />
+                            <span className="text-sm">Transactions</span>
+                          </Link>
+
                           {/* Free User - Show Upgrade to Plans */}
                           {(user?.status === 'Free' || !user?.plan_id) && (
                             <Link 
@@ -464,8 +531,8 @@ const DashboardLayout = ({ children, title }) => {
                             </Link>
                           )}
                           
-                          {/* Elite User or Out of Quota - Buy Single Mock */}
-                          {(user?.plan_id === 'elite' || (user?.interview_quota_remaining === 0 && user?.plan_id)) && (
+                          {/* Out of Quota - Buy Single Mock */}
+                          {(user?.interview_quota_remaining === 0 && user?.plan_id) && (
                             <Link 
                               to="/mentee/book"
                               onClick={() => setProfileDropdownOpen(false)}

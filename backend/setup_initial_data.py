@@ -292,6 +292,7 @@ async def setup_initial_data():
             {
                 "plan_id": "starter",
                 "name": "Mock Starter",
+                "service_type": "mock_interview",
                 "price": 299900,  # ₹2,999 in paise
                 "price_inr": 299900,
                 "price_usd": 3600,  # $36 in cents
@@ -316,6 +317,7 @@ async def setup_initial_data():
             {
                 "plan_id": "pro",
                 "name": "Interview Pro",
+                "service_type": "mock_interview",
                 "price": 699900,  # ₹6,999 in paise
                 "price_inr": 699900,
                 "price_usd": 8400,  # $84 in cents
@@ -342,6 +344,7 @@ async def setup_initial_data():
             {
                 "plan_id": "elite",
                 "name": "Interview Elite",
+                "service_type": "mock_interview",
                 "price": 1499900,  # ₹14,999 in paise
                 "price_inr": 1499900,
                 "price_usd": 18000,  # $180 in cents
@@ -366,31 +369,9 @@ async def setup_initial_data():
             },
             # AI Agent Standalone Plans
             {
-                "plan_id": "agent_trial",
-                "name": "AI Agent Trial (1 Month)",
-                "price": 9900,  # ₹99 in paise
-                "price_inr": 9900,
-                "price_usd": 200,  # $2 in cents
-                "duration_months": 1,
-                "features": [
-                    "AI Job Search Agent",
-                    "AI Referral Finder",
-                    "Daily email digest",
-                    "LinkedIn referral drafts",
-                    "Resume parsing & scoring"
-                ],
-                "limits": {
-                    "mock_interviews": 0,
-                    "ai_job_search": True,
-                    "ai_referral_finder": True,
-                    "daily_job_digest": True
-                },
-                "is_active": True,
-                "display_order": 4
-            },
-            {
                 "plan_id": "agent_monthly",
-                "name": "AI Agent Monthly",
+                "name": "Monthly",
+                "service_type": "ai_agent",
                 "price": 19900,  # ₹199 in paise
                 "price_inr": 19900,
                 "price_usd": 400,  # $4 in cents
@@ -409,22 +390,46 @@ async def setup_initial_data():
                     "daily_job_digest": True
                 },
                 "is_active": True,
-                "display_order": 5
+                "display_order": 4
             },
             {
                 "plan_id": "agent_quarterly",
-                "name": "AI Agent Quarterly (3 Months)",
-                "price": 59900,  # ₹599 in paise
-                "price_inr": 59900,
-                "price_usd": 1000,  # $10 in cents
+                "name": "Quarterly",
+                "service_type": "ai_agent",
+                "price": 49900,  # ₹499 in paise
+                "price_inr": 49900,
+                "price_usd": 800,  # $8 in cents
                 "duration_months": 3,
                 "features": [
                     "AI Job Search Agent",
                     "AI Referral Finder",
                     "Daily email digest",
                     "LinkedIn referral drafts",
-                    "Resume parsing & scoring",
-                    "Save ₹98 (INR) or $2 (USD)"
+                    "Resume parsing & scoring"
+                ],
+                "limits": {
+                    "mock_interviews": 0,
+                    "ai_job_search": True,
+                    "ai_referral_finder": True,
+                    "daily_job_digest": True
+                },
+                "is_active": True,
+                "display_order": 5
+            },
+            {
+                "plan_id": "agent_yearly",
+                "name": "Yearly",
+                "service_type": "ai_agent",
+                "price": 149900,  # ₹1,499 in paise
+                "price_inr": 149900,
+                "price_usd": 2000,  # $20 in cents
+                "duration_months": 12,
+                "features": [
+                    "AI Job Search Agent",
+                    "AI Referral Finder",
+                    "Daily email digest",
+                    "LinkedIn referral drafts",
+                    "Resume parsing & scoring"
                 ],
                 "limits": {
                     "mock_interviews": 0,
@@ -434,6 +439,116 @@ async def setup_initial_data():
                 },
                 "is_active": True,
                 "display_order": 6
+            },
+            # Mentorship Plans
+            {
+                "plan_id": "mentorship_1m",
+                "name": "1 Month",
+                "service_type": "mentorship",
+                "price": 999900,  # ₹9,999 in paise
+                "price_inr": 999900,
+                "price_usd": 12000,  # $120 in cents
+                "duration_months": 1,
+                "features": [
+                    "4 sessions (1 hr each)",
+                    "Dedicated mentor",
+                    "Personalized study plan",
+                    "Chat support between sessions"
+                ],
+                "limits": {},
+                "is_active": True,
+                "display_order": 1,
+                "sessions_count": 4,
+                "session_duration_minutes": 60,
+                "discount_percent": 0
+            },
+            {
+                "plan_id": "mentorship_2m",
+                "name": "2 Months",
+                "service_type": "mentorship",
+                "price": 1799900,  # ₹17,999 in paise
+                "price_inr": 1799900,
+                "price_usd": 21600,  # $216 in cents
+                "duration_months": 2,
+                "features": [
+                    "8 sessions (1 hr each)",
+                    "Dedicated mentor",
+                    "Personalized study plan",
+                    "Chat support between sessions",
+                    "Resume review included"
+                ],
+                "limits": {},
+                "is_active": True,
+                "display_order": 2,
+                "sessions_count": 8,
+                "session_duration_minutes": 60,
+                "discount_percent": 10
+            },
+            {
+                "plan_id": "mentorship_3m",
+                "name": "3 Months",
+                "service_type": "mentorship",
+                "price": 2399900,  # ₹23,999 in paise
+                "price_inr": 2399900,
+                "price_usd": 28800,  # $288 in cents
+                "duration_months": 3,
+                "features": [
+                    "12 sessions (1 hr each)",
+                    "Dedicated mentor",
+                    "Personalized study plan",
+                    "Chat support between sessions",
+                    "Resume review included",
+                    "Priority scheduling"
+                ],
+                "limits": {},
+                "is_active": True,
+                "display_order": 3,
+                "sessions_count": 12,
+                "session_duration_minutes": 60,
+                "discount_percent": 20
+            },
+            # Resume Review Plans
+            {
+                "plan_id": "resume_email",
+                "name": "Review over Email",
+                "service_type": "resume_review",
+                "price": 149900,  # ₹1,499 in paise
+                "price_inr": 149900,
+                "price_usd": 1800,  # $18 in cents
+                "duration_months": 1,
+                "features": [
+                    "Detailed written feedback",
+                    "ATS compatibility check",
+                    "Formatting & structure review",
+                    "Delivered in 5 business days"
+                ],
+                "limits": {},
+                "is_active": True,
+                "display_order": 1,
+                "review_type": "email",
+                "delivery_timeframe": "5 business days"
+            },
+            {
+                "plan_id": "resume_call",
+                "name": "45-min Call",
+                "service_type": "resume_review",
+                "price": 299900,  # ₹2,999 in paise
+                "price_inr": 299900,
+                "price_usd": 3600,  # $36 in cents
+                "duration_months": 1,
+                "features": [
+                    "Live 1-on-1 video session",
+                    "Real-time resume walkthrough",
+                    "ATS compatibility check",
+                    "Personalized improvement plan",
+                    "Follow-up summary via email"
+                ],
+                "limits": {},
+                "is_active": True,
+                "display_order": 2,
+                "review_type": "call",
+                "delivery_timeframe": "3 business days",
+                "session_duration_minutes": 45
             }
         ]
         
@@ -444,24 +559,7 @@ async def setup_initial_data():
                     "id": str(uuid.uuid4()),
                     "plan_id": plan_data["plan_id"],
                     "name": plan_data["name"],
-                    "price": plan_data["price"],
-                    "price_inr": plan_data.get("price_inr", plan_data["price"]),
-                    "price_usd": plan_data.get("price_usd", int(plan_data["price"] / 83)),  # Fallback conversion
-                    "duration_months": plan_data["duration_months"],
-                    "features": plan_data["features"],
-                    "limits": plan_data["limits"],
-                    "is_active": plan_data["is_active"],
-                    "display_order": plan_data["display_order"],
-                    "currencies": ["INR", "USD"],
-                    "created_at": datetime.now(timezone.utc).isoformat(),
-                    "updated_at": datetime.now(timezone.utc).isoformat()
-                }
-                await db.pricing_plans.insert_one(plan_doc)
-                print(f"✅ Pricing plan created: {plan_data['name']} - ₹{plan_data['price']/100} / ${plan_data.get('price_usd', 0)/100}")
-            else:
-                # Update existing plans with new pricing
-                update_data = {
-                    "name": plan_data["name"],
+                    "service_type": plan_data.get("service_type", "mock_interview"),
                     "price": plan_data["price"],
                     "price_inr": plan_data.get("price_inr", plan_data["price"]),
                     "price_usd": plan_data.get("price_usd", int(plan_data["price"] / 83)),
@@ -471,13 +569,44 @@ async def setup_initial_data():
                     "is_active": plan_data["is_active"],
                     "display_order": plan_data["display_order"],
                     "currencies": ["INR", "USD"],
+                    # Mentorship-specific
+                    "sessions_count": plan_data.get("sessions_count"),
+                    "session_duration_minutes": plan_data.get("session_duration_minutes"),
+                    "discount_percent": plan_data.get("discount_percent"),
+                    # Resume review-specific
+                    "review_type": plan_data.get("review_type"),
+                    "delivery_timeframe": plan_data.get("delivery_timeframe"),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+                await db.pricing_plans.insert_one(plan_doc)
+                print(f"✅ Pricing plan created: {plan_data['name']} ({plan_data.get('service_type', 'mock_interview')}) - ₹{plan_data['price']/100} / ${plan_data.get('price_usd', 0)/100}")
+            else:
+                # Update existing plans with new pricing and service_type
+                update_data = {
+                    "name": plan_data["name"],
+                    "service_type": plan_data.get("service_type", "mock_interview"),
+                    "price": plan_data["price"],
+                    "price_inr": plan_data.get("price_inr", plan_data["price"]),
+                    "price_usd": plan_data.get("price_usd", int(plan_data["price"] / 83)),
+                    "duration_months": plan_data["duration_months"],
+                    "features": plan_data["features"],
+                    "limits": plan_data["limits"],
+                    "is_active": plan_data["is_active"],
+                    "display_order": plan_data["display_order"],
+                    "currencies": ["INR", "USD"],
+                    "sessions_count": plan_data.get("sessions_count"),
+                    "session_duration_minutes": plan_data.get("session_duration_minutes"),
+                    "discount_percent": plan_data.get("discount_percent"),
+                    "review_type": plan_data.get("review_type"),
+                    "delivery_timeframe": plan_data.get("delivery_timeframe"),
                     "updated_at": datetime.now(timezone.utc).isoformat()
                 }
                 await db.pricing_plans.update_one(
                     {"plan_id": plan_data["plan_id"]},
                     {"$set": update_data}
                 )
-                print(f"✅ Pricing plan updated: {plan_data['name']} - ₹{plan_data['price']/100} / ${plan_data.get('price_usd', 0)/100}")
+                print(f"✅ Pricing plan updated: {plan_data['name']} ({plan_data.get('service_type', 'mock_interview')}) - ₹{plan_data['price']/100} / ${plan_data.get('price_usd', 0)/100}")
         
         # Validate pricing integrity
         print("🔍 Validating pricing plan integrity...")

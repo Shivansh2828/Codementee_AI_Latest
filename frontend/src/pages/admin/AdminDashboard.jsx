@@ -334,10 +334,28 @@ const AdminDashboard = () => {
             
             <QuickActionCard
               title="Pricing Management"
-              description="Manage pricing plans and features"
+              description="Manage mock interview pricing plans"
               icon={Settings}
               to="/admin/pricing"
               color="from-pink-400 to-rose-500"
+            />
+            
+            <QuickActionCard
+              title="Mentorship Pricing"
+              description="Manage mentorship plans and pricing"
+              icon={Users}
+              to="/admin/pricing"
+              color="from-violet-400 to-purple-500"
+              badge="Mentorship"
+            />
+            
+            <QuickActionCard
+              title="Resume Review Pricing"
+              description="Manage resume review plans and pricing"
+              icon={FileText}
+              to="/admin/pricing"
+              color="from-teal-400 to-emerald-500"
+              badge="Resume Review"
             />
             
             <QuickActionCard
