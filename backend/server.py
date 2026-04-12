@@ -3273,7 +3273,7 @@ async def login(credentials: UserLogin):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     # Ensure user has quota fields (for users created before migration)
-    if "interview_quota_total" not in user:
+    if "interview_quota_total" not in user or (user.get("interview_quota_total", 0) == 0 and user.get("plan_id") in ("starter", "pro", "elite")):
         # Determine quota based on plan
         plan_configs = {
             "starter": {"quota": 1, "features": {
