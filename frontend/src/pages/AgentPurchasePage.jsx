@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { ArrowLeft, Loader2, Shield, CreditCard, Bot, CheckCircle } from 'lucide-react';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
+import CouponCodeInput from '../components/pricing/CouponCodeInput';
 import { toast } from 'sonner';
 import api from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,6 +19,7 @@ const AgentPurchasePage = () => {
   const [cashfreeLoaded, setCashfreeLoaded] = useState(false);
   const [agentPlans, setAgentPlans] = useState({});
   const [loadingPlans, setLoadingPlans] = useState(true);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
   const selectedPlanId = searchParams.get('plan') || 'agent_monthly';
 
   // Fetch agent plans from API
@@ -152,6 +154,7 @@ const AgentPurchasePage = () => {
         current_role: '',
         target_role: '',
         is_upgrade: isAuthenticated,
+        coupon_code: appliedCoupon?.code || undefined,
       });
 
       const orderData = orderRes.data;
@@ -305,6 +308,17 @@ const AgentPurchasePage = () => {
                 <div className="bg-[#06b6d4]/10 rounded-xl border border-[#06b6d4]/30 p-4 text-center">
                   <p className="text-gray-400 text-sm">Purchasing as <span className="text-white font-medium">{user?.email}</span></p>
                 </div>
+              )}
+
+              {/* Coupon Code */}
+              {currentPlan && (
+                <CouponCodeInput
+                  serviceType="mock_interview"
+                  orderAmount={currentPlan.price}
+                  currency={currency}
+                  onCouponApplied={(result) => setAppliedCoupon(result)}
+                  onCouponRemoved={() => setAppliedCoupon(null)}
+                />
               )}
 
               {/* Order Summary */}

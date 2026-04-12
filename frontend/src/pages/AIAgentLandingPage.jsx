@@ -44,36 +44,28 @@ const AIAgentLandingPage = () => {
   
   const fetchAgentPricing = async () => {
     try {
-      const response = await api.get(`/pricing-plans?currency=${currency}`);
+      const response = await api.get(`/pricing-plans?currency=${currency}&service_type=ai_agent`);
       const plans = response.data;
       
-      // Map agent plans (prices already in paise/cents, formatPrice will handle division)
       const agentPlanMap = {};
       plans.forEach(plan => {
-        if (plan.plan_id === 'agent_trial') {
-          agentPlanMap.trial = {
-            price: plan.price,
-            name: plan.name,
-            features: plan.features
-          };
-        } else if (plan.plan_id === 'agent_monthly') {
-          agentPlanMap.monthly = {
-            price: plan.price,
-            name: plan.name,
-            features: plan.features
-          };
+        if (plan.plan_id === 'agent_monthly') {
+          agentPlanMap.monthly = { price: plan.price, name: plan.name, features: plan.features };
         } else if (plan.plan_id === 'agent_quarterly') {
-          agentPlanMap.quarterly = {
-            price: plan.price,
-            name: plan.name,
-            features: plan.features
-          };
+          agentPlanMap.quarterly = { price: plan.price, name: plan.name, features: plan.features };
+        } else if (plan.plan_id === 'agent_yearly') {
+          agentPlanMap.yearly = { price: plan.price, name: plan.name, features: plan.features };
         }
       });
       
-      // Calculate savings dynamically: 3 × monthly - quarterly
+      // Calculate savings dynamically
       if (agentPlanMap.monthly && agentPlanMap.quarterly) {
         agentPlanMap.quarterly.savings = (agentPlanMap.monthly.price * 3) - agentPlanMap.quarterly.price;
+        agentPlanMap.quarterly.savePercent = Math.round(((agentPlanMap.monthly.price * 3 - agentPlanMap.quarterly.price) / (agentPlanMap.monthly.price * 3)) * 100);
+      }
+      if (agentPlanMap.monthly && agentPlanMap.yearly) {
+        agentPlanMap.yearly.savings = (agentPlanMap.monthly.price * 12) - agentPlanMap.yearly.price;
+        agentPlanMap.yearly.savePercent = Math.round(((agentPlanMap.monthly.price * 12 - agentPlanMap.yearly.price) / (agentPlanMap.monthly.price * 12)) * 100);
       }
       
       setAgentPlans(agentPlanMap);
@@ -85,7 +77,6 @@ const AIAgentLandingPage = () => {
     }
   };
   
-  // Get price based on plan
   const getPrice = (plan) => {
     return agentPlans[plan]?.price || 0;
   };
@@ -101,7 +92,7 @@ const AIAgentLandingPage = () => {
     },
     {
       question: 'Do I need a mentorship plan to use AI Agents?',
-      answer: `No. AI Agents are available as a standalone product starting at ${formatPrice(getPrice('trial'))}/month. However, if you have an Elite mentorship plan, both agents are included for free.`
+      answer: `No. AI Agents are available as a standalone product starting at ${formatPrice(getPrice('monthly'))}/month. However, if you have an Elite mentorship plan, both agents are included for free.`
     },
     {
       question: 'What job boards does it search?',
@@ -167,11 +158,11 @@ const AIAgentLandingPage = () => {
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
                 <Link
-                  to="/agent-purchase?plan=agent_trial"
+                  to="/agent-purchase?plan=agent_monthly"
                   className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-bold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-lg"
                 >
                   <Zap className="w-5 h-5" />
-                  Start for {formatPrice(getPrice('trial'))}/month
+                  Start for {formatPrice(getPrice('monthly'))}/month
                 </Link>
                 <a
                   href="#pricing"
@@ -368,94 +359,81 @@ const AIAgentLandingPage = () => {
                 Simple, <span className="text-[#06b6d4]">Affordable</span> Pricing
               </h2>
               <p className={`text-lg ${theme.text.secondary} max-w-lg mx-auto`}>
-                Get both AI agents — job search + referral finder. No hidden fees.
+                One product. Pick your billing cycle. Longer = cheaper.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12">
-              {/* Trial */}
-              <div className={`rounded-2xl p-7 ${theme.bg.card} ${theme.border.primary} border hover:border-[#06b6d4]/40 transition-all duration-300`}>
-                <div className="mb-5">
-                  <span className="text-xs font-semibold text-[#06b6d4] uppercase tracking-wider">Try it out</span>
-                  <h4 className={`text-xl font-bold ${theme.text.primary} mt-1`}>First Month</h4>
-                </div>
-                <div className="flex items-baseline gap-1 mb-5">
-                  <span className={`text-5xl font-bold ${theme.text.primary}`}>{formatPrice(getPrice('trial'))}</span>
-                  <span className={`${theme.text.muted} text-sm`}>/month</span>
-                </div>
-                <ul className="space-y-3 mb-7">
-                  {['AI Job Search Agent', 'AI Referral Finder', 'Daily email digest', 'LinkedIn referral drafts', 'Resume parsing & scoring'].map((f, i) => (
-                    <li key={i} className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-[#06b6d4] shrink-0" />
-                      <span className={`text-sm ${theme.text.secondary}`}>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  to="/agent-purchase?plan=agent_trial"
-                  className={`block w-full text-center px-4 py-3.5 rounded-xl font-semibold transition-all duration-200 ${theme.bg.secondary} ${theme.text.primary} border ${theme.border.primary} hover:border-[#06b6d4]/50`}
-                >
-                  Start for {formatPrice(getPrice('trial'))}
-                </Link>
+            {/* Features — shown once */}
+            <div className="max-w-md mx-auto mb-10">
+              <p className={`text-xs font-semibold ${theme.text.muted} uppercase tracking-wider mb-4 text-center`}>Everything included</p>
+              <div className="grid grid-cols-1 gap-2.5">
+                {['AI Job Search Agent — daily automated search', 'AI Referral Finder — LinkedIn contacts + message drafts', 'Daily email digest with scored matches', 'Resume parsing & smart scoring (0-100)', 'Fake listing detection & filtering'].map((f, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <CheckCircle className="w-4 h-4 text-[#06b6d4] shrink-0" />
+                    <span className={`text-sm ${theme.text.secondary}`}>{f}</span>
+                  </div>
+                ))}
               </div>
+            </div>
 
-              {/* Monthly — Popular */}
-              <div className="rounded-2xl p-7 bg-gradient-to-b from-[#06b6d4]/10 to-transparent border-2 border-[#06b6d4]/40 relative">
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="px-4 py-1 bg-[#06b6d4] text-white text-xs font-bold rounded-full shadow-lg">Most Popular</span>
+            {/* Duration cards — price only, no repeated features */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto mb-12">
+              {/* Monthly */}
+              <div className={`rounded-2xl p-7 ${theme.bg.card} ${theme.border.primary} border hover:border-[#06b6d4]/40 transition-all duration-300 text-center`}>
+                <h4 className={`text-lg font-bold ${theme.text.primary} mb-1`}>Monthly</h4>
+                <p className={`text-xs ${theme.text.muted} mb-5`}>Billed every month</p>
+                <div className="flex items-baseline justify-center gap-1 mb-6">
+                  <span className={`text-4xl font-bold ${theme.text.primary}`}>{formatPrice(getPrice('monthly'))}</span>
+                  <span className={`${theme.text.muted} text-sm`}>/mo</span>
                 </div>
-                <div className="mb-5">
-                  <span className="text-xs font-semibold text-[#06b6d4] uppercase tracking-wider">Monthly</span>
-                  <h4 className={`text-xl font-bold ${theme.text.primary} mt-1`}>Regular</h4>
-                </div>
-                <div className="flex items-baseline gap-1 mb-5">
-                  <span className={`text-5xl font-bold ${theme.text.primary}`}>{formatPrice(getPrice('monthly'))}</span>
-                  <span className={`${theme.text.muted} text-sm`}>/month</span>
-                </div>
-                <ul className="space-y-3 mb-7">
-                  {['AI Job Search Agent', 'AI Referral Finder', 'Daily email digest', 'LinkedIn referral drafts', 'Resume parsing & scoring'].map((f, i) => (
-                    <li key={i} className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-[#06b6d4] shrink-0" />
-                      <span className={`text-sm ${theme.text.secondary}`}>{f}</span>
-                    </li>
-                  ))}
-                </ul>
                 <Link
                   to="/agent-purchase?plan=agent_monthly"
-                  className="block w-full text-center px-4 py-3.5 rounded-xl font-semibold bg-[#06b6d4] text-white hover:bg-[#0891b2] transition-all duration-200 shadow-lg"
+                  className={`block w-full text-center px-4 py-3 rounded-xl font-semibold transition-all duration-200 ${theme.bg.secondary} ${theme.text.primary} border ${theme.border.primary} hover:border-[#06b6d4]/50`}
                 >
                   Get Started
                 </Link>
               </div>
 
-              {/* Quarterly */}
-              <div className={`rounded-2xl p-7 ${theme.bg.card} ${theme.border.primary} border hover:border-[#06b6d4]/40 transition-all duration-300`}>
-                <div className="mb-5">
-                  <span className="text-xs font-semibold text-green-500 uppercase tracking-wider">
-                    Save {formatPrice(agentPlans.quarterly?.savings || 0)}
-                  </span>
-                  <h4 className={`text-xl font-bold ${theme.text.primary} mt-1`}>3 Months</h4>
+              {/* Quarterly — Popular */}
+              <div className="rounded-2xl p-7 bg-gradient-to-b from-[#06b6d4]/10 to-transparent border-2 border-[#06b6d4]/40 relative text-center">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="px-4 py-1 bg-[#06b6d4] text-white text-xs font-bold rounded-full shadow-lg">Best Value</span>
                 </div>
-                <div className="flex items-baseline gap-1 mb-1">
-                  <span className={`text-5xl font-bold ${theme.text.primary}`}>{formatPrice(getPrice('quarterly'))}</span>
-                  <span className={`${theme.text.muted} text-sm`}>/3 months</span>
+                <h4 className={`text-lg font-bold ${theme.text.primary} mb-1`}>Quarterly</h4>
+                <p className={`text-xs ${theme.text.muted} mb-5`}>Billed every 3 months</p>
+                <div className="flex items-baseline justify-center gap-1 mb-1">
+                  <span className={`text-4xl font-bold ${theme.text.primary}`}>{formatPrice(getPrice('quarterly'))}</span>
+                  <span className={`${theme.text.muted} text-sm`}>/3 mo</span>
                 </div>
-                <p className={`text-xs ${theme.text.muted} mb-5`}>
-                  ~{formatPrice(Math.round(getPrice('quarterly') / 3))}/month
-                </p>
-                <ul className="space-y-3 mb-7">
-                  {(agentPlans.quarterly?.features || ['AI Job Search Agent', 'AI Referral Finder', 'Daily email digest', 'LinkedIn referral drafts', 'Resume parsing & scoring']).map((f, i) => (
-                    <li key={i} className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-[#06b6d4] shrink-0" />
-                      <span className={`text-sm ${theme.text.secondary}`}>{f}</span>
-                    </li>
-                  ))}
-                </ul>
+                <p className={`text-xs mb-1 ${theme.text.muted}`}>~{formatPrice(Math.round(getPrice('quarterly') / 3))}/mo</p>
+                {agentPlans.quarterly?.savePercent > 0 && (
+                  <p className="text-xs font-semibold text-green-500 mb-5">Save {agentPlans.quarterly.savePercent}%</p>
+                )}
                 <Link
                   to="/agent-purchase?plan=agent_quarterly"
-                  className={`block w-full text-center px-4 py-3.5 rounded-xl font-semibold transition-all duration-200 ${theme.bg.secondary} ${theme.text.primary} border ${theme.border.primary} hover:border-[#06b6d4]/50`}
+                  className="block w-full text-center px-4 py-3 rounded-xl font-semibold bg-[#06b6d4] text-white hover:bg-[#0891b2] transition-all duration-200 shadow-lg"
                 >
-                  Save with Quarterly
+                  Get Quarterly
+                </Link>
+              </div>
+
+              {/* Yearly */}
+              <div className={`rounded-2xl p-7 ${theme.bg.card} ${theme.border.primary} border hover:border-[#06b6d4]/40 transition-all duration-300 text-center`}>
+                <h4 className={`text-lg font-bold ${theme.text.primary} mb-1`}>Yearly</h4>
+                <p className={`text-xs ${theme.text.muted} mb-5`}>Billed annually</p>
+                <div className="flex items-baseline justify-center gap-1 mb-1">
+                  <span className={`text-4xl font-bold ${theme.text.primary}`}>{formatPrice(getPrice('yearly'))}</span>
+                  <span className={`${theme.text.muted} text-sm`}>/yr</span>
+                </div>
+                <p className={`text-xs mb-1 ${theme.text.muted}`}>~{formatPrice(Math.round(getPrice('yearly') / 12))}/mo</p>
+                {agentPlans.yearly?.savePercent > 0 && (
+                  <p className="text-xs font-semibold text-green-500 mb-5">Save {agentPlans.yearly.savePercent}%</p>
+                )}
+                <Link
+                  to="/agent-purchase?plan=agent_yearly"
+                  className={`block w-full text-center px-4 py-3 rounded-xl font-semibold transition-all duration-200 ${theme.bg.secondary} ${theme.text.primary} border ${theme.border.primary} hover:border-[#06b6d4]/50`}
+                >
+                  Get Yearly
                 </Link>
               </div>
             </div>
@@ -513,11 +491,11 @@ const AIAgentLandingPage = () => {
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Link
-                  to="/agent-purchase?plan=agent_trial"
+                  to="/agent-purchase?plan=agent_monthly"
                   className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-bold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all duration-300 shadow-lg text-lg"
                 >
                   <Zap className="w-5 h-5" />
-                  Try for {formatPrice(getPrice('trial'))}
+                  Start for {formatPrice(getPrice('monthly'))}/mo
                 </Link>
                 <Link
                   to="/register"

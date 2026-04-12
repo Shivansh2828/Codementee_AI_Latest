@@ -551,17 +551,30 @@ const MenteeResumeReview = () => {
             <CardContent className="p-8 text-center">
               <AlertCircle className={`w-16 h-16 ${theme.text.muted} mx-auto mb-4`} />
               <h3 className={`${theme.text.primary} text-xl font-bold mb-2`}>
-                No Reviews Remaining
+                {user?.plan_id ? 'No Reviews Remaining' : 'Resume Review Not Included'}
               </h3>
-              <p className={`${theme.text.secondary} mb-4`}>
-                You've used all your resume reviews for this plan period.
+              <p className={`${theme.text.secondary} mb-6`}>
+                {user?.plan_id 
+                  ? "You've used all your resume reviews for this plan."
+                  : "You don't have a plan that includes resume reviews yet."
+                }
               </p>
-              <Button
-                onClick={() => window.location.href = '/mentee/pricing'}
-                className="bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white"
-              >
-                Upgrade Plan
-              </Button>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Button
+                  onClick={() => window.location.href = '/resume-review'}
+                  variant="outline"
+                  className={`${theme.border.primary} border ${theme.text.primary} hover:bg-[#06b6d4]/10`}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Buy Resume Review
+                </Button>
+                <Button
+                  onClick={() => window.location.href = '/mentee/book'}
+                  className="bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white"
+                >
+                  Upgrade to a Tier Plan
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
