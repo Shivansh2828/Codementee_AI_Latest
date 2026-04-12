@@ -8,9 +8,9 @@ import { useAuth } from '../../contexts/AuthContext';
 import { SECTIONS, TOPICS, COURSE_META, getTopicAccess } from '../../data/systemDesignCourse';
 
 const difficultyColor = {
-  Beginner: 'text-green-400',
-  Intermediate: 'text-yellow-400',
-  Advanced: 'text-red-400',
+  Beginner: 'text-[var(--green)]',
+  Intermediate: 'text-[var(--yellow)]',
+  Advanced: 'text-[var(--red)]',
 };
 
 const sectionBorderColor = {
@@ -23,18 +23,18 @@ const sectionBorderColor = {
 };
 
 const sectionBadgeColor = {
-  cyan: 'bg-cyan-500/10 text-cyan-400',
-  blue: 'bg-blue-500/10 text-blue-400',
-  purple: 'bg-purple-500/10 text-purple-400',
-  green: 'bg-green-500/10 text-green-400',
-  orange: 'bg-orange-500/10 text-orange-400',
-  red: 'bg-red-500/10 text-red-400',
+  cyan: 'bg-[var(--cyan-bg)] text-[var(--cyan)]',
+  blue: 'bg-[var(--blue-bg)] text-[var(--blue)]',
+  purple: 'bg-[var(--purple-bg)] text-[var(--purple)]',
+  green: 'bg-[var(--green-bg)] text-[var(--green)]',
+  orange: 'bg-[var(--orange-bg)] text-[var(--orange)]',
+  red: 'bg-[var(--red-bg)] text-[var(--red)]',
 };
 
 const accessBadgeMap = {
   free: null,
-  pro: { label: 'Pro', color: 'bg-blue-500/20 text-blue-400' },
-  elite: { label: 'Elite', color: 'bg-purple-500/20 text-purple-400' },
+  pro: { label: 'Pro', color: 'bg-[var(--blue-bg)] text-[var(--blue)]' },
+  elite: { label: 'Elite', color: 'bg-[var(--purple-bg)] text-[var(--purple)]' },
 };
 
 const SystemDesignIndex = () => {
@@ -151,10 +151,10 @@ const SystemDesignIndex = () => {
                                 {topic.title}
                               </p>
                               {access === 'preview' && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-semibold shrink-0">Preview</span>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--yellow-bg)] text-[var(--yellow)] font-semibold shrink-0">Preview</span>
                               )}
                               {topic.comingSoon && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-500/20 text-gray-400 font-semibold shrink-0">Coming Soon</span>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-tertiary)] text-[var(--text-muted)] font-semibold shrink-0">Coming Soon</span>
                               )}
                             </div>
                             <div className="flex items-center gap-2 mt-1">

@@ -10,17 +10,17 @@ import { getCompaniesForProblem, getAllCompanies } from '../../data/companyTags'
 import api from '../../utils/api';
 
 const diffColors = {
-  Easy: 'bg-green-500/20 text-green-400',
-  Medium: 'bg-yellow-500/20 text-yellow-400',
-  Hard: 'bg-red-500/20 text-red-400',
+  Easy: 'bg-[var(--green-bg)] text-[var(--green)]',
+  Medium: 'bg-[var(--yellow-bg)] text-[var(--yellow)]',
+  Hard: 'bg-[var(--red-bg)] text-[var(--red)]',
 };
 const patternColors = {
-  cyan: 'border-cyan-500/30', blue: 'border-blue-500/30', green: 'border-green-500/30',
-  purple: 'border-purple-500/30', orange: 'border-orange-500/30', red: 'border-red-500/30',
+  cyan: 'border-[var(--cyan-border)]', blue: 'border-[var(--blue-border)]', green: 'border-[var(--green-border)]',
+  purple: 'border-[var(--purple-border)]', orange: 'border-[var(--orange-border)]', red: 'border-[var(--red-border)]',
 };
 const patternAccent = {
-  cyan: 'text-cyan-400', blue: 'text-blue-400', green: 'text-green-400',
-  purple: 'text-purple-400', orange: 'text-orange-400', red: 'text-red-400',
+  cyan: 'text-[var(--cyan)]', blue: 'text-[var(--blue)]', green: 'text-[var(--green)]',
+  purple: 'text-[var(--purple)]', orange: 'text-[var(--orange)]', red: 'text-[var(--red)]',
 };
 
 // ── Progress Hook ────────────────────────────────────────────────────────────
@@ -113,7 +113,7 @@ const PatternCard = ({ pattern, theme, completed, onToggle, companyFilter, diffF
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className={`font-semibold ${theme.text.primary}`}>{pattern.title}</h3>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${pattern.difficulty.includes('Hard') ? 'bg-red-500/20 text-red-400' : pattern.difficulty.includes('Medium') ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}`}>{pattern.difficulty}</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${pattern.difficulty.includes('Hard') ? 'bg-[var(--red-bg)] text-[var(--red)]' : pattern.difficulty.includes('Medium') ? 'bg-[var(--yellow-bg)] text-[var(--yellow)]' : 'bg-[var(--green-bg)] text-[var(--green)]'}`}>{pattern.difficulty}</span>
             <span className={`text-xs ${theme.text.muted}`}>{completedCount}/{totalCount}</span>
           </div>
           <p className={`text-sm ${theme.text.muted} mt-1 line-clamp-1`}>{pattern.description}</p>
@@ -186,15 +186,15 @@ const DSAPatternsPage = () => {
 
           {/* Hero */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/30 mb-6">
-              <Zap className="w-4 h-4 text-green-400" />
-              <span className="text-sm font-semibold text-green-400">100% Free — Track Your Progress</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--green-bg)] border border-[var(--green-border)] mb-6">
+              <Zap className="w-4 h-4 text-[var(--green)]" />
+              <span className="text-sm font-semibold text-[var(--green)]">100% Free — Track Your Progress</span>
             </div>
             <h1 className={`text-4xl md:text-5xl font-bold ${theme.text.primary} mb-4`}>{DSA_META.title}</h1>
             <p className={`text-lg ${theme.text.secondary} max-w-2xl mx-auto mb-6`}>{DSA_META.subtitle}</p>
             <div className="flex flex-wrap items-center justify-center gap-6 text-sm">
               <div className={`flex items-center gap-2 ${theme.text.muted}`}><BookOpen className="w-4 h-4 text-[#06b6d4]" /><span>{DSA_PATTERNS.length} patterns</span></div>
-              <div className={`flex items-center gap-2 ${theme.text.muted}`}><CheckCircle className="w-4 h-4 text-green-400" /><span>{totalCompleted}/{totalProblems} solved</span></div>
+              <div className={`flex items-center gap-2 ${theme.text.muted}`}><CheckCircle className="w-4 h-4 text-[var(--green)]" /><span>{totalCompleted}/{totalProblems} solved</span></div>
             </div>
           </div>
 
@@ -202,7 +202,7 @@ const DSAPatternsPage = () => {
           <div className={`${theme.bg.card} ${theme.border.primary} border rounded-2xl p-5 mb-6`}>
             <div className="flex items-center justify-between mb-2">
               <span className={`text-sm font-semibold ${theme.text.primary}`}>Overall Progress</span>
-              <span className={`text-sm font-bold ${overallProgress === 100 ? 'text-green-400' : 'text-[#06b6d4]'}`}>{overallProgress}%</span>
+              <span className={`text-sm font-bold ${overallProgress === 100 ? 'text-[var(--green)]' : 'text-[var(--accent)]'}`}>{overallProgress}%</span>
             </div>
             <div className={`h-2.5 rounded-full ${theme.bg.secondary} overflow-hidden`}>
               <div className={`h-full rounded-full transition-all duration-700 ${overallProgress === 100 ? 'bg-green-500' : 'bg-gradient-to-r from-[#06b6d4] to-[#0891b2]'}`} style={{ width: `${overallProgress}%` }} />
@@ -235,7 +235,7 @@ const DSAPatternsPage = () => {
                   </span>
                 )}
                 {(companyFilter || diffFilter) && (
-                  <button onClick={() => { setCompanyFilter(''); setDiffFilter(''); }} className={`text-xs ${theme.text.muted} hover:text-red-400 transition-colors`}>
+                  <button onClick={() => { setCompanyFilter(''); setDiffFilter(''); }} className={`text-xs ${theme.text.muted} hover:text-[var(--red)] transition-colors`}>
                     Clear filters
                   </button>
                 )}

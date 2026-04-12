@@ -7,12 +7,12 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { BEHAVIORAL_CATEGORIES, BEHAVIORAL_META, STAR_FRAMEWORK } from '../../data/behavioralQuestions';
 
 const colorMap = {
-  cyan: 'border-cyan-500/30', blue: 'border-blue-500/30', green: 'border-green-500/30',
-  purple: 'border-purple-500/30', orange: 'border-orange-500/30', red: 'border-red-500/30',
+  cyan: 'border-[var(--cyan-border)]', blue: 'border-[var(--blue-border)]', green: 'border-[var(--green-border)]',
+  purple: 'border-[var(--purple-border)]', orange: 'border-[var(--orange-border)]', red: 'border-[var(--red-border)]',
 };
 const accentMap = {
-  cyan: 'text-cyan-400', blue: 'text-blue-400', green: 'text-green-400',
-  purple: 'text-purple-400', orange: 'text-orange-400', red: 'text-red-400',
+  cyan: 'text-[var(--cyan)]', blue: 'text-[var(--blue)]', green: 'text-[var(--green)]',
+  purple: 'text-[var(--purple)]', orange: 'text-[var(--orange)]', red: 'text-[var(--red)]',
 };
 
 const QuestionItem = ({ question, theme }) => {
@@ -26,7 +26,7 @@ const QuestionItem = ({ question, theme }) => {
         <MessageSquare className={`w-4 h-4 ${theme.text.muted} mt-0.5 shrink-0`} />
         <span className={`text-sm ${theme.text.primary} flex-1`}>
           {question.q}
-          {question.example && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 font-semibold align-middle">Example</span>}
+          {question.example && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-[var(--green-bg)] text-[var(--green)] font-semibold align-middle">Example</span>}
         </span>
         {showTip
           ? <ChevronDown className={`w-4 h-4 text-[#06b6d4] shrink-0 mt-0.5`} />
@@ -41,13 +41,13 @@ const QuestionItem = ({ question, theme }) => {
           </div>
           {question.example && (
             <div className={`p-4 rounded-xl ${theme.bg.card} border ${theme.border.primary}`}>
-              <p className="text-xs font-semibold text-green-400 uppercase tracking-wider mb-3">Example STAR Answer</p>
+              <p className="text-xs font-semibold text-[var(--green)] uppercase tracking-wider mb-3">Example STAR Answer</p>
               <div className="space-y-3">
                 {[
-                  { letter: 'S', label: 'Situation', text: question.example.s, color: 'text-cyan-400 bg-cyan-500/10' },
-                  { letter: 'T', label: 'Task', text: question.example.t, color: 'text-blue-400 bg-blue-500/10' },
-                  { letter: 'A', label: 'Action', text: question.example.a, color: 'text-purple-400 bg-purple-500/10' },
-                  { letter: 'R', label: 'Result', text: question.example.r, color: 'text-green-400 bg-green-500/10' },
+                  { letter: 'S', label: 'Situation', text: question.example.s, color: 'text-[var(--cyan)] bg-[var(--cyan-bg)]' },
+                  { letter: 'T', label: 'Task', text: question.example.t, color: 'text-[var(--blue)] bg-[var(--blue-bg)]' },
+                  { letter: 'A', label: 'Action', text: question.example.a, color: 'text-[var(--purple)] bg-[var(--purple-bg)]' },
+                  { letter: 'R', label: 'Result', text: question.example.r, color: 'text-[var(--green)] bg-[var(--green-bg)]' },
                 ].map((step) => (
                   <div key={step.letter} className="flex items-start gap-3">
                     <div className={`w-7 h-7 rounded-full ${step.color} flex items-center justify-center shrink-0 mt-0.5`}>
@@ -114,9 +114,9 @@ const BehavioralPrepPage = () => {
 
           {/* Hero */}
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/30 mb-6">
-              <Zap className="w-4 h-4 text-green-400" />
-              <span className="text-sm font-semibold text-green-400">100% Free — No Login Required</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--green-bg)] border border-[var(--green-border)] mb-6">
+              <Zap className="w-4 h-4 text-[var(--green)]" />
+              <span className="text-sm font-semibold text-[var(--green)]">100% Free — No Login Required</span>
             </div>
             <h1 className={`text-4xl md:text-5xl font-bold ${theme.text.primary} mb-4`}>{BEHAVIORAL_META.title}</h1>
             <p className={`text-lg ${theme.text.secondary} max-w-2xl mx-auto mb-6`}>{BEHAVIORAL_META.subtitle}</p>
@@ -126,11 +126,11 @@ const BehavioralPrepPage = () => {
                 <span>{BEHAVIORAL_META.totalCategories} categories</span>
               </div>
               <div className={`flex items-center gap-2 ${theme.text.muted}`}>
-                <MessageSquare className="w-4 h-4 text-purple-400" />
+                <MessageSquare className="w-4 h-4 text-[var(--purple)]" />
                 <span>{BEHAVIORAL_META.totalQuestions}+ questions</span>
               </div>
               <div className={`flex items-center gap-2 ${theme.text.muted}`}>
-                <Clock className="w-4 h-4 text-green-400" />
+                <Clock className="w-4 h-4 text-[var(--green)]" />
                 <span>Tips for every question</span>
               </div>
             </div>

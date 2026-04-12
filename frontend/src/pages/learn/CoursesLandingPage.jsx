@@ -50,10 +50,10 @@ const COURSES = [
 ];
 
 const colorMap = {
-  cyan:   { border: 'border-cyan-500/30 hover:border-cyan-500/60', badge: 'bg-cyan-500/10 text-cyan-400', tag: 'bg-cyan-500/10 text-cyan-400' },
-  green:  { border: 'border-green-500/30 hover:border-green-500/60', badge: 'bg-green-500/10 text-green-400', tag: 'bg-green-500/10 text-green-400' },
-  purple: { border: 'border-purple-500/30 hover:border-purple-500/60', badge: 'bg-purple-500/10 text-purple-400', tag: 'bg-purple-500/10 text-purple-400' },
-  orange: { border: 'border-orange-500/30 hover:border-orange-500/60', badge: 'bg-orange-500/10 text-orange-400', tag: 'bg-orange-500/10 text-orange-400' },
+  cyan:   { border: 'border-[var(--cyan-border)] hover:border-[var(--cyan)]', badge: 'bg-[var(--cyan-bg)] text-[var(--cyan)]', tag: 'bg-[var(--cyan-bg)] text-[var(--cyan)]' },
+  green:  { border: 'border-[var(--green-border)] hover:border-[var(--green)]', badge: 'bg-[var(--green-bg)] text-[var(--green)]', tag: 'bg-[var(--green-bg)] text-[var(--green)]' },
+  purple: { border: 'border-[var(--purple-border)] hover:border-[var(--purple)]', badge: 'bg-[var(--purple-bg)] text-[var(--purple)]', tag: 'bg-[var(--purple-bg)] text-[var(--purple)]' },
+  orange: { border: 'border-[var(--orange-border)] hover:border-[var(--orange)]', badge: 'bg-[var(--orange-bg)] text-[var(--orange)]', tag: 'bg-[var(--orange-bg)] text-[var(--orange)]' },
 };
 
 const CourseCard = ({ course, theme }) => {
@@ -75,7 +75,7 @@ const CourseCard = ({ course, theme }) => {
                 {course.title}
               </h3>
               {course.comingSoon && (
-                <span className="text-xs px-2 py-1 rounded-full bg-gray-500/20 text-gray-400 font-semibold">Coming Soon</span>
+                <span className="text-xs px-2 py-1 rounded-full bg-[var(--bg-tertiary)] text-[var(--text-muted)] font-semibold">Coming Soon</span>
               )}
             </div>
             <p className={`text-sm ${theme.text.muted}`}>{course.subtitle}</p>
@@ -105,8 +105,8 @@ const CourseCard = ({ course, theme }) => {
 
         {/* Access badge */}
         <div className="flex items-center gap-2 mb-5">
-          <CheckCircle className={`w-4 h-4 ${course.access.includes('Free') ? 'text-green-400' : 'text-[#06b6d4]'}`} />
-          <span className={`text-sm font-medium ${course.access.includes('Free') ? 'text-green-400' : 'text-[#06b6d4]'}`}>
+          <CheckCircle className={`w-4 h-4 ${course.access.includes('Free') ? 'text-[var(--green)]' : 'text-[var(--accent)]'}`} />
+          <span className={`text-sm font-medium ${course.access.includes('Free') ? 'text-[var(--green)]' : 'text-[var(--accent)]'}`}>
             {course.access}
           </span>
         </div>
@@ -159,11 +159,11 @@ const CoursesLandingPage = () => {
                   <span>{COURSES.filter(c => !c.comingSoon).length} courses live</span>
                 </div>
                 <div className={`flex items-center gap-2 ${theme.text.muted}`}>
-                  <Users className="w-4 h-4 text-green-400" />
+                  <Users className="w-4 h-4 text-[var(--green)]" />
                   <span>Free to start</span>
                 </div>
                 <div className={`flex items-center gap-2 ${theme.text.muted}`}>
-                  <Clock className="w-4 h-4 text-purple-400" />
+                  <Clock className="w-4 h-4 text-[var(--purple)]" />
                   <span>Self-paced learning</span>
                 </div>
               </div>
