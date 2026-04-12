@@ -6,6 +6,7 @@ import Footer from '../../components/layout/Footer';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getTopicBySlug, getNextTopic, getPrevTopic, TOPICS, SECTIONS, getTopicAccess } from '../../data/systemDesignCourse';
 import { ANIMATIONS } from '../../components/learn/CourseAnimations';
+import ArchitectureDiagram from '../../components/learn/ArchitectureDiagram';
 import { useAuth } from '../../contexts/AuthContext';
 
 // ── Rich text renderer ───────────────────────────────────────────────────────
@@ -676,6 +677,9 @@ const Section = ({ section, theme }) => {
 
     case 'diagram':
       return <DiagramSection section={section} theme={theme} />;
+
+    case 'architecture':
+      return <ArchitectureDiagram {...section.config} title={section.heading} caption={section.caption} />;
 
     default:
       return null;
