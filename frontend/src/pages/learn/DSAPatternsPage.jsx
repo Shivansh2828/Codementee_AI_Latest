@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
-import { ExternalLink, ChevronDown, ChevronRight, BookOpen, Clock, Zap, ArrowRight, ArrowLeft, CheckCircle, Filter, Building2, BarChart3, X } from 'lucide-react';
+import { ExternalLink, ChevronDown, ChevronRight, BookOpen, Clock, Zap, ArrowRight, ArrowLeft, CheckCircle, Filter, Building2, BarChart3, X, Code2 } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -8,6 +8,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { DSA_PATTERNS, DSA_META } from '../../data/dsaPatterns';
 import { getCompaniesForProblem, getAllCompanies } from '../../data/companyTags';
 import api from '../../utils/api';
+
+const CodePlayground = lazy(() => import('../../components/learn/CodePlayground'));
 
 const diffColors = {
   Easy: 'bg-green-500/20 text-green-400',
@@ -61,7 +63,7 @@ const useProgress = () => {
 };
 
 // ── Problem Row with checkbox ────────────────────────────────────────────────
-const ProblemRow = ({ problem, theme, isCompleted, onToggle, companyFilter }) => {
+const ProblemRow = ({ problem, theme, isCompleted, onToggle, companyFilter, onTryIt }) => {
   const companies = getCompaniesForProblem(problem.url);
   if (companyFilter && !companies.includes(companyFilter)) return null;
 
@@ -81,6 +83,10 @@ const ProblemRow = ({ problem, theme, isCompleted, onToggle, companyFilter }) =>
         ))}
         {companies.length > 3 && <span className={`text-[9px] ${theme.text.muted}`}>+{companies.length - 3}</span>}
         <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${diffColors[problem.difficulty]}`}>{problem.difficulty}</span>
+        <button onClick={() => onTryIt(problem)} title="Try in editor"
+          className="p-1 rounded hover:bg-[var(--accent-subtle)] text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors">
+          <Code2 className="w-3.5 h-3.5" />
+        </button>
         <a href={problem.url} target="_blank" rel="noopener noreferrer">
           <ExternalLink className={`w-3.5 h-3.5 ${theme.text.muted} group-hover:text-[#06b6d4] transition-colors`} />
         </a>
@@ -90,7 +96,7 @@ const ProblemRow = ({ problem, theme, isCompleted, onToggle, companyFilter }) =>
 };
 
 // ── Pattern Card ─────────────────────────────────────────────────────────────
-const PatternCard = ({ pattern, theme, completed, onToggle, companyFilter, diffFilter, forceOpen = false }) => {
+const PatternCard = ({ pattern, theme, completed, onToggle, companyFilter, diffFilter, forceOpen = false, onTryIt }) => {
   const [open, setOpen] = useState(false);
   const isOpen = forceOpen || open;
   const allProblems = pattern.subcategories
@@ -143,7 +149,7 @@ const PatternCard = ({ pattern, theme, completed, onToggle, companyFilter, diffF
                   <div key={i}>
                     <p className={`text-xs font-semibold ${patternAccent[pattern.color]} uppercase tracking-wider mb-2`}>{sc.name}</p>
                     <div className="space-y-1.5">
-                      {scFiltered.map((p, j) => <ProblemRow key={j} problem={p} theme={theme} isCompleted={completed.has(p.url)} onToggle={onToggle} companyFilter={null} />)}
+                      {scFiltered.map((p, j) => <ProblemRow key={j} problem={p} theme={theme} isCompleted={completed.has(p.url)} onToggle={onToggle} companyFilter={null} onTryIt={onTryIt} />)}
                     </div>
                   </div>
                 );
@@ -151,7 +157,7 @@ const PatternCard = ({ pattern, theme, completed, onToggle, companyFilter, diffF
             </div>
           ) : (
             <div className="space-y-1.5">
-              {filteredProblems.map((p, j) => <ProblemRow key={j} problem={p} theme={theme} isCompleted={completed.has(p.url)} onToggle={onToggle} companyFilter={null} />)}
+              {filteredProblems.map((p, j) => <ProblemRow key={j} problem={p} theme={theme} isCompleted={completed.has(p.url)} onToggle={onToggle} companyFilter={null} onTryIt={onTryIt} />)}
             </div>
           )}
         </div>
@@ -168,6 +174,7 @@ const DSAPatternsPage = () => {
   const [expandAll, setExpandAll] = useState(false);
   const [companyFilter, setCompanyFilter] = useState('');
   const [diffFilter, setDiffFilter] = useState('');
+  const [playgroundProblem, setPlaygroundProblem] = useState(null);
 
   const allProblems = DSA_PATTERNS.flatMap(p => p.subcategories ? p.subcategories.flatMap(sc => sc.problems) : p.problems || []);
   const totalProblems = allProblems.length;
@@ -273,7 +280,7 @@ const DSAPatternsPage = () => {
           {/* Pattern Cards */}
           <div className="space-y-3">
             {DSA_PATTERNS.map((pattern) => (
-              <PatternCard key={pattern.id} pattern={pattern} theme={theme} completed={completed} onToggle={toggle} companyFilter={companyFilter} diffFilter={diffFilter} forceOpen={expandAll} />
+              <PatternCard key={pattern.id} pattern={pattern} theme={theme} completed={completed} onToggle={toggle} companyFilter={companyFilter} diffFilter={diffFilter} forceOpen={expandAll} onTryIt={setPlaygroundProblem} />
             ))}
           </div>
 
@@ -288,6 +295,13 @@ const DSAPatternsPage = () => {
         </div>
       </main>
       <Footer />
+
+      {/* Code Playground Modal */}
+      {playgroundProblem && (
+        <Suspense fallback={null}>
+          <CodePlayground problem={playgroundProblem} onClose={() => setPlaygroundProblem(null)} />
+        </Suspense>
+      )}
     </div>
   );
 };

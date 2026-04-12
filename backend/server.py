@@ -8396,6 +8396,129 @@ async def startup_scheduler():
     """Start the background scheduler on application startup"""
     start_scheduler()
 
+# ── Code Execution (Judge0 proxy) ─────────────────────────────────────────────
+import httpx
+
+JUDGE0_RAPIDAPI_URL = "https://judge0-ce.p.rapidapi.com"
+JUDGE0_SELF_HOSTED_URL = os.environ.get("JUDGE0_URL", "")  # e.g. http://localhost:2358
+JUDGE0_RAPIDAPI_KEY = os.environ.get("JUDGE0_RAPIDAPI_KEY", "")
+
+# Language ID mapping for Judge0 CE
+JUDGE0_LANG_MAP = {
+    "python": 71,       # Python 3.8.1
+    "javascript": 63,   # JavaScript (Node.js 12.14.0)
+    "java": 62,         # Java (OpenJDK 13.0.1)
+    "c++": 54,          # C++ (GCC 9.2.0)
+    "cpp": 54,
+    "typescript": 74,   # TypeScript (3.7.4)
+    "go": 60,           # Go (1.13.5)
+    "c": 50,            # C (GCC 9.2.0)
+    "rust": 73,         # Rust (1.40.0)
+}
+
+class CodeExecutionRequest(BaseModel):
+    language: str
+    code: str
+    stdin: Optional[str] = ""
+
+@api_router.post("/code/execute")
+async def execute_code(body: CodeExecutionRequest):
+    """Execute code via Judge0 (RapidAPI or self-hosted)"""
+    lang_id = JUDGE0_LANG_MAP.get(body.language.lower())
+    if not lang_id:
+        raise HTTPException(status_code=400, detail=f"Unsupported language: {body.language}")
+
+    import base64
+    source_b64 = base64.b64encode(body.code.encode()).decode()
+    stdin_b64 = base64.b64encode((body.stdin or "").encode()).decode()
+
+    payload = {
+        "language_id": lang_id,
+        "source_code": source_b64,
+        "stdin": stdin_b64,
+        "cpu_time_limit": 5,
+        "wall_time_limit": 10,
+        "memory_limit": 128000,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client_http:
+            # Try self-hosted first if configured
+            if JUDGE0_SELF_HOSTED_URL:
+                res = await client_http.post(
+                    f"{JUDGE0_SELF_HOSTED_URL}/submissions?base64_encoded=true&wait=true&fields=stdout,stderr,status,compile_output,time,memory",
+                    json=payload,
+                )
+                if res.status_code == 200:
+                    data = res.json()
+                    return _parse_judge0_response(data)
+
+            # Fall back to RapidAPI
+            if not JUDGE0_RAPIDAPI_KEY:
+                raise HTTPException(status_code=503, detail="Code execution service not configured. Please set JUDGE0_RAPIDAPI_KEY.")
+
+            headers = {
+                "X-RapidAPI-Key": JUDGE0_RAPIDAPI_KEY,
+                "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com",
+                "Content-Type": "application/json",
+            }
+            res = await client_http.post(
+                f"{JUDGE0_RAPIDAPI_URL}/submissions?base64_encoded=true&wait=true&fields=stdout,stderr,status,compile_output,time,memory",
+                json=payload,
+                headers=headers,
+            )
+            if res.status_code != 200 and res.status_code != 201:
+                logger.error(f"Judge0 error: {res.status_code} {res.text}")
+                raise HTTPException(status_code=502, detail="Code execution service returned an error")
+
+            data = res.json()
+            return _parse_judge0_response(data)
+
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Code execution timed out")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Code execution error: {e}")
+        raise HTTPException(status_code=500, detail="Code execution failed")
+
+def _parse_judge0_response(data):
+    import base64
+    stdout = ""
+    stderr = ""
+    compile_output = ""
+    status_desc = data.get("status", {}).get("description", "Unknown") if isinstance(data.get("status"), dict) else "Unknown"
+    status_id = data.get("status", {}).get("id", 0) if isinstance(data.get("status"), dict) else 0
+
+    if data.get("stdout"):
+        try:
+            stdout = base64.b64decode(data["stdout"]).decode("utf-8", errors="replace")
+        except Exception:
+            stdout = data["stdout"]
+    if data.get("stderr"):
+        try:
+            stderr = base64.b64decode(data["stderr"]).decode("utf-8", errors="replace")
+        except Exception:
+            stderr = data["stderr"]
+    if data.get("compile_output"):
+        try:
+            compile_output = base64.b64decode(data["compile_output"]).decode("utf-8", errors="replace")
+        except Exception:
+            compile_output = data["compile_output"]
+
+    # status_id 3 = Accepted (success)
+    exit_code = 0 if status_id == 3 else 1
+    error_output = stderr or compile_output
+
+    return {
+        "stdout": stdout,
+        "stderr": error_output,
+        "code": exit_code,
+        "status": status_desc,
+        "time": data.get("time"),
+        "memory": data.get("memory"),
+    }
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     """Shutdown database client and scheduler on application shutdown"""
