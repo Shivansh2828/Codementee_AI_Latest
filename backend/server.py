@@ -181,18 +181,27 @@ class PricingPlan(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     plan_id: str  # starter, professional, premium
     name: str
+    service_type: str = "mock_interview"  # mock_interview, mentorship, resume_review
     price: int  # in paise
     duration_months: int
     features: List[str] = []
     limits: dict = {}  # Usage limits for the plan
     is_active: bool = True
     display_order: int = 1
+    # Mentorship-specific fields
+    sessions_count: Optional[int] = None
+    session_duration_minutes: Optional[int] = None
+    discount_percent: Optional[float] = None
+    # Resume review-specific fields
+    review_type: Optional[str] = None  # "email" | "call"
+    delivery_timeframe: Optional[str] = None  # e.g. "5 business days"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class PricingPlanCreate(BaseModel):
     plan_id: str
     name: str
+    service_type: str = "mock_interview"  # mock_interview, mentorship, resume_review
     price: int  # in paise
     price_inr: Optional[int] = None  # INR in paise
     price_usd: Optional[int] = None  # USD in cents
@@ -202,9 +211,17 @@ class PricingPlanCreate(BaseModel):
     is_active: bool = True
     display_order: int = 1
     currencies: Optional[List[str]] = None
+    # Mentorship-specific fields
+    sessions_count: Optional[int] = None
+    session_duration_minutes: Optional[int] = None
+    discount_percent: Optional[float] = None
+    # Resume review-specific fields
+    review_type: Optional[str] = None  # "email" | "call"
+    delivery_timeframe: Optional[str] = None  # e.g. "5 business days"
 
 class PricingPlanUpdate(BaseModel):
     name: Optional[str] = None
+    service_type: Optional[str] = None  # mock_interview, mentorship, resume_review
     price: Optional[int] = None  # in paise (deprecated, use price_inr)
     price_inr: Optional[int] = None  # INR in paise
     price_usd: Optional[int] = None  # USD in cents
@@ -214,6 +231,57 @@ class PricingPlanUpdate(BaseModel):
     is_active: Optional[bool] = None
     display_order: Optional[int] = None
     currencies: Optional[List[str]] = None
+    # Mentorship-specific fields
+    sessions_count: Optional[int] = None
+    session_duration_minutes: Optional[int] = None
+    discount_percent: Optional[float] = None
+    # Resume review-specific fields
+    review_type: Optional[str] = None  # "email" | "call"
+    delivery_timeframe: Optional[str] = None  # e.g. "5 business days"
+
+# ============ COUPON CODE MODELS ============
+class CouponCode(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    code: str  # Unique, uppercase, e.g. "LAUNCH20"
+    discount_type: str  # "percentage" | "fixed"
+    discount_value: float  # Percentage (0-100) or fixed amount in paise/cents
+    max_uses: int = 0  # 0 = unlimited
+    current_uses: int = 0
+    valid_from: str  # ISO datetime
+    valid_to: str  # ISO datetime
+    applicable_services: List[str] = ["all"]  # ["mock_interview", "mentorship", "resume_review"] or ["all"]
+    is_active: bool = True
+    min_order_amount: int = 0  # Minimum order in paise (0 = no minimum)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CouponCodeCreate(BaseModel):
+    code: str
+    discount_type: str  # "percentage" | "fixed"
+    discount_value: float
+    max_uses: int = 0
+    valid_from: str  # ISO datetime
+    valid_to: str  # ISO datetime
+    applicable_services: List[str] = ["all"]
+    is_active: bool = True
+    min_order_amount: int = 0
+
+class CouponCodeUpdate(BaseModel):
+    code: Optional[str] = None
+    discount_type: Optional[str] = None
+    discount_value: Optional[float] = None
+    max_uses: Optional[int] = None
+    valid_from: Optional[str] = None
+    valid_to: Optional[str] = None
+    applicable_services: Optional[List[str]] = None
+    is_active: Optional[bool] = None
+    min_order_amount: Optional[int] = None
+
+class ValidateCouponRequest(BaseModel):
+    code: str
+    service_type: str  # "mock_interview" | "mentorship" | "resume_review"
+    order_amount: int  # In paise or cents
+    currency: str  # "INR" | "USD"
 
 # ============ BOOKING SYSTEM MODELS ============
 class CompanyCreate(BaseModel):
@@ -395,6 +463,17 @@ class BugReportCreate(BaseModel):
     user_name: Optional[str] = None
     user_email: Optional[str] = None
     user_role: Optional[str] = None
+
+# ============ MENTORSHIP MODELS ============
+class AssignMentorRequest(BaseModel):
+    subscription_id: str
+    mentor_id: str
+
+class ScheduleSessionRequest(BaseModel):
+    subscription_id: str
+    date: str          # YYYY-MM-DD
+    start_time: str    # HH:MM
+    end_time: str      # HH:MM
 
 # ============ HELPERS ============
 def hash_password(password: str) -> str:
@@ -3069,6 +3148,46 @@ def start_scheduler():
     except Exception as e:
         logger.error(f"Failed to start scheduler: {str(e)}")
 
+# ============ MENTORSHIP SUBSCRIPTION HELPER ============
+def _add_months(dt, months):
+    """Add months to a datetime, handling month-end overflow."""
+    import calendar
+    month = dt.month - 1 + months
+    year = dt.year + month // 12
+    month = month % 12 + 1
+    day = min(dt.day, calendar.monthrange(year, month)[1])
+    return dt.replace(year=year, month=month, day=day)
+
+async def create_mentorship_subscription(order, plan_info):
+    """Create a mentorship_subscriptions document after successful payment."""
+    now = datetime.now(timezone.utc)
+    sessions_total = plan_info.get("sessions_count", 0)
+    session_duration_minutes = plan_info.get("session_duration_minutes", 60)
+    duration_months = plan_info.get("duration_months", 1)
+    expires_at = _add_months(now, duration_months)
+
+    subscription = {
+        "id": str(uuid.uuid4()),
+        "mentee_id": order.get("user_id") or order.get("mentee_id", ""),
+        "mentee_name": order.get("name", ""),
+        "mentee_email": order.get("email", ""),
+        "plan_id": order.get("plan_id", ""),
+        "plan_name": order.get("plan_name", ""),
+        "sessions_total": sessions_total,
+        "sessions_used": 0,
+        "session_duration_minutes": session_duration_minutes,
+        "mentor_id": None,
+        "mentor_name": None,
+        "mentor_email": None,
+        "status": "active",
+        "purchased_at": now.isoformat(),
+        "expires_at": expires_at.isoformat(),
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat(),
+    }
+    await db.mentorship_subscriptions.insert_one(subscription)
+    return subscription
+
 # ============ AUTH ROUTES ============
 @api_router.post("/auth/register")
 async def register(user: UserCreate):
@@ -3716,6 +3835,7 @@ async def create_pricing_plan(data: PricingPlanCreate, user=Depends(get_current_
         "id": str(uuid.uuid4()),
         "plan_id": data.plan_id,
         "name": data.name,
+        "service_type": data.service_type,
         "price": data.price,
         "price_inr": data.price_inr if data.price_inr else data.price,
         "price_usd": data.price_usd if data.price_usd else int(data.price * 0.012),
@@ -3725,6 +3845,13 @@ async def create_pricing_plan(data: PricingPlanCreate, user=Depends(get_current_
         "is_active": data.is_active,
         "display_order": data.display_order,
         "currencies": data.currencies or ["INR", "USD"],
+        # Mentorship-specific fields
+        "sessions_count": data.sessions_count,
+        "session_duration_minutes": data.session_duration_minutes,
+        "discount_percent": data.discount_percent,
+        # Resume review-specific fields
+        "review_type": data.review_type,
+        "delivery_timeframe": data.delivery_timeframe,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
@@ -3766,6 +3893,83 @@ async def delete_pricing_plan(plan_id: str, user=Depends(get_current_user)):
     
     return {"message": "Pricing plan deleted successfully"}
 
+# ============ ADMIN COUPON CODE MANAGEMENT ============
+@api_router.post("/admin/coupons")
+async def create_coupon(data: CouponCodeCreate, user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    # Normalize code to uppercase
+    code_upper = data.code.strip().upper()
+    
+    # Check for duplicate code
+    existing = await db.coupon_codes.find_one({"code": code_upper})
+    if existing:
+        raise HTTPException(status_code=400, detail="Coupon code already exists")
+    
+    coupon_doc = {
+        "id": str(uuid.uuid4()),
+        "code": code_upper,
+        "discount_type": data.discount_type,
+        "discount_value": data.discount_value,
+        "max_uses": data.max_uses,
+        "current_uses": 0,
+        "valid_from": data.valid_from,
+        "valid_to": data.valid_to,
+        "applicable_services": data.applicable_services,
+        "is_active": data.is_active,
+        "min_order_amount": data.min_order_amount,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.coupon_codes.insert_one(coupon_doc)
+    return serialize_doc(coupon_doc)
+
+@api_router.get("/admin/coupons")
+async def list_coupons(user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    coupons = await db.coupon_codes.find().sort("created_at", -1).to_list(500)
+    return [serialize_doc(dict(c)) for c in coupons]
+
+@api_router.put("/admin/coupons/{coupon_id}")
+async def update_coupon(coupon_id: str, data: CouponCodeUpdate, user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    coupon = await db.coupon_codes.find_one({"id": coupon_id})
+    if not coupon:
+        raise HTTPException(status_code=404, detail="Coupon not found")
+    
+    update_data = {k: v for k, v in data.dict().items() if v is not None}
+    
+    # Normalize code to uppercase if being updated
+    if "code" in update_data:
+        update_data["code"] = update_data["code"].strip().upper()
+        # Check for duplicate if code is changing
+        if update_data["code"] != coupon.get("code"):
+            existing = await db.coupon_codes.find_one({"code": update_data["code"]})
+            if existing:
+                raise HTTPException(status_code=400, detail="Coupon code already exists")
+    
+    if update_data:
+        update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await db.coupon_codes.update_one({"id": coupon_id}, {"$set": update_data})
+    
+    updated_coupon = await db.coupon_codes.find_one({"id": coupon_id})
+    return serialize_doc(dict(updated_coupon))
+
+@api_router.delete("/admin/coupons/{coupon_id}")
+async def delete_coupon(coupon_id: str, user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    result = await db.coupon_codes.delete_one({"id": coupon_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Coupon not found")
+    
+    return {"message": "Coupon deleted successfully"}
+
 # ============ PUBLIC PRICING ROUTES ============
 @api_router.get("/detect-currency")
 async def detect_currency(request: Request):
@@ -3780,14 +3984,24 @@ async def detect_currency(request: Request):
     }
 
 @api_router.get("/pricing-plans")
-async def get_public_pricing_plans(response: Response, currency: str = "INR"):
+async def get_public_pricing_plans(response: Response, currency: str = "INR", service_type: Optional[str] = None):
     """Get active pricing plans for public display in specified currency"""
     # Prevent caching to ensure fresh data
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     
-    plans = await db.pricing_plans.find({"is_active": True}).sort("display_order", 1).to_list(100)
+    # Validate service_type if provided
+    allowed_service_types = ["mock_interview", "mentorship", "resume_review", "ai_agent"]
+    if service_type is not None and service_type not in allowed_service_types:
+        raise HTTPException(status_code=400, detail="Invalid service type. Allowed: mock_interview, mentorship, resume_review, ai_agent")
+    
+    # Build query filter
+    query = {"is_active": True}
+    if service_type is not None:
+        query["service_type"] = service_type
+    
+    plans = await db.pricing_plans.find(query).sort("display_order", 1).to_list(100)
     
     # Format plans with correct currency
     result = []
@@ -3807,6 +4021,76 @@ async def get_public_pricing_plans(response: Response, currency: str = "INR"):
         result.append(plan_dict)
     
     return result
+
+# ============ PUBLIC COUPON VALIDATION ============
+@api_router.post("/validate-coupon")
+async def validate_coupon(data: ValidateCouponRequest):
+    """Validate a coupon code and return discount details (public, no auth required). Always returns HTTP 200."""
+    code_upper = data.code.strip().upper()
+
+    # Look up coupon
+    coupon = await db.coupon_codes.find_one({"code": code_upper})
+    if not coupon:
+        return {"valid": False, "message": "Coupon code not found"}
+
+    # Check is_active
+    if not coupon.get("is_active", False):
+        return {"valid": False, "message": "Coupon is not active"}
+
+    # Check usage limit
+    max_uses = coupon.get("max_uses", 0)
+    current_uses = coupon.get("current_uses", 0)
+    if max_uses != 0 and current_uses >= max_uses:
+        return {"valid": False, "message": "Coupon usage limit reached"}
+
+    # Check date validity
+    now = datetime.now(timezone.utc)
+    try:
+        valid_from = datetime.fromisoformat(coupon["valid_from"].replace("Z", "+00:00"))
+        valid_to = datetime.fromisoformat(coupon["valid_to"].replace("Z", "+00:00"))
+    except Exception:
+        return {"valid": False, "message": "Coupon has invalid date configuration"}
+
+    if now < valid_from:
+        return {"valid": False, "message": "Coupon is not yet valid"}
+    if now > valid_to:
+        return {"valid": False, "message": "Coupon has expired"}
+
+    # Check applicable services
+    applicable = coupon.get("applicable_services", ["all"])
+    if "all" not in applicable and data.service_type not in applicable:
+        return {"valid": False, "message": "Coupon not applicable to this service"}
+
+    # Check minimum order amount
+    min_order = coupon.get("min_order_amount", 0)
+    if min_order > 0 and data.order_amount < min_order:
+        if data.currency == "USD":
+            formatted_min = f"${min_order / 100:.2f}"
+        else:
+            formatted_min = f"₹{min_order / 100:.0f}"
+        return {"valid": False, "message": f"Minimum order amount is {formatted_min}"}
+
+    # Calculate discount
+    discount_type = coupon["discount_type"]
+    discount_value = coupon["discount_value"]
+    order_amount = data.order_amount
+
+    if discount_type == "percentage":
+        discount_amount = int(order_amount * discount_value / 100)
+        discounted_amount = order_amount - discount_amount
+    else:
+        # fixed
+        discount_amount = int(min(discount_value, order_amount))
+        discounted_amount = max(0, order_amount - int(discount_value))
+
+    return {
+        "valid": True,
+        "code": code_upper,
+        "discount_type": discount_type,
+        "discount_value": discount_value,
+        "discounted_amount": discounted_amount,
+        "discount_amount": discount_amount,
+    }
 
 # ============ MEET LINKS MANAGEMENT ============
 @api_router.get("/admin/meet-links")
@@ -5283,6 +5567,32 @@ async def get_mentee_feedbacks(user=Depends(get_current_user)):
     feedbacks = await db.feedbacks.find({"mentee_id": user["id"]}).to_list(1000)
     return [serialize_doc(dict(f)) for f in feedbacks]
 
+# ============ TRANSACTION HISTORY ============
+TRANSACTION_FIELDS = {
+    "id", "plan_name", "plan_id", "amount", "original_amount",
+    "currency", "payment_gateway", "coupon_code", "status",
+    "is_upgrade", "created_at"
+}
+
+@api_router.get("/mentee/transactions")
+async def get_mentee_transactions(user=Depends(get_current_user)):
+    """Get all transactions for the authenticated mentee, sorted newest first."""
+    if user["role"] != "mentee":
+        raise HTTPException(status_code=403, detail="Mentee only")
+
+    orders = await db.orders.find({"email": user["email"]}).sort("created_at", -1).to_list(1000)
+
+    results = []
+    for order in orders:
+        doc = serialize_doc(dict(order))
+        # Strip any remaining sensitive fields
+        for key in ("razorpay_order_id", "cashfree_order_id"):
+            doc.pop(key, None)
+        # Project only the allowed fields
+        results.append({k: doc.get(k) for k in TRANSACTION_FIELDS})
+
+    return results
+
 # ============ RESUME REVIEW SYSTEM ============
 @api_router.post("/mentee/resume-request")
 async def create_resume_request(
@@ -6077,6 +6387,7 @@ class CreateOrderRequest(BaseModel):
     timeline: str = ""
     struggle: str = ""
     is_upgrade: bool = False  # True if existing user is upgrading/buying add-ons
+    coupon_code: Optional[str] = None  # Validated coupon code for discount
 
 class VerifyPaymentRequest(BaseModel):
     razorpay_order_id: str
@@ -6257,6 +6568,47 @@ async def create_payment_order(data: CreateOrderRequest, request: Request):
     
     plan_name = plan_info["name"]
     
+    # Coupon code validation and discount application
+    coupon_code_applied = None
+    original_amount = amount
+    if data.coupon_code:
+        code_upper = data.coupon_code.strip().upper()
+        coupon = await db.coupon_codes.find_one({"code": code_upper})
+        if not coupon:
+            raise HTTPException(status_code=400, detail="Invalid or expired coupon code")
+        if not coupon.get("is_active", False):
+            raise HTTPException(status_code=400, detail="Invalid or expired coupon code")
+        max_uses = coupon.get("max_uses", 0)
+        current_uses = coupon.get("current_uses", 0)
+        if max_uses != 0 and current_uses >= max_uses:
+            raise HTTPException(status_code=400, detail="Invalid or expired coupon code")
+        now = datetime.now(timezone.utc)
+        try:
+            valid_from = datetime.fromisoformat(coupon["valid_from"].replace("Z", "+00:00"))
+            valid_to = datetime.fromisoformat(coupon["valid_to"].replace("Z", "+00:00"))
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid or expired coupon code")
+        if now < valid_from or now > valid_to:
+            raise HTTPException(status_code=400, detail="Invalid or expired coupon code")
+        applicable = coupon.get("applicable_services", ["all"])
+        # Determine service_type from the pricing plan
+        plan_doc = await db.pricing_plans.find_one({"plan_id": data.plan_id, "is_active": True})
+        service_type = plan_doc.get("service_type", "mock_interview") if plan_doc else "mock_interview"
+        if "all" not in applicable and service_type not in applicable:
+            raise HTTPException(status_code=400, detail="Invalid or expired coupon code")
+        min_order = coupon.get("min_order_amount", 0)
+        if min_order > 0 and amount < min_order:
+            raise HTTPException(status_code=400, detail="Invalid or expired coupon code")
+        # Apply discount
+        discount_type = coupon["discount_type"]
+        discount_value = coupon["discount_value"]
+        if discount_type == "percentage":
+            discount_amount = int(amount * discount_value / 100)
+            amount = amount - discount_amount
+        else:
+            amount = max(0, amount - int(discount_value))
+        coupon_code_applied = code_upper
+    
     # Generate internal order ID
     internal_order_id = str(uuid.uuid4())
     
@@ -6290,6 +6642,8 @@ async def create_payment_order(data: CreateOrderRequest, request: Request):
                 "plan_id": data.plan_id,
                 "plan_name": plan_name,
                 "amount": amount,
+                "original_amount": original_amount,
+                "coupon_code": coupon_code_applied,
                 "currency": "INR",
                 "current_role": data.current_role,
                 "target_role": data.target_role,
@@ -6338,6 +6692,8 @@ async def create_payment_order(data: CreateOrderRequest, request: Request):
                 "plan_id": data.plan_id,
                 "plan_name": plan_name,
                 "amount": amount,
+                "original_amount": original_amount,
+                "coupon_code": coupon_code_applied,
                 "currency": "USD",
                 "current_role": data.current_role,
                 "target_role": data.target_role,
@@ -6377,6 +6733,8 @@ async def create_payment_order(data: CreateOrderRequest, request: Request):
         "plan_id": data.plan_id,
         "plan_name": plan_name,
         "amount": amount,
+        "original_amount": original_amount,
+        "coupon_code": coupon_code_applied,
         "current_role": data.current_role,
         "target_role": data.target_role,
         "timeline": data.timeline,
@@ -6430,6 +6788,19 @@ async def verify_payment(data: VerifyPaymentRequest):
             "paid_at": datetime.now(timezone.utc).isoformat()
         }}
     )
+    
+    # Increment coupon usage if a coupon was applied
+    if order.get("coupon_code"):
+        await db.coupon_codes.update_one(
+            {"code": order["coupon_code"]},
+            {"$inc": {"current_uses": 1}}
+        )
+    
+    # Create mentorship subscription if this is a mentorship plan purchase
+    if order.get("plan_id", "").startswith("mentorship_"):
+        plan_info = await db.pricing_plans.find_one({"plan_id": order["plan_id"]})
+        if plan_info:
+            await create_mentorship_subscription(order, plan_info)
     
     # Check if this is an upgrade (user already exists)
     existing_user = await db.users.find_one({"email": order["email"]})
@@ -6792,6 +7163,19 @@ async def cashfree_webhook(request: Request):
                     "paid_at": datetime.now(timezone.utc).isoformat()
                 }}
             )
+            
+            # Increment coupon usage if a coupon was applied
+            if order.get("coupon_code"):
+                await db.coupon_codes.update_one(
+                    {"code": order["coupon_code"]},
+                    {"$inc": {"current_uses": 1}}
+                )
+            
+            # Create mentorship subscription if this is a mentorship plan purchase
+            if order.get("plan_id", "").startswith("mentorship_"):
+                plan_info = await db.pricing_plans.find_one({"plan_id": order["plan_id"]})
+                if plan_info:
+                    await create_mentorship_subscription(order, plan_info)
             
             # Create or update user account (same logic as Razorpay)
             existing_user = await db.users.find_one({"email": order["email"]})
@@ -7590,6 +7974,315 @@ async def get_payment_config():
 @api_router.get("/")
 async def root():
     return {"message": "Codementee API"}
+
+# ============ MENTORSHIP ENDPOINTS ============
+
+@api_router.get("/mentee/mentorship")
+async def get_mentee_mentorship(user=Depends(get_current_user)):
+    """Get mentee's active mentorship subscription and sessions."""
+    if user["role"] not in ("mentee", "agent_user"):
+        raise HTTPException(status_code=403, detail="Mentee only")
+
+    now = datetime.now(timezone.utc)
+    today_str = now.strftime("%Y-%m-%d")
+
+    # Find the mentee's active subscription
+    subscription = await db.mentorship_subscriptions.find_one({
+        "mentee_id": user["id"],
+        "status": "active"
+    })
+
+    if not subscription:
+        return {
+            "subscription": None,
+            "upcoming_sessions": [],
+            "past_sessions": []
+        }
+
+    # Time-based expiry check
+    expires_at_str = subscription.get("expires_at", "")
+    try:
+        expires_at = datetime.fromisoformat(expires_at_str)
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at < now:
+            subscription["status"] = "expired"
+    except (ValueError, TypeError):
+        pass
+
+    # Compute sessions_remaining
+    sessions_total = subscription.get("sessions_total", 0)
+    sessions_used = subscription.get("sessions_used", 0)
+    sessions_remaining = sessions_total - sessions_used
+
+    # Build subscription response
+    sub_response = {
+        "id": subscription.get("id"),
+        "plan_name": subscription.get("plan_name"),
+        "sessions_total": sessions_total,
+        "sessions_used": sessions_used,
+        "sessions_remaining": sessions_remaining,
+        "mentor_name": subscription.get("mentor_name"),
+        "mentor_email": subscription.get("mentor_email"),
+        "status": subscription.get("status"),
+        "expires_at": subscription.get("expires_at"),
+    }
+
+    # Query mentorship sessions for this mentee
+    sessions_cursor = db.mentorship_sessions.find({"mentee_id": user["id"]})
+    all_sessions = [serialize_doc(dict(s)) async for s in sessions_cursor]
+
+    upcoming_sessions = []
+    past_sessions = []
+    for s in all_sessions:
+        session_obj = {
+            "id": s.get("id"),
+            "date": s.get("date"),
+            "start_time": s.get("start_time"),
+            "end_time": s.get("end_time"),
+            "meeting_link": s.get("meeting_link"),
+            "status": s.get("status"),
+            "feedback_id": s.get("feedback_id"),
+        }
+        if s.get("date", "") >= today_str:
+            upcoming_sessions.append(session_obj)
+        else:
+            past_sessions.append(session_obj)
+
+    return {
+        "subscription": sub_response,
+        "upcoming_sessions": upcoming_sessions,
+        "past_sessions": past_sessions,
+    }
+
+@api_router.get("/mentor/mentorship")
+async def get_mentor_mentorship(user=Depends(get_current_user)):
+    """Get mentor's assigned mentorship mentees and sessions."""
+    if user["role"] != "mentor":
+        raise HTTPException(status_code=403, detail="Mentor only")
+
+    now = datetime.now(timezone.utc)
+    today_str = now.strftime("%Y-%m-%d")
+
+    # Find active subscriptions assigned to this mentor
+    subs_cursor = db.mentorship_subscriptions.find({
+        "mentor_id": user["id"],
+        "status": "active"
+    })
+    mentees = []
+    async for sub in subs_cursor:
+        sub = serialize_doc(dict(sub))
+
+        # Time-based expiry check
+        expires_at_str = sub.get("expires_at", "")
+        try:
+            expires_at = datetime.fromisoformat(expires_at_str)
+            if expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+            if expires_at < now:
+                sub["status"] = "expired"
+                continue  # skip expired from active mentees list
+        except (ValueError, TypeError):
+            pass
+
+        sessions_total = sub.get("sessions_total", 0)
+        sessions_used = sub.get("sessions_used", 0)
+        mentees.append({
+            "id": sub.get("id"),
+            "mentee_name": sub.get("mentee_name"),
+            "mentee_email": sub.get("mentee_email"),
+            "plan_name": sub.get("plan_name"),
+            "sessions_total": sessions_total,
+            "sessions_used": sessions_used,
+            "sessions_remaining": sessions_total - sessions_used,
+            "expires_at": sub.get("expires_at"),
+        })
+
+    # Query mentorship sessions for this mentor
+    sessions_cursor = db.mentorship_sessions.find({"mentor_id": user["id"]})
+    all_sessions = [serialize_doc(dict(s)) async for s in sessions_cursor]
+
+    upcoming_sessions = []
+    past_sessions = []
+    for s in all_sessions:
+        session_obj = {
+            "id": s.get("id"),
+            "mentee_name": s.get("mentee_name"),
+            "date": s.get("date"),
+            "start_time": s.get("start_time"),
+            "end_time": s.get("end_time"),
+            "meeting_link": s.get("meeting_link"),
+            "status": s.get("status"),
+            "feedback_id": s.get("feedback_id"),
+        }
+        if s.get("date", "") >= today_str:
+            upcoming_sessions.append(session_obj)
+        else:
+            past_sessions.append(session_obj)
+
+    return {
+        "mentees": mentees,
+        "upcoming_sessions": upcoming_sessions,
+        "past_sessions": past_sessions,
+    }
+
+@api_router.get("/admin/mentorship")
+async def get_admin_mentorship(user=Depends(get_current_user)):
+    """Get all mentorship subscriptions with summary stats for admin dashboard."""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    now = datetime.now(timezone.utc)
+
+    # Query all mentorship subscriptions
+    subs_cursor = db.mentorship_subscriptions.find({})
+    subscriptions = []
+    active_count = 0
+    expired_count = 0
+    unassigned_count = 0
+
+    async for sub in subs_cursor:
+        sub = serialize_doc(dict(sub))
+        status = sub.get("status", "active")
+
+        # Time-based expiry check: if expires_at < now and status is "active", treat as expired
+        if status == "active":
+            expires_at_str = sub.get("expires_at", "")
+            try:
+                expires_at = datetime.fromisoformat(expires_at_str)
+                if expires_at.tzinfo is None:
+                    expires_at = expires_at.replace(tzinfo=timezone.utc)
+                if expires_at < now:
+                    status = "expired"
+            except (ValueError, TypeError):
+                pass
+
+        # Count by effective status
+        if status == "active":
+            active_count += 1
+            if not sub.get("mentor_id"):
+                unassigned_count += 1
+        else:
+            expired_count += 1
+
+        subscriptions.append({
+            "id": sub.get("id"),
+            "mentee_name": sub.get("mentee_name"),
+            "mentee_email": sub.get("mentee_email"),
+            "plan_name": sub.get("plan_name"),
+            "mentor_name": sub.get("mentor_name"),
+            "mentor_email": sub.get("mentor_email"),
+            "sessions_total": sub.get("sessions_total", 0),
+            "sessions_used": sub.get("sessions_used", 0),
+            "status": status,
+            "expires_at": sub.get("expires_at"),
+        })
+
+    # Total sessions count
+    total_sessions = await db.mentorship_sessions.count_documents({})
+
+    return {
+        "subscriptions": subscriptions,
+        "summary": {
+            "active_count": active_count,
+            "expired_count": expired_count,
+            "unassigned_count": unassigned_count,
+            "total_sessions": total_sessions,
+        },
+    }
+
+@api_router.post("/admin/mentorship/assign-mentor")
+async def assign_mentorship_mentor(data: AssignMentorRequest, user=Depends(get_current_user)):
+    """Assign a mentor to a mentorship subscription."""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    # Validate subscription exists
+    subscription = await db.mentorship_subscriptions.find_one({"id": data.subscription_id})
+    if not subscription:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+
+    # Validate mentor exists and has role "mentor"
+    mentor = await db.users.find_one({"id": data.mentor_id, "role": "mentor"})
+    if not mentor:
+        raise HTTPException(status_code=404, detail="Mentor not found")
+
+    # Update subscription with mentor details
+    now = datetime.now(timezone.utc).isoformat()
+    await db.mentorship_subscriptions.update_one(
+        {"id": data.subscription_id},
+        {"$set": {
+            "mentor_id": mentor["id"],
+            "mentor_name": mentor.get("name", ""),
+            "mentor_email": mentor.get("email", ""),
+            "updated_at": now,
+        }},
+    )
+
+    return {
+        "message": "Mentor assigned successfully",
+        "subscription_id": data.subscription_id,
+        "mentor_id": mentor["id"],
+        "mentor_name": mentor.get("name", ""),
+        "mentor_email": mentor.get("email", ""),
+    }
+
+@api_router.post("/admin/mentorship/schedule-session")
+async def schedule_mentorship_session(data: ScheduleSessionRequest, user=Depends(get_current_user)):
+    """Schedule a mentorship session for a subscription."""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    # Validate subscription exists
+    subscription = await db.mentorship_subscriptions.find_one({"id": data.subscription_id})
+    if not subscription:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+
+    # Validate mentor is assigned
+    if not subscription.get("mentor_id"):
+        raise HTTPException(status_code=400, detail="Mentor must be assigned before scheduling sessions")
+
+    # Validate session quota not exhausted
+    if subscription.get("sessions_used", 0) >= subscription.get("sessions_total", 0):
+        raise HTTPException(status_code=400, detail="Session quota exhausted for this subscription")
+
+    # Find available meet link
+    meet_link = await db.meet_links.find_one({"status": "available"})
+    if not meet_link:
+        raise HTTPException(status_code=400, detail="No available meeting links")
+
+    # Create session document
+    now = datetime.now(timezone.utc).isoformat()
+    session_id = str(uuid.uuid4())
+    session_doc = {
+        "id": session_id,
+        "subscription_id": data.subscription_id,
+        "mentee_id": subscription["mentee_id"],
+        "mentor_id": subscription["mentor_id"],
+        "mentor_name": subscription.get("mentor_name", ""),
+        "date": data.date,
+        "start_time": data.start_time,
+        "end_time": data.end_time,
+        "meeting_link": meet_link["link"],
+        "meet_link_id": meet_link["id"],
+        "status": "scheduled",
+        "feedback_id": None,
+        "notes": None,
+        "created_at": now,
+        "updated_at": now,
+    }
+    await db.mentorship_sessions.insert_one(session_doc)
+
+    # Mark meet link as in_use
+    await db.meet_links.update_one(
+        {"id": meet_link["id"]},
+        {"$set": {"status": "in_use", "current_booking_id": session_id}},
+    )
+
+    return {
+        "message": "Session scheduled successfully",
+        "session": serialize_doc(session_doc),
+    }
 
 # Include router
 app.include_router(api_router)
