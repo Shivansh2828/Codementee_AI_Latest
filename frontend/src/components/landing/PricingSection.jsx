@@ -137,7 +137,7 @@ const PricingSection = () => {
         {
           id: 'starter',
           name: 'Mock Starter',
-          price: isUSD ? '24' : '2,999',
+          price: isUSD ? '19' : '2,499',
           currencySymbol: isUSD ? '$' : '₹',
           features: [
             '1 MAANG-Level Mock Interview',
@@ -155,7 +155,7 @@ const PricingSection = () => {
         {
           id: 'pro',
           name: 'Interview Pro',
-          price: isUSD ? '84' : '6,999',
+          price: isUSD ? '45' : '6,999',
           currencySymbol: isUSD ? '$' : '₹',
           features: [
             '3 MAANG-Level Mock Interviews',
@@ -175,7 +175,7 @@ const PricingSection = () => {
         {
           id: 'elite',
           name: 'Interview Elite',
-          price: isUSD ? '180' : '14,999',
+          price: isUSD ? '123' : '9,999',
           currencySymbol: isUSD ? '$' : '₹',
           features: [
             '6 MAANG-Level Mock Interviews',

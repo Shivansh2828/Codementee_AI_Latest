@@ -531,8 +531,8 @@ const DashboardLayout = ({ children, title }) => {
                             </Link>
                           )}
                           
-                          {/* Elite User or Out of Quota - Buy Single Mock */}
-                          {(user?.plan_id === 'elite' || (user?.interview_quota_remaining === 0 && user?.plan_id)) && (
+                          {/* Out of Quota - Buy Single Mock */}
+                          {(user?.interview_quota_remaining === 0 && user?.plan_id) && (
                             <Link 
                               to="/mentee/book"
                               onClick={() => setProfileDropdownOpen(false)}
