@@ -6,9 +6,11 @@ import { useCurrency } from '../../contexts/CurrencyContext';
 import { useFoundingSlots } from '../../hooks/useFoundingSlots';
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
+import CouponCodeInput from "../../components/pricing/CouponCodeInput";
 import { toast } from "sonner";
 import { 
   Check, 
+  X,
   Crown, 
   Sparkles,
   TrendingUp,
@@ -22,14 +24,26 @@ import api from "../../utils/api";
 const MenteePricing = () => {
   const { theme } = useTheme();
   const { user } = useAuth();
-  const { currency, formatPrice, currencySymbol } = useCurrency();
+  const { currency, currencySymbol } = useCurrency();
   const { remaining, total, sold_out } = useFoundingSlots(30000);
   const [loading, setLoading] = useState(true);
   const [processingPlan, setProcessingPlan] = useState(null);
   const [plans, setPlans] = useState([]);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponPlanId, setCouponPlanId] = useState(null);
 
   const isFreeUser = user?.status === 'Free' || !user?.plan_id;
   const currentPlanId = user?.plan_id;
+
+  // Tier hierarchy for upgrade path logic
+  const tierOrder = { starter: 1, pro: 2, elite: 3 };
+
+  const isHigherTier = (planId) => {
+    if (!currentPlanId || isFreeUser) return false;
+    return (tierOrder[planId] || 0) > (tierOrder[currentPlanId] || 0);
+  };
+
+  const isOnHighestTier = currentPlanId === 'elite';
 
   // Plan configuration matching landing page
   const planConfig = {
@@ -60,17 +74,52 @@ const MenteePricing = () => {
     }
   };
 
+  const featureMatrix = [
+    { feature: "MAANG-Level Mock Interviews", starter: "1", pro: "3", elite: "6" },
+    { feature: "Detailed Feedback Report", starter: true, pro: true, elite: true },
+    { feature: "Resume Review (Email-based)", starter: true, pro: false, elite: false },
+    { feature: "Resume Review by MAANG Engineer", starter: false, pro: true, elite: false },
+    { feature: "Live Resume Review Session", starter: false, pro: false, elite: true },
+    { feature: "Strategy Call", starter: false, pro: "1", elite: false },
+    { feature: "Proven Resume Templates", starter: true, pro: true, elite: true },
+    { feature: "AI ATS Resume Checker", starter: true, pro: true, elite: true },
+    { feature: "Improvement Tracking", starter: false, pro: true, elite: true },
+    { feature: "Referral Guidance", starter: false, pro: false, elite: true },
+    { feature: "Priority WhatsApp Support", starter: false, pro: false, elite: true },
+  ];
+
+  const renderCellValue = (value) => {
+    if (typeof value === 'string') {
+      return <span className={`text-sm font-semibold ${theme.text.primary}`}>{value}</span>;
+    }
+    if (value === true) {
+      return <Check className="w-5 h-5 text-emerald-400 mx-auto" strokeWidth={3} />;
+    }
+    return <X className="w-5 h-5 text-gray-500/50 mx-auto" strokeWidth={2} />;
+  };
+
   useEffect(() => {
     fetchPricingPlans();
   }, [currency]);
 
   const fetchPricingPlans = async () => {
     try {
-      const response = await api.get(`/pricing-plans?currency=${currency}`);
+      const response = await api.get('/pricing-plans', {
+        params: {
+          currency,
+          service_type: 'mock_interview'
+        }
+      });
+      
+      // Only show the 3 main mock interview tiers
+      const allowedPlanIds = ['starter', 'pro', 'elite'];
       
       // Map and sort plans
       const mappedPlans = response.data
-        .filter(plan => plan.is_active !== false)
+        .filter(plan => {
+          const planId = plan.plan_id || plan.id;
+          return plan.is_active !== false && allowedPlanIds.includes(planId);
+        })
         .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
         .map(plan => {
           const planId = plan.plan_id || plan.id;
@@ -106,7 +155,8 @@ const MenteePricing = () => {
         email: user.email,
         current_role: user.current_role || '',
         target_role: user.target_role || '',
-        is_upgrade: !isFreeUser
+        is_upgrade: !isFreeUser,
+        coupon_code: (couponPlanId === plan.plan_id && appliedCoupon?.code) || undefined,
       });
 
       const orderData = orderResponse.data;
@@ -240,32 +290,53 @@ const MenteePricing = () => {
             const isCurrentPlan = currentPlanId === plan.plan_id;
             const isProcessing = processingPlan === plan.plan_id;
             const isPopular = plan.config.popular;
+            const isUpgrade = isHigherTier(plan.plan_id);
+            const isHighestTierCard = plan.plan_id === 'elite' && isOnHighestTier;
             
             return (
               <div
                 key={plan.plan_id}
                 className={`relative rounded-2xl overflow-hidden transition-all duration-300 ${
-                  isPopular
+                  isCurrentPlan
+                    ? `${theme.bg.card} border-2 border-emerald-500/60 shadow-lg shadow-emerald-500/10`
+                    : isPopular
                     ? `${theme.bg.card} border-2 border-[#06b6d4] shadow-2xl shadow-[#06b6d4]/20 md:scale-105 md:-mt-4 md:mb-4`
                     : `${theme.bg.card} ${theme.border.primary} border hover:border-[#06b6d4]/50`
                 }`}
               >
+                {/* Current Plan Badge */}
+                {isCurrentPlan && (
+                  <div className="absolute top-0 left-0 right-0 bg-emerald-500 text-white text-xs font-bold px-4 py-1.5 text-center">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                      Current Plan
+                    </div>
+                  </div>
+                )}
+
                 {/* Popular Badge */}
-                {isPopular && (
+                {isPopular && !isCurrentPlan && (
                   <div className="absolute top-0 right-0 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white text-xs font-bold px-4 py-1.5 rounded-bl-lg">
                     {plan.config.badge}
                   </div>
                 )}
 
-                <div className="p-8">
+                <div className={`p-8 ${isCurrentPlan ? 'pt-12' : ''}`}>
                   {/* Icon & Name */}
                   <div className="flex items-center gap-3 mb-4">
                     <div className={`w-12 h-12 rounded-xl ${plan.config.bgColor} flex items-center justify-center`}>
                       <Icon className={`w-6 h-6 ${plan.config.iconColor}`} />
                     </div>
-                    <h3 className={`text-2xl font-bold ${theme.text.primary}`}>
-                      {plan.name}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className={`text-2xl font-bold ${theme.text.primary}`}>
+                        {plan.name}
+                      </h3>
+                      {isCurrentPlan && (
+                        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                          Active
+                        </Badge>
+                      )}
+                    </div>
                   </div>
 
                   {/* Description */}
@@ -309,13 +380,42 @@ const MenteePricing = () => {
                     ))}
                   </ul>
 
+                  {/* Coupon Code */}
+                  <div className="mb-4">
+                    <CouponCodeInput
+                      serviceType={plan.service_type || "mock_interview"}
+                      orderAmount={plan.price}
+                      currency={currency}
+                      onCouponApplied={(result) => {
+                        setAppliedCoupon(result);
+                        setCouponPlanId(plan.plan_id);
+                      }}
+                      onCouponRemoved={() => {
+                        setAppliedCoupon(null);
+                        setCouponPlanId(null);
+                      }}
+                    />
+                  </div>
+
+                  {/* Highest Tier Indicator */}
+                  {isHighestTierCard && (
+                    <div className="flex items-center justify-center gap-2 mb-4 py-2 px-3 rounded-lg bg-amber-400/10 border border-amber-400/30">
+                      <Crown className="w-4 h-4 text-amber-400" />
+                      <span className="text-sm font-semibold text-amber-400">
+                        Highest Tier — You're at the top!
+                      </span>
+                    </div>
+                  )}
+
                   {/* CTA Button */}
                   <Button
                     onClick={() => handleUpgrade(plan)}
                     disabled={isCurrentPlan || isProcessing}
                     className={`w-full py-3.5 px-6 rounded-xl font-semibold text-center transition-all duration-200 flex items-center justify-center gap-2 ${
                       isCurrentPlan
-                        ? 'bg-gray-600 cursor-not-allowed text-white'
+                        ? 'bg-emerald-600/80 cursor-not-allowed text-white'
+                        : isUpgrade
+                        ? 'bg-gradient-to-r from-[#06b6d4] to-[#0891b2] hover:from-[#0891b2] hover:to-[#0e7490] text-white shadow-lg shadow-[#06b6d4]/30'
                         : isPopular
                         ? 'bg-[#06b6d4] hover:bg-[#0891b2] text-white shadow-lg shadow-[#06b6d4]/30'
                         : `${theme.bg.secondary} ${theme.text.primary} hover:bg-[#06b6d4] hover:text-white border ${theme.border.primary}`
@@ -331,6 +431,11 @@ const MenteePricing = () => {
                         <Check className="w-4 h-4" />
                         Current Plan
                       </>
+                    ) : isUpgrade ? (
+                      <>
+                        <TrendingUp className="w-4 h-4" />
+                        Upgrade
+                      </>
                     ) : (
                       plan.config.cta
                     )}
@@ -339,6 +444,40 @@ const MenteePricing = () => {
               </div>
             );
           })}
+        </div>
+
+        {/* Feature Comparison Matrix */}
+        <div className="max-w-4xl mx-auto">
+          <h2 className={`text-2xl font-bold ${theme.text.primary} text-center mb-6`}>
+            Compare Plans
+          </h2>
+          <div className={`overflow-x-auto rounded-xl border ${theme.border.primary}`}>
+            <table className="w-full">
+              <thead>
+                <tr className={`${theme.bg.secondary} border-b ${theme.border.primary}`}>
+                  <th className={`text-left py-4 px-5 text-sm font-semibold ${theme.text.secondary}`}>Feature</th>
+                  <th className="text-center py-4 px-4 text-sm font-semibold text-blue-400">Starter</th>
+                  <th className="text-center py-4 px-4 text-sm font-semibold text-[#06b6d4]">Pro</th>
+                  <th className="text-center py-4 px-4 text-sm font-semibold text-amber-400">Elite</th>
+                </tr>
+              </thead>
+              <tbody>
+                {featureMatrix.map((row, index) => (
+                  <tr
+                    key={index}
+                    className={`border-b ${theme.border.primary} last:border-b-0 ${
+                      index % 2 === 0 ? theme.bg.card : theme.bg.secondary
+                    }`}
+                  >
+                    <td className={`py-3.5 px-5 text-sm ${theme.text.secondary}`}>{row.feature}</td>
+                    <td className="py-3.5 px-4 text-center">{renderCellValue(row.starter)}</td>
+                    <td className="py-3.5 px-4 text-center">{renderCellValue(row.pro)}</td>
+                    <td className="py-3.5 px-4 text-center">{renderCellValue(row.elite)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Trust Indicators */}

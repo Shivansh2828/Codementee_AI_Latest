@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useCurrency } from '../../contexts/CurrencyContext';
+import CouponCodeInput from '../../components/pricing/CouponCodeInput';
 import api from '../../utils/api';
 import { Building2, Calendar, Clock, CheckCircle, ArrowRight, ArrowLeft, Brain, Users, Code, MessageSquare, CreditCard, Loader2, Star, Info } from 'lucide-react';
 import { toast } from 'sonner';
@@ -9,6 +11,7 @@ import { useAuth } from '../../contexts/AuthContext';
 const MenteeBooking = () => {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { currency } = useCurrency();
   const [step, setStep] = useState(1);
   const [companies, setCompanies] = useState([]);
   const [slots, setSlots] = useState([]);
@@ -16,6 +19,7 @@ const MenteeBooking = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
   
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [selectedSlots, setSelectedSlots] = useState([]);
@@ -160,7 +164,8 @@ const MenteeBooking = () => {
         password: 'temp-password', // Will be updated
         plan_id: selectedPlan,
         current_role: user.current_role || '',
-        target_role: user.target_role || ''
+        target_role: user.target_role || '',
+        coupon_code: appliedCoupon?.code || undefined,
       });
 
       const { order_id, razorpay_order_id, amount, currency } = orderResponse.data;
@@ -964,6 +969,19 @@ const MenteeBooking = () => {
               </div>
             ))}
           </div>
+
+          {/* Coupon Code */}
+          {selectedPlan && pricingPlans.find(p => p.id === selectedPlan) && (
+            <div className="mb-6">
+              <CouponCodeInput
+                serviceType="mock_interview"
+                orderAmount={pricingPlans.find(p => p.id === selectedPlan)?.price || 0}
+                currency={currency}
+                onCouponApplied={(result) => setAppliedCoupon(result)}
+                onCouponRemoved={() => setAppliedCoupon(null)}
+              />
+            </div>
+          )}
 
           <div className="flex justify-between">
             <button

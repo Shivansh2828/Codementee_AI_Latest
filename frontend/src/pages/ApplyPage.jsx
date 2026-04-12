@@ -3,17 +3,21 @@ import { useNavigate, Link } from 'react-router-dom';
 import { ArrowRight, ArrowLeft, Loader2, Shield, CreditCard } from 'lucide-react';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
+import CouponCodeInput from '../components/pricing/CouponCodeInput';
 import { cohortData } from '../data/mock';
 import { toast } from 'sonner';
 import api from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 const ApplyPage = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { currency } = useCurrency();
   const [isLoading, setIsLoading] = useState(false);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
   const [pricingPlans, setPricingPlans] = useState([]);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -29,11 +33,17 @@ const ApplyPage = () => {
   useEffect(() => {
     const fetchPricing = async () => {
       try {
-        const response = await api.get('/pricing-plans');
-        setPricingPlans(response.data.filter(p => p.is_active));
+        const allowedPlanIds = ['starter', 'pro', 'elite'];
+        const response = await api.get('/pricing-plans', {
+          params: { currency, service_type: 'mock_interview' }
+        });
+        const filtered = response.data
+          .filter(p => p.is_active !== false && allowedPlanIds.includes(p.plan_id || p.id))
+          .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+        setPricingPlans(filtered);
         // Set default to pro plan if available
-        if (response.data.length > 0) {
-          const proPlan = response.data.find(p => p.plan_id === 'pro');
+        if (filtered.length > 0) {
+          const proPlan = filtered.find(p => p.plan_id === 'pro');
           if (proPlan) {
             setFormData(prev => ({ ...prev, selectedPlan: proPlan.plan_id }));
           }
@@ -85,7 +95,8 @@ const ApplyPage = () => {
         current_role: formData.currentRole,
         target_role: formData.targetRole,
         timeline: formData.timeline,
-        struggle: formData.struggle
+        struggle: formData.struggle,
+        coupon_code: appliedCoupon?.code || undefined
       });
 
       const { order_id, razorpay_order_id, razorpay_key_id, amount, currency } = orderRes.data;
@@ -317,6 +328,17 @@ const ApplyPage = () => {
                   <p className="text-[#06b6d4] text-sm text-right mt-1">{selectedPlanDetails.savings}</p>
                 )}
               </div>
+
+              {/* Coupon Code */}
+              {selectedPlanDetails && (
+                <CouponCodeInput
+                  serviceType="mock_interview"
+                  orderAmount={selectedPlanDetails.price}
+                  currency={currency}
+                  onCouponApplied={(result) => setAppliedCoupon(result)}
+                  onCouponRemoved={() => setAppliedCoupon(null)}
+                />
+              )}
 
               {/* Submit */}
               <button
