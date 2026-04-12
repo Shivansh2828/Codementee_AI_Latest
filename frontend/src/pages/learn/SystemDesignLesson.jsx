@@ -6,6 +6,7 @@ import Footer from '../../components/layout/Footer';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getTopicBySlug, getNextTopic, getPrevTopic, TOPICS, SECTIONS, getTopicAccess } from '../../data/systemDesignCourse';
 import { ANIMATIONS } from '../../components/learn/CourseAnimations';
+import ArchitectureDiagram from '../../components/learn/ArchitectureDiagram';
 import { useAuth } from '../../contexts/AuthContext';
 
 // ── Rich text renderer ───────────────────────────────────────────────────────
@@ -322,6 +323,56 @@ const DiagramSection = ({ section, theme }) => {
             ))}
           </div>
         )}
+
+        {section.variant === 'db-types-comparison' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto">
+            {[
+              { name: 'Relational (SQL)', examples: 'PostgreSQL, MySQL', model: 'Tables with rows & columns', best: 'Transactions, JOINs, complex queries', scale: 'Vertical + read replicas', color: 'blue' },
+              { name: 'Document', examples: 'MongoDB, Firestore', model: 'JSON-like documents', best: 'Flexible schema, hierarchical data', scale: 'Horizontal (sharding)', color: 'green' },
+              { name: 'Key-Value', examples: 'Redis, DynamoDB', model: 'Key → Value pairs', best: 'Caching, sessions, simple lookups', scale: 'Horizontal, sub-ms latency', color: 'orange' },
+              { name: 'Wide-Column', examples: 'Cassandra, HBase', model: 'Rows with dynamic columns', best: 'Time-series, massive writes', scale: 'Horizontal, multi-region', color: 'purple' },
+              { name: 'Graph', examples: 'Neo4j, Neptune', model: 'Nodes & edges', best: 'Social graphs, recommendations', scale: 'Relationship traversals O(1)', color: 'pink' },
+              { name: 'Search Engine', examples: 'Elasticsearch, Solr', model: 'Inverted index', best: 'Full-text search, log analytics', scale: 'Horizontal, near real-time', color: 'cyan' },
+            ].map((db, i) => (
+              <div key={i} className={`${theme.bg.secondary} rounded-xl p-4 border ${theme.border.primary}`}>
+                <h4 className={`font-bold text-[var(--${db.color})] text-sm mb-2`}>{db.name}</h4>
+                <div className={`space-y-1.5 text-xs ${theme.text.secondary}`}>
+                  <div><span className={theme.text.muted}>Examples:</span> {db.examples}</div>
+                  <div><span className={theme.text.muted}>Model:</span> {db.model}</div>
+                  <div><span className={theme.text.muted}>Best for:</span> {db.best}</div>
+                  <div className={`pt-1.5 border-t border-[var(--border-primary)] text-[var(--${db.color})]`}>{db.scale}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {section.variant === 'sql-vs-nosql' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+            <div className={`${theme.bg.secondary} rounded-xl p-5 border ${theme.border.primary}`}>
+              <h4 className="font-bold text-[var(--blue)] text-center mb-3">Choose SQL When</h4>
+              <div className={`text-xs ${theme.text.secondary} space-y-2`}>
+                <p>✅ Data has strong relationships (users → orders → items)</p>
+                <p>✅ You need ACID transactions (payments, inventory)</p>
+                <p>✅ Complex queries with JOINs, aggregations, GROUP BY</p>
+                <p>✅ Ad-hoc querying and reporting</p>
+                <p>✅ Schema is well-defined and stable</p>
+                <p className={`pt-2 border-t border-[var(--border-primary)] ${theme.text.muted} italic`}>Default: PostgreSQL</p>
+              </div>
+            </div>
+            <div className={`${theme.bg.secondary} rounded-xl p-5 border ${theme.border.primary}`}>
+              <h4 className="font-bold text-[var(--green)] text-center mb-3">Choose NoSQL When</h4>
+              <div className={`text-xs ${theme.text.secondary} space-y-2`}>
+                <p>✅ Need horizontal write scalability (millions/sec)</p>
+                <p>✅ Data is naturally document-shaped (nested JSON)</p>
+                <p>✅ Simple access patterns (key-value lookups)</p>
+                <p>✅ Schema evolves frequently</p>
+                <p>✅ Eventual consistency is acceptable</p>
+                <p className={`pt-2 border-t border-[var(--border-primary)] ${theme.text.muted} italic`}>Default: MongoDB (docs) or Redis (KV)</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -626,6 +677,9 @@ const Section = ({ section, theme }) => {
 
     case 'diagram':
       return <DiagramSection section={section} theme={theme} />;
+
+    case 'architecture':
+      return <ArchitectureDiagram {...section.config} title={section.heading} caption={section.caption} />;
 
     default:
       return null;
