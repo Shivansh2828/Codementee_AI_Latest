@@ -49,10 +49,15 @@ const SystemDesignIndex = () => {
         <div className="container max-w-5xl mx-auto px-4">
 
           {/* Back to Courses */}
-          <Link to="/learn" className={`inline-flex items-center gap-2 text-sm ${theme.text.muted} hover:text-[#06b6d4] transition-colors mb-8`}>
-            <ArrowLeft className="w-4 h-4" />
-            All Courses
-          </Link>
+          <div className="flex items-center gap-4 mb-8">
+            <Link to="/mentee" className={`inline-flex items-center gap-2 text-sm ${theme.text.muted} hover:text-[#06b6d4] transition-colors`}>
+              <ArrowLeft className="w-4 h-4" /> Dashboard
+            </Link>
+            <span className={`text-sm ${theme.text.muted}`}>/</span>
+            <Link to="/learn" className={`text-sm ${theme.text.muted} hover:text-[#06b6d4] transition-colors`}>
+              All Courses
+            </Link>
+          </div>
 
           {/* Hero */}
           <div className="text-center mb-14">

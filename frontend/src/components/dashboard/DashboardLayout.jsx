@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useCurrency } from '../../contexts/CurrencyContext';
-import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus, DollarSign, FileText, MessageCircle, BarChart3, TrendingUp, ChevronDown, ChevronRight, Bug, Briefcase, Target, Crown, Headphones, Search, Lock, GraduationCap, Server, Code, Layers, Receipt } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus, DollarSign, FileText, MessageCircle, BarChart3, TrendingUp, ChevronDown, ChevronRight, Bug, Briefcase, Target, Crown, Headphones, Search, Lock, GraduationCap, Server, Code, Layers, Receipt, Bot, CreditCard } from 'lucide-react';
 import ThemeToggle from '../ui/ThemeToggle';
 import { Badge } from '../ui/badge';
 import BugReportModal from '../BugReportModal';
@@ -21,14 +21,14 @@ const DashboardLayout = ({ children, title }) => {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [bugReportOpen, setBugReportOpen] = useState(false);
   const [starterPrice, setStarterPrice] = useState(null);
-  const [expandedSections, setExpandedSections] = useState({ learn: true, coaching: true, community: true });
+  const [expandedSections, setExpandedSections] = useState({ 'ai-tools': true, learn: true, coaching: true, community: true });
   const dropdownRef = useRef(null);
 
   // Map icon string names from navigationConfig to Lucide components
   const iconMap = {
     LayoutDashboard, GraduationCap, Server, Code, MessageSquare, Layers,
     Target, FileText, Search, Headphones, CalendarPlus, Calendar,
-    Users, MessageCircle, Receipt,
+    Users, MessageCircle, Receipt, Bot, Briefcase, CreditCard,
   };
 
   const getIcon = (iconName) => iconMap[iconName] || LayoutDashboard;

@@ -49,7 +49,9 @@ const AIAgentLandingPage = () => {
       
       const agentPlanMap = {};
       plans.forEach(plan => {
-        if (plan.plan_id === 'agent_monthly') {
+        if (plan.plan_id === 'agent_trial') {
+          agentPlanMap.trial = { price: plan.price, name: plan.name, features: plan.features };
+        } else if (plan.plan_id === 'agent_monthly') {
           agentPlanMap.monthly = { price: plan.price, name: plan.name, features: plan.features };
         } else if (plan.plan_id === 'agent_quarterly') {
           agentPlanMap.quarterly = { price: plan.price, name: plan.name, features: plan.features };
@@ -327,7 +329,7 @@ const AIAgentLandingPage = () => {
             <div className="max-w-4xl mx-auto">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {[
-                  { step: '1', icon: FileText, title: 'Paste Your Resume', desc: 'Upload or paste your resume. AI extracts skills, experience, and preferences.' },
+                  { step: '1', icon: FileText, title: 'Upload Your Resume', desc: 'Upload your resume (PDF/DOCX). AI extracts skills, experience, and preferences.' },
                   { step: '2', icon: Bot, title: 'AI Searches Daily', desc: 'Every day, your agent searches job boards and scores matches against your profile.' },
                   { step: '3', icon: Mail, title: 'Get Email Digest', desc: 'Top matches land in your inbox each morning with scores and direct apply links.' },
                   { step: '4', icon: Users, title: 'Find Referrals', desc: 'Pick a company, get LinkedIn contacts and AI-drafted referral messages instantly.' },
@@ -377,61 +379,79 @@ const AIAgentLandingPage = () => {
             </div>
 
             {/* Duration cards — price only, no repeated features */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto mb-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-4xl mx-auto mb-12">
+              {/* Trial — One-time */}
+              <div className={`rounded-2xl p-6 ${theme.bg.card} ${theme.border.primary} border hover:border-amber-500/40 transition-all duration-300 text-center relative`}>
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="px-3 py-1 bg-amber-500 text-white text-[10px] font-bold rounded-full shadow-lg">Try It Out</span>
+                </div>
+                <h4 className={`text-lg font-bold ${theme.text.primary} mb-1 mt-1`}>Trial</h4>
+                <p className={`text-[11px] ${theme.text.muted} mb-4`}>One-time • 1 month only</p>
+                <div className="flex items-baseline justify-center gap-1 mb-5">
+                  <span className={`text-3xl font-bold ${theme.text.primary}`}>{formatPrice(getPrice('trial'))}</span>
+                </div>
+                <Link
+                  to="/agent-purchase?plan=agent_trial"
+                  className={`block w-full text-center px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 ${theme.bg.secondary} ${theme.text.primary} border ${theme.border.primary} hover:border-amber-500/50`}
+                >
+                  Start Trial
+                </Link>
+              </div>
+
               {/* Monthly */}
-              <div className={`rounded-2xl p-7 ${theme.bg.card} ${theme.border.primary} border hover:border-[#06b6d4]/40 transition-all duration-300 text-center`}>
+              <div className={`rounded-2xl p-6 ${theme.bg.card} ${theme.border.primary} border hover:border-[#06b6d4]/40 transition-all duration-300 text-center`}>
                 <h4 className={`text-lg font-bold ${theme.text.primary} mb-1`}>Monthly</h4>
-                <p className={`text-xs ${theme.text.muted} mb-5`}>Billed every month</p>
-                <div className="flex items-baseline justify-center gap-1 mb-6">
-                  <span className={`text-4xl font-bold ${theme.text.primary}`}>{formatPrice(getPrice('monthly'))}</span>
+                <p className={`text-[11px] ${theme.text.muted} mb-4`}>Billed every month</p>
+                <div className="flex items-baseline justify-center gap-1 mb-5">
+                  <span className={`text-3xl font-bold ${theme.text.primary}`}>{formatPrice(getPrice('monthly'))}</span>
                   <span className={`${theme.text.muted} text-sm`}>/mo</span>
                 </div>
                 <Link
                   to="/agent-purchase?plan=agent_monthly"
-                  className={`block w-full text-center px-4 py-3 rounded-xl font-semibold transition-all duration-200 ${theme.bg.secondary} ${theme.text.primary} border ${theme.border.primary} hover:border-[#06b6d4]/50`}
+                  className={`block w-full text-center px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 ${theme.bg.secondary} ${theme.text.primary} border ${theme.border.primary} hover:border-[#06b6d4]/50`}
                 >
-                  Get Started
+                  Get Monthly
                 </Link>
               </div>
 
               {/* Quarterly — Popular */}
-              <div className="rounded-2xl p-7 bg-gradient-to-b from-[#06b6d4]/10 to-transparent border-2 border-[#06b6d4]/40 relative text-center">
+              <div className="rounded-2xl p-6 bg-gradient-to-b from-[#06b6d4]/10 to-transparent border-2 border-[#06b6d4]/40 relative text-center">
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="px-4 py-1 bg-[#06b6d4] text-white text-xs font-bold rounded-full shadow-lg">Best Value</span>
+                  <span className="px-3 py-1 bg-[#06b6d4] text-white text-[10px] font-bold rounded-full shadow-lg">Best Value</span>
                 </div>
-                <h4 className={`text-lg font-bold ${theme.text.primary} mb-1`}>Quarterly</h4>
-                <p className={`text-xs ${theme.text.muted} mb-5`}>Billed every 3 months</p>
+                <h4 className={`text-lg font-bold ${theme.text.primary} mb-1 mt-1`}>Quarterly</h4>
+                <p className={`text-[11px] ${theme.text.muted} mb-4`}>Billed every 3 months</p>
                 <div className="flex items-baseline justify-center gap-1 mb-1">
-                  <span className={`text-4xl font-bold ${theme.text.primary}`}>{formatPrice(getPrice('quarterly'))}</span>
+                  <span className={`text-3xl font-bold ${theme.text.primary}`}>{formatPrice(getPrice('quarterly'))}</span>
                   <span className={`${theme.text.muted} text-sm`}>/3 mo</span>
                 </div>
-                <p className={`text-xs mb-1 ${theme.text.muted}`}>~{formatPrice(Math.round(getPrice('quarterly') / 3))}/mo</p>
+                <p className={`text-[11px] mb-1 ${theme.text.muted}`}>~{formatPrice(Math.round(getPrice('quarterly') / 3))}/mo</p>
                 {agentPlans.quarterly?.savePercent > 0 && (
-                  <p className="text-xs font-semibold text-green-500 mb-5">Save {agentPlans.quarterly.savePercent}%</p>
+                  <p className="text-[11px] font-semibold text-green-500 mb-4">Save {agentPlans.quarterly.savePercent}%</p>
                 )}
                 <Link
                   to="/agent-purchase?plan=agent_quarterly"
-                  className="block w-full text-center px-4 py-3 rounded-xl font-semibold bg-[#06b6d4] text-white hover:bg-[#0891b2] transition-all duration-200 shadow-lg"
+                  className="block w-full text-center px-4 py-2.5 rounded-xl font-semibold text-sm bg-[#06b6d4] text-white hover:bg-[#0891b2] transition-all duration-200 shadow-lg"
                 >
                   Get Quarterly
                 </Link>
               </div>
 
               {/* Yearly */}
-              <div className={`rounded-2xl p-7 ${theme.bg.card} ${theme.border.primary} border hover:border-[#06b6d4]/40 transition-all duration-300 text-center`}>
+              <div className={`rounded-2xl p-6 ${theme.bg.card} ${theme.border.primary} border hover:border-[#06b6d4]/40 transition-all duration-300 text-center`}>
                 <h4 className={`text-lg font-bold ${theme.text.primary} mb-1`}>Yearly</h4>
-                <p className={`text-xs ${theme.text.muted} mb-5`}>Billed annually</p>
+                <p className={`text-[11px] ${theme.text.muted} mb-4`}>Billed annually</p>
                 <div className="flex items-baseline justify-center gap-1 mb-1">
-                  <span className={`text-4xl font-bold ${theme.text.primary}`}>{formatPrice(getPrice('yearly'))}</span>
+                  <span className={`text-3xl font-bold ${theme.text.primary}`}>{formatPrice(getPrice('yearly'))}</span>
                   <span className={`${theme.text.muted} text-sm`}>/yr</span>
                 </div>
-                <p className={`text-xs mb-1 ${theme.text.muted}`}>~{formatPrice(Math.round(getPrice('yearly') / 12))}/mo</p>
+                <p className={`text-[11px] mb-1 ${theme.text.muted}`}>~{formatPrice(Math.round(getPrice('yearly') / 12))}/mo</p>
                 {agentPlans.yearly?.savePercent > 0 && (
-                  <p className="text-xs font-semibold text-green-500 mb-5">Save {agentPlans.yearly.savePercent}%</p>
+                  <p className="text-[11px] font-semibold text-green-500 mb-4">Save {agentPlans.yearly.savePercent}%</p>
                 )}
                 <Link
                   to="/agent-purchase?plan=agent_yearly"
-                  className={`block w-full text-center px-4 py-3 rounded-xl font-semibold transition-all duration-200 ${theme.bg.secondary} ${theme.text.primary} border ${theme.border.primary} hover:border-[#06b6d4]/50`}
+                  className={`block w-full text-center px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 ${theme.bg.secondary} ${theme.text.primary} border ${theme.border.primary} hover:border-[#06b6d4]/50`}
                 >
                   Get Yearly
                 </Link>
