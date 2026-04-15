@@ -431,10 +431,14 @@ export const QUESTION_BREAKDOWN_TOPICS = {
 // ── FB NEWS FEED ───────────────────────────────────────────────────────────
 'design-fb-news-feed': {
   slug: 'design-fb-news-feed', title: 'Design FB News Feed', subtitle: 'Personalized social media feed at scale',
-  duration: '40 min', difficulty: 'Advanced',
+  duration: '40 min', difficulty: 'Hard',
   sections: [
     {
-      type: 'requirements', heading: 'Understanding the Problem',
+      type: 'text', heading: 'Understanding the Problem',
+      body: `Facebook's News Feed is the personalized stream of posts, photos, and updates that users see when they open the app. What makes this one of the hardest system design problems is the combination of scale (2B users, 500M DAU), personalization (every user sees a different feed), and real-time updates (new posts should appear within seconds).\n\nThe core challenge is the fan-out problem: when a user with 5,000 friends posts something, that post needs to appear in 5,000 different feeds. Do you compute each feed on-the-fly (fan-out on read) or pre-compute and push to all followers (fan-out on write)? The answer depends on the user — and that trade-off is what interviewers want you to reason through.`,
+    },
+    {
+      type: 'requirements', heading: 'Requirements',
       functional: [
         'User sees a personalized feed of posts from friends and followed pages',
         'Posts support text, images, and videos',
@@ -507,6 +511,35 @@ export const QUESTION_BREAKDOWN_TOPICS = {
       ],
     },
     {
+      type: 'architecture', heading: 'News Feed Architecture',
+      caption: 'Hybrid fan-out: push for normal users, pull for celebrities. Feed served from Redis cache.',
+      config: {
+        width: 850, height: 420,
+        nodes: [
+          { id: 'user', label: 'User', icon: '👤', color: 'blue', x: 20, y: 160, w: 100, h: 56 },
+          { id: 'lb', label: 'Load Balancer', color: 'cyan', x: 170, y: 160, w: 120, h: 56 },
+          { id: 'post-svc', label: 'Post Service', sublabel: 'Create posts', color: 'green', x: 370, y: 40, w: 130, h: 56 },
+          { id: 'feed-svc', label: 'Feed Service', sublabel: 'Read feeds', color: 'orange', x: 370, y: 160, w: 130, h: 56 },
+          { id: 'fanout', label: 'Fan-out Service', sublabel: 'Push to followers', color: 'purple', x: 370, y: 290, w: 130, h: 56 },
+          { id: 'feed-cache', label: 'Feed Cache', sublabel: 'Redis sorted sets', icon: '⚡', color: 'red', x: 580, y: 160, w: 130, h: 56 },
+          { id: 'post-db', label: 'Post DB', sublabel: 'PostgreSQL', icon: '🗄️', color: 'blue', x: 580, y: 40, w: 130, h: 56 },
+          { id: 'graph', label: 'Social Graph', sublabel: 'Followers list', color: 'cyan', x: 580, y: 290, w: 130, h: 56 },
+          { id: 'rank', label: 'Ranking Service', sublabel: 'ML scoring', color: 'yellow', x: 740, y: 160, w: 110, h: 56 },
+        ],
+        edges: [
+          { from: 'user', to: 'lb', label: 'request' },
+          { from: 'lb', to: 'post-svc', label: 'POST /posts' },
+          { from: 'lb', to: 'feed-svc', label: 'GET /feed' },
+          { from: 'post-svc', to: 'post-db', label: 'store post' },
+          { from: 'post-svc', to: 'fanout', label: 'trigger fan-out' },
+          { from: 'fanout', to: 'graph', label: 'get followers' },
+          { from: 'fanout', to: 'feed-cache', label: 'push to feeds', color: 'accent' },
+          { from: 'feed-svc', to: 'feed-cache', label: 'read feed', color: 'accent' },
+          { from: 'feed-svc', to: 'rank', label: 'rank posts' },
+        ],
+      },
+    },
+    {
       type: 'deepdive', heading: 'Deep Dive: Fan-out — The Core Design Decision',
       subtitle: 'How do you get a post into all followers\' feeds efficiently?',
       content: [
@@ -560,10 +593,14 @@ export const QUESTION_BREAKDOWN_TOPICS = {
 // ── RATE LIMITER ───────────────────────────────────────────────────────────
 'design-rate-limiter': {
   slug: 'design-rate-limiter', title: 'Design a Rate Limiter', subtitle: 'Protect APIs from abuse and ensure fair usage',
-  duration: '30 min', difficulty: 'Intermediate',
+  duration: '30 min', difficulty: 'Medium',
   sections: [
     {
-      type: 'requirements', heading: 'Understanding the Problem',
+      type: 'text', heading: 'Understanding the Problem',
+      body: `A rate limiter controls how many requests a client can make to your API within a given time window. Without one, a single misbehaving client or attacker can overwhelm your servers and degrade the experience for everyone. Every production API has rate limiting — it is table stakes.\n\nWhat makes this a great interview question is that it tests your understanding of distributed systems fundamentals: where do you store the counters (Redis), how do you handle multiple servers (distributed counting), and what algorithm do you use (token bucket vs sliding window). The interviewer expects you to discuss trade-offs, not just pick one approach.`,
+    },
+    {
+      type: 'requirements', heading: 'Requirements',
       functional: [
         'Limit the number of requests a client can make in a time window',
         'Return HTTP 429 (Too Many Requests) when limit is exceeded',
@@ -582,6 +619,31 @@ export const QUESTION_BREAKDOWN_TOPICS = {
     {
       type: 'text', heading: 'Where to Place the Rate Limiter',
       body: `**Client-side:** Easily bypassed. Never rely on this alone.\n\n**API Gateway:** Best for most cases. Centralized, language-agnostic, no code changes needed in services. Examples: AWS API Gateway, Kong, Nginx.\n\n**Application middleware:** More flexible (can access business logic), but must be implemented in every service.\n\n**Recommendation:** API Gateway for global limits, application middleware for business-logic-aware limits (e.g., "free tier users can only call /search 10 times/day").`,
+    },
+    {
+      type: 'architecture', heading: 'Rate Limiter Architecture',
+      caption: 'Rate limiter sits in the API Gateway. Counters stored in Redis for distributed accuracy.',
+      config: {
+        width: 820, height: 340,
+        nodes: [
+          { id: 'client', label: 'Client', icon: '🌐', color: 'blue', x: 20, y: 120, w: 100, h: 56 },
+          { id: 'gateway', label: 'API Gateway', sublabel: 'Rate limit check', color: 'cyan', x: 190, y: 120, w: 140, h: 56 },
+          { id: 'redis', label: 'Redis', sublabel: 'Counters + TTL', icon: '⚡', color: 'red', x: 190, y: 250, w: 130, h: 56 },
+          { id: 'rules', label: 'Rules DB', sublabel: 'Limit configs', icon: '📋', color: 'purple', x: 400, y: 250, w: 130, h: 56 },
+          { id: 'svc1', label: 'Service A', color: 'green', x: 420, y: 40, w: 120, h: 50 },
+          { id: 'svc2', label: 'Service B', color: 'green', x: 420, y: 120, w: 120, h: 50 },
+          { id: 'svc3', label: 'Service C', color: 'green', x: 420, y: 200, w: 120, h: 50 },
+          { id: 'resp429', label: '429 Too Many', sublabel: 'Retry-After header', color: 'red', x: 620, y: 120, w: 130, h: 56 },
+        ],
+        edges: [
+          { from: 'client', to: 'gateway', label: 'request' },
+          { from: 'gateway', to: 'redis', label: 'INCR counter', color: 'accent' },
+          { from: 'gateway', to: 'rules', label: 'load rules (cached)', dashed: true },
+          { from: 'gateway', to: 'svc1', label: 'allowed → forward' },
+          { from: 'gateway', to: 'svc2', label: '' },
+          { from: 'gateway', to: 'resp429', label: 'over limit → reject', dashed: true },
+        ],
+      },
     },
     {
       type: 'text', heading: 'Core Entities',
@@ -816,9 +878,14 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
 
   'design-tinder': {
     slug: 'design-tinder', title: 'Design Tinder', subtitle: 'Location-based matching with swipe mechanics',
-    duration: '40 min', difficulty: 'Advanced',
+    duration: '40 min', difficulty: 'Hard',
     sections: [
-      {
+      
+    {
+      type: 'text', heading: 'Understanding the Problem',
+      body: `Tinder is a location-based dating app where users swipe right (like) or left (pass) on profiles. When two users both swipe right on each other, it is a match and they can chat. The interesting system design challenges are geospatial queries (finding users nearby), the recommendation engine (who to show next), and handling the massive read-heavy workload (millions of swipe decisions per minute).`,
+    },
+    {
         type: 'requirements', heading: 'Understanding the Problem',
         functional: ['Users create a profile with photos, bio, and preferences', 'Users see nearby profiles and swipe left (pass) or right (like)', 'When two users both swipe right, it\'s a match', 'Matched users can chat', 'Users can set distance, age, and gender preferences'],
         functionalOutOfScope: ['Super likes', 'Boost/premium features', 'Video profiles'],
@@ -887,9 +954,14 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
 
   'design-whatsapp': {
     slug: 'design-whatsapp', title: 'Design WhatsApp', subtitle: 'Real-time messaging at scale',
-    duration: '40 min', difficulty: 'Advanced',
+    duration: '40 min', difficulty: 'Hard',
     sections: [
-      {
+      
+    {
+      type: 'text', heading: 'Understanding the Problem',
+      body: `WhatsApp is a real-time messaging platform handling 100B+ messages per day. The core challenges are maintaining persistent WebSocket connections for 2B users, ensuring message delivery even when recipients are offline, supporting group chats with fan-out, and end-to-end encryption. The interviewer wants to see how you handle the stateful nature of WebSocket connections across a distributed system.`,
+    },
+    {
         type: 'requirements', heading: 'Understanding the Problem',
         functional: ['1:1 messaging between users', 'Group messaging (up to 256 members)', 'Message delivery receipts — sent, delivered, read', 'Media sharing (images, videos, documents)', 'Online/last seen status'],
         functionalOutOfScope: ['Voice/video calls', 'Status/stories', 'Payment'],
@@ -930,7 +1002,40 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
           ]},
         ],
       },
-      { type: 'text', heading: 'High-Level Design', body: `**Message flow (both users online):**\n1. Sender sends message via WebSocket to Chat Server\n2. Chat Server writes to message DB (Cassandra)\n3. Chat Server looks up recipient's connected Chat Server (via Redis session store)\n4. Routes message to recipient's Chat Server\n5. Recipient's Chat Server pushes via WebSocket\n6. Recipient's device sends "delivered" ack\n\n**Message flow (recipient offline):**\n1-2 same as above\n3. Recipient not connected — message stored in pending queue\n4. When recipient connects, Chat Server fetches pending messages and delivers\n5. Pending messages cleared after delivery confirmation\n\n**Key components:**\n- **Chat Servers** — Handle WebSocket connections, route messages\n- **Session Service (Redis)** — Maps user_id → chat_server_id for routing\n- **Message DB (Cassandra)** — Persistent message storage\n- **Pending Queue (Redis/Kafka)** — Buffer for offline users\n- **S3** — Media file storage, **CDN** — Media delivery` },
+      { type: 'text', heading: 'High-Level Design', body: `The architecture centers around stateful Chat Servers that maintain WebSocket connections. The key challenge is routing: when User A sends a message to User B, A's Chat Server needs to know which Chat Server B is connected to. A Redis session store maps user_id → chat_server_id for this purpose.` },
+      {
+        type: 'architecture', heading: 'WhatsApp Messaging Architecture',
+        caption: 'WebSocket connections on Chat Servers, Redis for session routing, Cassandra for message persistence.',
+        config: {
+          width: 850, height: 440,
+          nodes: [
+            { id: 'sender', label: 'Sender', icon: '📱', color: 'blue', x: 20, y: 60, w: 100, h: 56 },
+            { id: 'receiver', label: 'Receiver', icon: '📱', color: 'blue', x: 20, y: 300, w: 100, h: 56 },
+            { id: 'chat1', label: 'Chat Server 1', sublabel: 'WebSocket ×N', color: 'green', x: 200, y: 60, w: 140, h: 56 },
+            { id: 'chat2', label: 'Chat Server 2', sublabel: 'WebSocket ×N', color: 'green', x: 200, y: 300, w: 140, h: 56 },
+            { id: 'session', label: 'Session Store', sublabel: 'Redis — user→server', icon: '⚡', color: 'red', x: 430, y: 60, w: 140, h: 56 },
+            { id: 'msgdb', label: 'Message DB', sublabel: 'Cassandra', icon: '🗄️', color: 'blue', x: 430, y: 180, w: 140, h: 56 },
+            { id: 'pending', label: 'Pending Queue', sublabel: 'Kafka / Redis', icon: '📨', color: 'yellow', x: 430, y: 300, w: 140, h: 56 },
+            { id: 's3', label: 'S3 + CDN', sublabel: 'Media files', icon: '📦', color: 'orange', x: 650, y: 60, w: 120, h: 56 },
+            { id: 'push', label: 'Push Notification', sublabel: 'FCM / APNs', icon: '🔔', color: 'purple', x: 650, y: 300, w: 120, h: 56 },
+          ],
+          edges: [
+            { from: 'sender', to: 'chat1', label: 'WebSocket' },
+            { from: 'receiver', to: 'chat2', label: 'WebSocket' },
+            { from: 'chat1', to: 'session', label: '1. lookup receiver', color: 'accent' },
+            { from: 'chat1', to: 'msgdb', label: '2. persist message' },
+            { from: 'chat1', to: 'chat2', label: '3. route to receiver', color: 'accent' },
+            { from: 'chat1', to: 'pending', label: 'if offline', dashed: true },
+            { from: 'pending', to: 'chat2', label: 'on reconnect', dashed: true },
+            { from: 'chat2', to: 'push', label: 'if app backgrounded' },
+            { from: 'chat1', to: 's3', label: 'media upload' },
+          ],
+        },
+      },
+      {
+        type: 'text', heading: 'Message Flow — Both Users Online',
+        body: `1. Sender types a message and sends it via WebSocket to Chat Server 1 (the server they are connected to).\n\n2. Chat Server 1 writes the message to Cassandra (partitioned by conversation_id, clustered by timestamp). This ensures durability — the message is persisted before any delivery attempt.\n\n3. Chat Server 1 looks up the recipient's connected Chat Server in the Redis session store: GET session:{recipient_id} → "chat-server-2".\n\n4. Chat Server 1 routes the message to Chat Server 2 (via internal gRPC or message bus).\n\n5. Chat Server 2 pushes the message to the recipient via their WebSocket connection.\n\n6. The recipient's device sends a "delivered" acknowledgment back through the same path. The sender sees the double checkmark.\n\n**When the recipient is offline:** Step 3 finds no session entry. The message goes to the Pending Queue (Kafka or Redis list). When the recipient reconnects, their Chat Server drains the pending queue and delivers all missed messages in order. A push notification (FCM/APNs) is also sent to wake the app.`,
+      },
       {
         type: 'deepdive', heading: 'Deep Dive: Message Delivery & Receipts',
         subtitle: 'The three ticks — sent, delivered, read',
@@ -961,9 +1066,14 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
 
   'design-youtube': {
     slug: 'design-youtube', title: 'Design YouTube', subtitle: 'Video upload, processing, and streaming at scale',
-    duration: '45 min', difficulty: 'Advanced',
+    duration: '45 min', difficulty: 'Hard',
     sections: [
-      {
+      
+    {
+      type: 'text', heading: 'Understanding the Problem',
+      body: `YouTube handles 500+ hours of video uploaded every minute and serves 1B+ hours of video watched per day. The key challenges are the video processing pipeline (transcoding to multiple resolutions), efficient streaming via CDN, and the recommendation engine. Unlike text-based systems, video involves massive binary data — a single 10-minute 1080p video is ~1GB. Your architecture must handle this without your servers becoming the bottleneck.`,
+    },
+    {
         type: 'requirements', heading: 'Understanding the Problem',
         functional: ['Upload videos (up to 256GB)', 'Stream videos with adaptive quality', 'Search videos by title, description, tags', 'View count, likes, comments', 'Subscribe to channels'],
         functionalOutOfScope: ['Live streaming', 'Shorts/reels', 'Monetization/ads'],
@@ -1014,58 +1124,132 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
 
   'design-uber': {
     slug: 'design-uber', title: 'Design Uber', subtitle: 'Real-time ride matching and location tracking',
-    duration: '45 min', difficulty: 'Advanced',
+    duration: '50 min', difficulty: 'Hard',
     sections: [
       {
-        type: 'requirements', heading: 'Understanding the Problem',
-        functional: ['Rider requests a ride from current location', 'System matches rider with a nearby available driver', 'Real-time location tracking during the ride', 'ETA calculation before and during ride', 'Fare calculation and payment'],
-        functionalOutOfScope: ['Driver onboarding', 'Ride scheduling', 'Ride sharing/pooling'],
-        nonFunctional: ['100M users, 10M active drivers', 'Match rider to driver within 1 second', 'Driver location updates every 4 seconds', 'High availability — ride requests must never fail', 'Low latency location queries'],
-        nonFunctionalOutOfScope: ['Fraud detection', 'Driver ratings system'],
+        type: 'text', heading: 'Understanding the Problem',
+        body: `Uber is a ride-sharing platform that connects passengers with nearby drivers. Users open the app, enter a destination, see a fare estimate, and request a ride. The system finds a nearby available driver, the driver accepts, picks up the rider, and completes the trip.\n\nWhat makes this a challenging system design problem is the real-time nature of everything. Drivers are constantly moving — their locations change every few seconds. When a rider requests a ride, the system needs to find the best available driver within seconds, not minutes. And during the ride, both the rider and driver need to see live location updates.\n\nThe numbers are what make it hard: 10 million active drivers sending GPS updates every 4 seconds means 2.5 million location writes per second. No traditional database can handle that. This is where the interesting design decisions happen.`,
       },
-      { type: 'text', heading: 'Scale Estimation', body: `**Location updates:** 10M drivers × 1 update/4sec = 2.5M updates/sec\n**Ride requests:** 10M rides/day ÷ 86,400 = ~116 rides/sec\n**Storage:** Location data is ephemeral (only current location matters). Ride history: 10M rides/day × 1KB = 10GB/day.\n**Key insight:** Location updates (2.5M/sec) is the hardest scaling challenge, not ride requests (116/sec).` },
-      { type: 'text', heading: 'Core Entities', body: `**Rider** — Profile, payment method, current location\n**Driver** — Profile, vehicle info, current location, availability status\n**Ride** — Rider, driver, pickup/dropoff locations, status, fare\n**Location** — Latitude, longitude, timestamp, driver_id` },
+      {
+        type: 'requirements', heading: 'Requirements',
+        functional: [
+          'Riders should be able to enter a destination and get a fare estimate',
+          'Riders should be able to request a ride based on the estimated fare',
+          'The system should match riders with a nearby, available driver',
+          'Drivers should be able to accept or decline ride requests',
+          'Both rider and driver should see live location during the ride',
+        ],
+        functionalOutOfScope: ['Driver onboarding and background checks', 'Ride scheduling in advance', 'Ride sharing / carpooling', 'Driver and rider ratings'],
+        nonFunctional: [
+          'Match rider to driver in under 1 minute (ideally < 10 seconds)',
+          'Strong consistency in matching — a driver cannot be assigned to two rides simultaneously',
+          'Handle 2.5M location updates per second (10M drivers × 1 update/4 sec)',
+          'Handle traffic spikes during events (100K requests from the same area)',
+          'High availability — ride requests must never fail',
+        ],
+        nonFunctionalOutOfScope: ['Fraud detection', 'GDPR compliance details'],
+      },
+      {
+        type: 'text', heading: 'Scale Estimation',
+        body: `Before designing anything, let us understand the scale we are dealing with.\n\n**Location updates:** 10M active drivers, each sending GPS coordinates every 4 seconds = 2.5M writes/sec. This is the hardest scaling challenge in the entire system.\n\n**Ride requests:** 10M rides/day ÷ 86,400 = ~116 rides/sec. This is surprisingly low — a single server could handle this.\n\n**Storage:** Driver locations are ephemeral — we only care about the current position, not history. Ride records: 10M/day × 1KB = 10GB/day, very manageable.\n\nThe key insight: the bottleneck is not ride requests (116/sec) — it is location updates (2.5M/sec). Your design must handle this write throughput while still supporting fast geospatial queries ("find drivers within 3km").`,
+      },
+      {
+        type: 'text', heading: 'Core Entities',
+        body: `Let us identify the key entities before designing APIs. Keep it simple — you can always add fields later.\n\n**Rider** — The person requesting a ride. Has a profile, payment method, and current location.\n\n**Driver** — The person providing the ride. Has a profile, vehicle info, current GPS location, and an availability status (available / on-trip / offline).\n\n**Fare** — An estimated price for a trip. Created when the rider enters a destination. Contains pickup location, destination, estimated price, and ETA.\n\n**Ride** — Represents the full lifecycle of a trip, from request to completion. Links a rider to a driver, tracks status (matching → accepted → in-progress → completed), and records the actual fare.\n\n**Location** — A driver's GPS coordinates at a point in time. Stored ephemerally — we only need the latest position.`,
+      },
       {
         type: 'api', heading: 'API Design',
+        description: 'One endpoint per functional requirement. Notice that driver location updates are the highest-frequency call.',
         endpoints: [
-          { method: 'POST', path: '/rides', label: 'Request a ride', request: '{\n  pickup: { lat, lng },\n  dropoff: { lat, lng },\n  ride_type: "standard" | "premium"\n}', response: '{ ride_id, estimated_fare, eta }' },
-          { method: 'PUT', path: '/rides/{id}/accept', label: 'Driver accepts ride' },
-          { method: 'GET', path: '/rides/{id}', label: 'Get ride status + live location' },
-          { method: 'PUT', path: '/drivers/{id}/location', label: 'Update driver location', request: '{ lat, lng }', note: 'Called every 4 seconds by driver app' },
-          { method: 'PUT', path: '/drivers/{id}/availability', label: 'Toggle availability', request: '{ available: bool }' },
-        ],
-      },
-      { type: 'text', heading: 'High-Level Design', body: `**Ride request flow:**\n1. Rider requests ride → Ride Service creates ride (status: MATCHING)\n2. Ride Service queries Location Service: "find available drivers within 3km of pickup"\n3. Location Service queries Redis Geospatial → returns list of nearby drivers\n4. Matching Service ranks drivers by ETA (not just distance — considers traffic, route)\n5. Send ride request to top 3 drivers simultaneously\n6. First driver to accept → ride confirmed, others notified\n7. If no acceptance in 15 seconds → expand radius, try next batch\n\n**During ride:**\n- Driver app sends location every 4 seconds → Location Service → Redis\n- Rider app polls ride status every 5 seconds (or WebSocket push)\n- ETA recalculated based on live location\n\n**Key components:**\n- **Location Service** — Handles 2.5M location updates/sec, stores in Redis Geospatial\n- **Matching Service** — Finds and ranks nearby drivers\n- **Ride Service** — Manages ride lifecycle\n- **ETA Service** — Calculates estimated time using map data + traffic\n- **Fare Service** — Calculates fare based on distance, time, surge` },
-      {
-        type: 'deepdive', heading: 'Deep Dive: Location Storage & Geospatial Queries',
-        subtitle: 'Handling 2.5M location updates per second',
-        content: [
-          { type: 'text', heading: 'Redis Geospatial', body: `Redis has built-in geospatial commands:\n- **GEOADD** drivers {lng} {lat} {driver_id} — store/update location\n- **GEORADIUS** drivers {lng} {lat} 3 km — find all drivers within 3km\n\nRedis handles this in-memory with O(log N) for both operations. At 2.5M updates/sec, you need a Redis Cluster (shard by geographic region).\n\n**Why not PostGIS?** PostGIS is great for complex geo queries but can't handle 2.5M writes/sec. Redis is 100x faster for simple proximity queries.` },
-          { type: 'text', heading: 'Geohashing', body: `Divide the world into grid cells. Each cell has a hash string. Nearby locations share a common prefix.\n\n**Example:** Geohash "tdr1w" covers a ~5km² area. All drivers in that area have geohashes starting with "tdr1w".\n\n**For finding nearby drivers:**\n1. Compute geohash of rider's location\n2. Query drivers in the same cell + 8 neighboring cells\n3. Filter by exact distance\n\nThis is how Redis GEORADIUS works internally.` },
-          { type: 'text', heading: 'Sharding by Region', body: `A single Redis instance can't handle all 10M drivers globally.\n\n**Shard by city/region:**\n- Redis cluster for NYC handles NYC drivers only\n- Redis cluster for London handles London drivers only\n- Ride Service routes to the correct cluster based on rider's location\n\nThis also reduces the dataset size per cluster — GEORADIUS is faster with fewer entries.` },
+          { method: 'POST', path: '/fares', label: 'Get fare estimate', request: '{\n  pickup: { lat, lng },\n  destination: { lat, lng }\n}', response: '{ fare_id, estimated_price, eta }', note: 'Creates a Fare record. Uses a mapping API (Google Maps) to calculate distance and ETA.' },
+          { method: 'POST', path: '/rides', label: 'Request a ride', request: '{ fare_id }', response: '{ ride_id, status: "matching" }', note: 'Triggers the matching flow. Rider waits for a driver to accept.' },
+          { method: 'PATCH', path: '/rides/{id}', label: 'Driver accepts/declines', request: '{ action: "accept" | "decline" }', note: 'On accept: ride status → "accepted", driver navigates to pickup.' },
+          { method: 'POST', path: '/drivers/location', label: 'Update driver location', request: '{ lat, lng }', note: 'Called every 4 seconds by the driver app. Driver ID from auth token, not request body (security).' },
+          { method: 'GET', path: '/rides/{id}', label: 'Get ride status + live location', response: '{ status, driver_location, eta }' },
         ],
       },
       {
-        type: 'deepdive', heading: 'Deep Dive: Matching Algorithm',
-        subtitle: 'Finding the best driver, not just the closest',
+        type: 'callout', variant: 'warning', heading: 'Security: Never Trust the Client',
+        body: `Notice that the driver location endpoint takes lat/lng in the body but the driver ID comes from the auth token (JWT/session). Never pass user IDs, timestamps, or fare amounts from the client — they can be manipulated. The server should always derive these from the authenticated session or database.`,
+      },
+      {
+        type: 'text', heading: 'Building the Design — Step by Step',
+        body: `Instead of showing one big architecture diagram, let us build the system incrementally, one requirement at a time. This is exactly how you should approach it in an interview — start simple and add complexity as needed.`,
+      },
+      {
+        type: 'text', heading: 'Step 1: Fare Estimation',
+        body: `The simplest flow. The rider enters a destination, and we return a price estimate.\n\nWe need three components: a Rider Client (mobile app), an API Gateway (handles auth, rate limiting, routing), and a Ride Service (calculates the fare using a third-party mapping API like Google Maps).\n\nThe flow is straightforward:\n1. Rider enters pickup and destination in the app\n2. App sends POST /fares to the API Gateway\n3. Gateway authenticates and forwards to the Ride Service\n4. Ride Service calls Google Maps API to get distance and travel time\n5. Ride Service applies the pricing model (base fare + per-km + per-minute + surge multiplier)\n6. Ride Service creates a Fare record in the database and returns it to the rider\n\nAt this point, our architecture is just: Client → API Gateway → Ride Service → Database. Simple.`,
+      },
+      {
+        type: 'text', heading: 'Step 2: Requesting a Ride and Matching with a Driver',
+        body: `Now the rider confirms the fare and requests a ride. This is where it gets interesting — we need to find a nearby available driver.\n\nWe need two new components: a Location Service (knows where every driver is) and a Matching Service (finds the best driver for a ride).\n\nBut before we can match, we need to know where drivers are. This means drivers must be continuously sending their GPS coordinates to our system. The Driver Client app calls POST /drivers/location every 4 seconds. The Location Service receives these updates and stores them.\n\nThe matching flow:\n1. Rider confirms fare → POST /rides with the fare_id\n2. Ride Service creates a Ride record (status: MATCHING) and asks the Matching Service to find a driver\n3. Matching Service asks the Location Service: "give me available drivers within 3km of this pickup location"\n4. Location Service queries its geospatial index and returns a ranked list of nearby drivers\n5. Matching Service sends a push notification to the top driver\n6. Driver has 15 seconds to accept or decline\n7. If accepted → ride status changes to ACCEPTED, rider is notified\n8. If declined or timeout → try the next driver on the list`,
+      },
+      {
+        type: 'architecture', heading: 'Uber System Architecture',
+        caption: 'Progressive design: Ride Service for fare/ride lifecycle, Location Service for driver GPS, Matching Service for pairing.',
+        config: {
+          width: 850, height: 480,
+          nodes: [
+            { id: 'rider', label: 'Rider App', icon: '📱', color: 'blue', x: 20, y: 60, w: 100, h: 56 },
+            { id: 'driver', label: 'Driver App', icon: '🚗', color: 'green', x: 20, y: 300, w: 100, h: 56 },
+            { id: 'gateway', label: 'API Gateway', sublabel: 'Auth + rate limit', color: 'cyan', x: 180, y: 160, w: 130, h: 56 },
+            { id: 'ride-svc', label: 'Ride Service', sublabel: 'Fare + ride lifecycle', color: 'orange', x: 380, y: 60, w: 140, h: 56 },
+            { id: 'match-svc', label: 'Matching Service', sublabel: 'Find best driver', color: 'purple', x: 380, y: 180, w: 140, h: 56 },
+            { id: 'loc-svc', label: 'Location Service', sublabel: '2.5M updates/sec', color: 'red', x: 380, y: 300, w: 140, h: 56 },
+            { id: 'redis', label: 'Redis Geo', sublabel: 'Driver locations', icon: '⚡', color: 'red', x: 600, y: 300, w: 120, h: 56 },
+            { id: 'db', label: 'PostgreSQL', sublabel: 'Rides, fares, users', icon: '🗄️', color: 'blue', x: 600, y: 60, w: 120, h: 56 },
+            { id: 'maps', label: 'Maps API', sublabel: 'Google Maps', icon: '🗺️', color: 'cyan', x: 600, y: 160, w: 120, h: 56 },
+            { id: 'notif', label: 'Push Notifications', sublabel: 'FCM / APNs', icon: '🔔', color: 'yellow', x: 180, y: 380, w: 130, h: 56 },
+          ],
+          edges: [
+            { from: 'rider', to: 'gateway', label: 'request ride' },
+            { from: 'driver', to: 'gateway', label: 'location updates' },
+            { from: 'gateway', to: 'ride-svc', label: 'fare + ride ops' },
+            { from: 'gateway', to: 'loc-svc', label: 'GPS updates' },
+            { from: 'ride-svc', to: 'match-svc', label: 'find driver', color: 'accent' },
+            { from: 'match-svc', to: 'loc-svc', label: 'nearby drivers', color: 'accent' },
+            { from: 'loc-svc', to: 'redis', label: 'GEOADD / GEORADIUS' },
+            { from: 'ride-svc', to: 'db', label: 'rides + fares' },
+            { from: 'ride-svc', to: 'maps', label: 'distance + ETA' },
+            { from: 'match-svc', to: 'notif', label: 'notify driver' },
+          ],
+        },
+      },
+      {
+        type: 'text', heading: 'Step 3: Live Tracking During the Ride',
+        body: `Once the driver accepts, both the rider and driver need to see live location updates.\n\nThe driver app continues sending GPS updates every 4 seconds to the Location Service. The rider app can either poll GET /rides/{id} every 5 seconds to get the latest driver location, or we can use WebSocket/SSE for real-time push.\n\nFor an MVP, polling every 5 seconds is fine — the rider does not need millisecond-accurate tracking. For a production system, WebSocket gives a smoother experience.\n\nThe ETA is recalculated on each location update using the Maps API. When the driver arrives at the pickup, the ride status changes to IN_PROGRESS. When they arrive at the destination, it changes to COMPLETED and the final fare is calculated.`,
+      },
+      {
+        type: 'deepdive', heading: 'Deep Dive: How Do We Handle 2.5M Location Updates Per Second?',
+        subtitle: 'This is the hardest scaling challenge in the system — and the most common interview follow-up.',
         content: [
-          { type: 'text', heading: 'Beyond Simple Distance', body: `Closest driver ≠ best driver. A driver 1km away but stuck in traffic has a higher ETA than a driver 2km away on an open road.\n\n**Ranking factors:**\n1. **ETA** (primary) — Estimated time to reach pickup, using map routing + live traffic\n2. **Driver rating** — Higher-rated drivers preferred\n3. **Vehicle type match** — If rider requested premium, only match premium vehicles\n4. **Driver acceptance rate** — Drivers who frequently decline get lower priority\n5. **Fairness** — Don't always send rides to the same drivers` },
-          { type: 'text', heading: 'Dispatch Strategy', body: `**Batch dispatch (Uber's approach):**\n1. Collect all ride requests in a 2-second window\n2. Collect all available drivers\n3. Run a matching algorithm that optimizes total ETA across all rides\n4. This is a bipartite matching problem — solved with the Hungarian algorithm or greedy approximation\n\n**Why batch?** Individual matching is greedy — you might assign a driver to ride A when they'd be a better match for ride B that comes in 1 second later. Batching gives a globally better assignment.` },
+          { type: 'text', heading: 'Why Traditional Databases Fail', body: `10M drivers sending GPS coordinates every 4 seconds = 2.5M writes/sec. PostgreSQL maxes out at ~50K writes/sec on a single instance. Even DynamoDB at on-demand pricing would cost $200K+ per day for this write volume.\n\nWe need an in-memory store that can handle millions of writes per second and also supports geospatial queries. Redis is the answer.` },
+          { type: 'text', heading: 'Redis Geospatial Commands', body: `Redis has built-in geospatial support:\n\n**GEOADD** drivers {longitude} {latitude} {driver_id} — Store or update a driver's location. O(log N).\n\n**GEORADIUS** drivers {longitude} {latitude} 3 km — Find all drivers within 3km of a point. Returns results sorted by distance.\n\nBoth operations are in-memory and extremely fast. A single Redis instance handles ~100K geo operations/sec. With a Redis Cluster sharded by geographic region, we can handle 2.5M/sec.\n\nInternally, Redis uses geohashing — it converts lat/lng into a single integer that preserves spatial locality. Nearby locations have similar geohash values, making range queries efficient.` },
+          { type: 'text', heading: 'Sharding by Geographic Region', body: `A single Redis instance cannot hold all 10M drivers globally. We shard by city or region:\n\n- Redis cluster for New York handles NYC drivers only\n- Redis cluster for London handles London drivers only\n- Redis cluster for Mumbai handles Mumbai drivers only\n\nThe Location Service routes each update to the correct cluster based on the driver's coordinates. This also makes GEORADIUS faster — fewer entries per cluster means faster queries.\n\nFor cities that span multiple regions (like Los Angeles), use overlapping geohash cells at the boundaries so drivers near the edge are visible from both clusters.` },
+          { type: 'text', heading: 'Reducing Update Frequency', body: `Do we really need updates every 4 seconds? Not always.\n\nThe driver app can be smart about when to send updates:\n- **Stationary:** If the driver has not moved more than 10 meters, skip the update\n- **On a highway:** GPS is stable, reduce to every 10 seconds\n- **In a city:** Keep at 4 seconds for accuracy\n- **Offline/parked:** Stop sending entirely\n\nThis client-side optimization can reduce write volume by 30-50% without affecting accuracy. Do not neglect the client in your design — many candidates draw a small client box and move on, but client-side logic is critical for efficiency.` },
+        ],
+      },
+      {
+        type: 'deepdive', heading: 'Deep Dive: How Do We Prevent a Driver from Being Assigned Two Rides?',
+        subtitle: 'Strong consistency in matching — the Ticketmaster problem for rides.',
+        content: [
+          { type: 'text', heading: 'The Problem', body: `Two ride requests come in simultaneously, both near the same driver. Without locking, both Matching Service instances could assign the same driver to both rides. The driver gets two notifications and chaos ensues.\n\nThis is the same problem as double-booking a seat in Ticketmaster — we need a distributed lock.` },
+          { type: 'text', heading: 'Solution: Redis Lock per Driver', body: `When the Matching Service wants to assign a driver, it first acquires a lock:\n\n\`\`\`\nSETNX driver_lock:{driver_id} {ride_id} EX 30\n\`\`\`\n\nIf SETNX returns 1 (success) — this driver is now reserved for this ride. Send the notification.\nIf SETNX returns 0 (key exists) — another ride already claimed this driver. Skip to the next candidate.\n\nThe 30-second TTL ensures the lock auto-releases if the driver does not respond. When the driver accepts, the lock is extended. When they decline or timeout, the lock is deleted and the driver becomes available for other rides.\n\nThis is the same SETNX pattern we used in Ticketmaster for seat holds — it works perfectly for any "reserve a scarce resource temporarily" problem.` },
         ],
       },
       {
         type: 'deepdive', heading: 'Deep Dive: Surge Pricing',
         subtitle: 'Dynamic pricing based on supply and demand',
         content: [
-          { type: 'text', heading: 'How It Works', body: `**For each geohash cell, every 2 minutes:**\n1. Count ride requests in the cell (demand)\n2. Count available drivers in the cell (supply)\n3. surge_multiplier = demand / supply (capped at 3x-5x)\n4. If surge > 1.0, show surge pricing to rider before they confirm\n\n**Why surge?**\n- Attracts more drivers to high-demand areas (they earn more)\n- Reduces demand (some riders wait or take alternatives)\n- Balances supply and demand naturally\n\n**Storage:** Surge multipliers per geohash cell in Redis with 2-minute TTL. Recalculated by a background job.` },
+          { type: 'text', heading: 'How It Works', body: `Every 2 minutes, a background job calculates the surge multiplier for each geographic cell:\n\n1. Count ride requests in the cell in the last 5 minutes (demand)\n2. Count available drivers in the cell (supply)\n3. surge_multiplier = demand / supply, capped at 3x-5x\n\nIf surge > 1.0, the rider sees the multiplier before confirming: "Prices are 2.3x higher due to high demand."\n\nSurge pricing serves two purposes: it attracts more drivers to high-demand areas (they earn more), and it reduces demand (some riders wait or take alternatives). The market balances itself.\n\nSurge multipliers are stored in Redis with a 2-minute TTL, keyed by geohash cell. The Fare Service reads the surge for the rider's pickup location when calculating the estimate.` },
         ],
       },
       {
-        type: 'levels', heading: 'What\'s Expected at Each Level',
+        type: 'levels', heading: 'What Interviewers Expect at Each Level',
         levels: [
-          { title: 'Mid-level', body: `Should define the API, basic ride flow, and understand that geospatial queries are needed. Should propose using Redis or a geo-capable database. Not expected to know geohashing details.` },
-          { title: 'Senior', body: `Should design the full matching flow with ETA-based ranking. Should explain Redis Geospatial and why it's chosen over PostGIS. Should discuss sharding by region. Should handle the location update scale (2.5M/sec).` },
-          { title: 'Staff+', body: `Should go deep on batch dispatch optimization, surge pricing algorithm, and how to handle edge cases (driver goes offline mid-match, rider cancels). Should discuss ETA prediction using ML models and live traffic data. May discuss multi-region deployment for global service.` },
+          { title: 'Mid-level', body: `Should define the API endpoints and core entities clearly. Should design the basic ride request flow — rider requests, system finds a nearby driver, driver accepts. Should understand that geospatial queries are needed and propose Redis or a geo-capable database. Not expected to know geohashing details, but should reason about why a traditional database cannot handle 2.5M writes/sec when asked.` },
+          { title: 'Senior', body: `Should build the design progressively, explaining each component as it is added. Should design the full matching flow with ETA-based ranking (not just closest driver). Should explain Redis Geospatial and why it is chosen over PostGIS for this workload. Should discuss sharding by region and the driver locking problem (SETNX). Should handle at least 2 deep dives in detail.` },
+          { title: 'Staff+', body: `Should proactively identify all the hard problems (location write throughput, driver locking, surge pricing, what happens when a driver goes offline mid-match) without being prompted. Should discuss batch dispatch optimization (collecting requests in a 2-second window and solving the bipartite matching problem for globally optimal assignments). Should discuss client-side optimizations for reducing location update frequency. May discuss ETA prediction using ML models with live traffic data, and multi-region deployment for a global service.` },
         ],
       },
     ],
@@ -1073,9 +1257,14 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
 
   'design-web-crawler': {
     slug: 'design-web-crawler', title: 'Design a Web Crawler', subtitle: 'Systematically browse and index the web',
-    duration: '35 min', difficulty: 'Advanced',
+    duration: '35 min', difficulty: 'Hard',
     sections: [
-      {
+      
+    {
+      type: 'text', heading: 'Understanding the Problem',
+      body: `A web crawler systematically browses the internet, downloading pages and extracting links to discover new pages. Google's crawler indexes billions of pages. The challenges are scale (billions of URLs), politeness (not overwhelming any single website), deduplication (not crawling the same page twice), and prioritization (crawling important pages first). This question tests your ability to design a distributed pipeline.`,
+    },
+    {
         type: 'requirements', heading: 'Understanding the Problem',
         functional: ['Start from a set of seed URLs', 'Download web pages and extract content', 'Extract links from pages and add to crawl queue', 'Store page content for indexing', 'Revisit pages periodically to detect changes'],
         functionalOutOfScope: ['Rendering JavaScript (headless browser)', 'Full-text search indexing', 'PageRank computation'],
@@ -1123,9 +1312,14 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
 
   'design-instagram': {
     slug: 'design-instagram', title: 'Design Instagram', subtitle: 'Photo sharing with feed, stories, and explore',
-    duration: '40 min', difficulty: 'Advanced',
+    duration: '40 min', difficulty: 'Medium',
     sections: [
-      {
+      
+    {
+      type: 'text', heading: 'Understanding the Problem',
+      body: `Instagram is a photo and video sharing platform with a personalized feed, stories, and explore page. It combines elements of several other system design problems: media upload and storage (like Dropbox), a personalized feed (like Facebook), and real-time notifications. The key insight is that photos are stored in object storage (S3) with CDN delivery, while the feed is a separate system that references photo metadata.`,
+    },
+    {
         type: 'requirements', heading: 'Understanding the Problem',
         functional: ['Upload photos and short videos', 'Follow/unfollow users', 'View a personalized feed of posts from followed users', 'Like and comment on posts', 'Explore/discover page with trending content'],
         functionalOutOfScope: ['Stories (24-hour expiry)', 'Reels', 'Direct messaging', 'Shopping'],
@@ -1167,9 +1361,14 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
 
   'design-google-docs': {
     slug: 'design-google-docs', title: 'Design Google Docs', subtitle: 'Real-time collaborative document editing',
-    duration: '45 min', difficulty: 'Advanced',
+    duration: '45 min', difficulty: 'Hard',
     sections: [
-      {
+      
+    {
+      type: 'text', heading: 'Understanding the Problem',
+      body: `Google Docs allows multiple users to edit the same document simultaneously, with changes appearing in real-time for all editors. The fundamental challenge is conflict resolution — when two users type at the same position at the same time, how do you merge their changes without losing either? This is solved by Operational Transformation (OT) or CRDTs, and understanding these algorithms is what separates a good answer from a great one.`,
+    },
+    {
         type: 'requirements', heading: 'Understanding the Problem',
         functional: ['Create and edit text documents', 'Real-time collaboration — multiple users editing simultaneously', 'See other users\' cursors and selections in real-time', 'Version history — view and restore previous versions', 'Comments and suggestions'],
         functionalOutOfScope: ['Rich formatting (bold, italic, etc.)', 'Spreadsheets/presentations', 'Offline editing'],
@@ -1216,9 +1415,14 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
 
   'design-distributed-cache': {
     slug: 'design-distributed-cache', title: 'Design a Distributed Cache', subtitle: 'Build a Redis-like distributed caching system',
-    duration: '40 min', difficulty: 'Advanced',
+    duration: '40 min', difficulty: 'Hard',
     sections: [
-      {
+      
+    {
+      type: 'text', heading: 'Understanding the Problem',
+      body: `A distributed cache stores frequently accessed data in memory across multiple servers, providing sub-millisecond reads. Think Redis Cluster or Memcached. The core challenges are data distribution (consistent hashing), fault tolerance (what happens when a node dies), eviction policies (LRU, LFU), and cache coherence. This question tests your understanding of distributed systems fundamentals.`,
+    },
+    {
         type: 'requirements', heading: 'Understanding the Problem',
         functional: ['GET key → value (or null if not found)', 'SET key value [TTL] — store a key-value pair with optional expiry', 'DELETE key — remove a key', 'Support various data types (strings, lists, sets, hashes)'],
         functionalOutOfScope: ['Pub/Sub messaging', 'Lua scripting', 'Transactions'],
@@ -1227,6 +1431,41 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
       { type: 'text', heading: 'Scale Estimation', body: `**QPS:** 1M requests/sec across the cluster\n**Data size:** 100GB total cached data\n**Key size:** Average 50 bytes. Value size: average 1KB.\n**Nodes:** At 16GB RAM per node, need ~7 nodes for data + replication overhead.\n**Network:** 1M × 1KB = 1GB/sec bandwidth across the cluster.` },
       { type: 'text', heading: 'Core Entities', body: `**CacheNode** — A single server holding a portion of the data in memory\n**CacheEntry** — Key, value, TTL, last accessed timestamp\n**HashRing** — Consistent hash ring mapping keys to nodes\n**Replica** — Copy of data on another node for fault tolerance` },
       { type: 'text', heading: 'High-Level Design', body: `**Client request flow:**\n1. Client computes hash(key) to determine which node owns this key\n2. Client sends GET/SET directly to that node (no proxy — client-side routing)\n3. Node looks up key in its in-memory hash table\n4. Returns value (GET) or stores value (SET)\n\n**Key components:**\n- **Consistent Hash Ring** — Maps keys to nodes. Virtual nodes for even distribution.\n- **Cache Nodes** — In-memory hash table + LRU eviction\n- **Replication** — Each key stored on N nodes (primary + N-1 replicas)\n- **Cluster Manager** — Tracks node health, manages ring membership\n- **Client Library** — Handles routing, connection pooling, failover` },
+      {
+        type: 'architecture', heading: 'Distributed Cache Architecture',
+        caption: 'Client-side routing via consistent hash ring. Each key replicated to N nodes for fault tolerance.',
+        config: {
+          width: 820, height: 400,
+          nodes: [
+            { id: 'app1', label: 'App Server 1', icon: '💻', color: 'blue', x: 20, y: 60, w: 120, h: 56 },
+            { id: 'app2', label: 'App Server 2', icon: '💻', color: 'blue', x: 20, y: 160, w: 120, h: 56 },
+            { id: 'app3', label: 'App Server N', icon: '💻', color: 'blue', x: 20, y: 260, w: 120, h: 56 },
+            { id: 'lib', label: 'Client Library', sublabel: 'Hash ring + routing', color: 'cyan', x: 210, y: 140, w: 140, h: 60 },
+            { id: 'node1', label: 'Cache Node 1', sublabel: '16GB RAM', icon: '⚡', color: 'red', x: 430, y: 20, w: 130, h: 56 },
+            { id: 'node2', label: 'Cache Node 2', sublabel: '16GB RAM', icon: '⚡', color: 'red', x: 430, y: 120, w: 130, h: 56 },
+            { id: 'node3', label: 'Cache Node 3', sublabel: '16GB RAM', icon: '⚡', color: 'red', x: 430, y: 220, w: 130, h: 56 },
+            { id: 'node4', label: 'Cache Node N', sublabel: '16GB RAM', icon: '⚡', color: 'red', x: 430, y: 320, w: 130, h: 56 },
+            { id: 'mgr', label: 'Cluster Manager', sublabel: 'Health + membership', color: 'purple', x: 640, y: 60, w: 140, h: 56 },
+            { id: 'db', label: 'Source DB', sublabel: 'PostgreSQL', icon: '🗄️', color: 'blue', x: 640, y: 220, w: 140, h: 56 },
+          ],
+          edges: [
+            { from: 'app1', to: 'lib', label: 'GET/SET' },
+            { from: 'app2', to: 'lib', label: 'GET/SET' },
+            { from: 'app3', to: 'lib', label: 'GET/SET' },
+            { from: 'lib', to: 'node1', label: 'hash → node', dashed: true },
+            { from: 'lib', to: 'node2', label: '', dashed: true },
+            { from: 'lib', to: 'node3', label: '', dashed: true },
+            { from: 'node1', to: 'node2', label: 'replicate', dashed: true },
+            { from: 'node2', to: 'node3', label: 'replicate', dashed: true },
+            { from: 'mgr', to: 'node1', label: 'heartbeat', dashed: true },
+            { from: 'node3', to: 'db', label: 'cache miss → query', color: 'accent' },
+          ],
+        },
+      },
+      {
+        type: 'text', heading: 'Read and Write Paths',
+        body: `**Read path (GET):**\n1. Client library hashes the key and looks up the consistent hash ring to find the owning node.\n2. Client sends GET directly to that node — no proxy, no coordinator. This is what makes it fast.\n3. The node looks up the key in its in-memory hash table. If found (cache hit), return the value in <1ms.\n4. If not found (cache miss), the application fetches from the source database, then calls SET to populate the cache for next time.\n\n**Write path (SET):**\n1. Client library routes to the primary node for this key.\n2. Primary stores the key-value pair in memory with the specified TTL.\n3. Primary asynchronously replicates to N-1 replica nodes (next nodes clockwise on the ring).\n4. Returns success to the client after the primary write (not waiting for replicas — this is eventual consistency).\n\n**Node failure:**\nThe cluster manager detects a dead node via heartbeat timeout. It updates the hash ring, and the dead node's keys are now owned by the next node clockwise. If replication was configured, the replica already has the data. If not, those keys are cache misses until re-populated from the database.`,
+      },
       {
         type: 'deepdive', heading: 'Deep Dive: Consistent Hashing',
         subtitle: 'Minimize data movement when adding/removing nodes',
@@ -1264,9 +1503,14 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
 
   'design-payment-system': {
     slug: 'design-payment-system', title: 'Design a Payment System', subtitle: 'Reliable, consistent payment processing',
-    duration: '40 min', difficulty: 'Advanced',
+    duration: '40 min', difficulty: 'Hard',
     sections: [
-      {
+      
+    {
+      type: 'text', heading: 'Understanding the Problem',
+      body: `A payment system processes financial transactions — charging credit cards, transferring money, handling refunds. The non-negotiable requirement is correctness: a user must never be charged twice, and money must never be lost. This means idempotency, ACID transactions, and careful handling of distributed failures. Payment systems prioritize consistency over availability — the opposite of most web applications.`,
+    },
+    {
         type: 'requirements', heading: 'Understanding the Problem',
         functional: ['Process payments (credit card, debit card, UPI, wallet)', 'Handle refunds (full and partial)', 'Payment history and receipts', 'Support multiple currencies', 'Webhook notifications to merchants on payment status changes'],
         functionalOutOfScope: ['Fraud detection', 'Subscription/recurring billing', 'Multi-party payments (marketplace splits)'],
@@ -1308,7 +1552,40 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
           ]},
         ],
       },
-      { type: 'text', heading: 'High-Level Design', body: `**Payment flow:**\n1. Client sends payment request with idempotency key\n2. **Payment Service** checks idempotency key in Redis\n   - If found → return stored result (no duplicate charge)\n   - If not found → continue\n3. Create payment record in DB (status: PENDING)\n4. Call **Payment Gateway** (Razorpay, Stripe) to process the charge\n5. Gateway returns success/failure\n6. Update payment status in DB (SUCCEEDED or FAILED)\n7. Store idempotency key → result in Redis (TTL: 24h)\n8. Write ledger entries (double-entry bookkeeping)\n9. Send webhook notification to merchant\n10. Return result to client\n\n**What if step 4 times out?**\n- Don't retry blindly — you might double-charge\n- Query the gateway for payment status\n- If gateway has no record → safe to retry\n- If gateway shows success → update our DB to match\n- Use webhook callbacks as a backup notification channel` },
+      { type: 'text', heading: 'High-Level Design', body: `The payment flow must be designed for correctness above all else. Every step must be idempotent, every state change must be logged, and every failure must be recoverable.\n\nThe flow has three critical phases: validation (check idempotency, validate input), execution (call the payment gateway), and reconciliation (update our records to match the gateway's). The idempotency key is the linchpin — it prevents double charges when clients retry after timeouts.` },
+      {
+        type: 'architecture', heading: 'Payment System Architecture',
+        caption: 'Idempotency check in Redis, ACID transactions in PostgreSQL, async webhooks for merchant notification.',
+        config: {
+          width: 850, height: 440,
+          nodes: [
+            { id: 'client', label: 'Client / App', icon: '📱', color: 'blue', x: 20, y: 160, w: 110, h: 56 },
+            { id: 'lb', label: 'Load Balancer', color: 'cyan', x: 180, y: 160, w: 120, h: 56 },
+            { id: 'pay-svc', label: 'Payment Service', sublabel: 'Idempotency + orchestration', color: 'green', x: 370, y: 60, w: 150, h: 60 },
+            { id: 'redis', label: 'Redis', sublabel: 'Idempotency keys', icon: '⚡', color: 'red', x: 370, y: 180, w: 130, h: 56 },
+            { id: 'db', label: 'PostgreSQL', sublabel: 'Payments + Ledger', icon: '🗄️', color: 'blue', x: 370, y: 300, w: 130, h: 56 },
+            { id: 'gateway', label: 'Payment Gateway', sublabel: 'Razorpay / Stripe', icon: '💳', color: 'purple', x: 600, y: 60, w: 150, h: 60 },
+            { id: 'webhook', label: 'Webhook Service', sublabel: 'Notify merchants', icon: '🔔', color: 'orange', x: 600, y: 180, w: 150, h: 56 },
+            { id: 'recon', label: 'Reconciliation', sublabel: 'Cron job', icon: '🔄', color: 'yellow', x: 600, y: 300, w: 150, h: 56 },
+          ],
+          edges: [
+            { from: 'client', to: 'lb', label: 'POST /payments' },
+            { from: 'lb', to: 'pay-svc', label: 'with idempotency key' },
+            { from: 'pay-svc', to: 'redis', label: '1. check idempotency', color: 'accent' },
+            { from: 'pay-svc', to: 'db', label: '2. create PENDING record' },
+            { from: 'pay-svc', to: 'gateway', label: '3. charge card', color: 'accent' },
+            { from: 'gateway', to: 'pay-svc', label: '4. success/failure', dashed: true },
+            { from: 'pay-svc', to: 'db', label: '5. update status + ledger' },
+            { from: 'pay-svc', to: 'webhook', label: '6. notify merchant' },
+            { from: 'recon', to: 'gateway', label: 'compare records', dashed: true },
+            { from: 'recon', to: 'db', label: 'fix discrepancies', dashed: true },
+          ],
+        },
+      },
+      {
+        type: 'text', heading: 'Payment Flow — Step by Step',
+        body: `1. Client sends POST /payments with an idempotency key (UUID generated client-side). This key is mandatory.\n\n2. Payment Service checks Redis: SETNX idempotency:{key} "processing" EX 86400. If the key already exists, it means this payment was already attempted — return the stored result immediately. No duplicate charge.\n\n3. If the key is new, create a payment record in PostgreSQL with status PENDING. This is done in a transaction.\n\n4. Call the Payment Gateway (Razorpay, Stripe) to process the charge. This is the external call that can fail or timeout.\n\n5. Gateway returns success or failure. Update the payment status in PostgreSQL (SUCCEEDED or FAILED) and write ledger entries (double-entry bookkeeping) in the same transaction.\n\n6. Store the result in Redis: SET idempotency:{key} {result_json} EX 86400. Now any retry with the same key returns this result.\n\n7. Send a webhook notification to the merchant with the payment status.\n\n**The critical failure scenario:** What if step 4 times out? You do not know if the gateway charged the card or not. Never retry blindly. Instead: query the gateway for the payment status. If the gateway has no record, it is safe to retry. If the gateway shows success, update your DB to match. The reconciliation service runs every hour to catch any discrepancies between your records and the gateway's.`,
+      },
       {
         type: 'deepdive', heading: 'Deep Dive: Idempotency',
         subtitle: 'The most critical requirement — never charge twice',

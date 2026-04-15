@@ -44,8 +44,21 @@ const AIAgentLandingPage = () => {
   
   const fetchAgentPricing = async () => {
     try {
-      const response = await api.get(`/pricing-plans?currency=${currency}&service_type=ai_agent`);
-      const plans = response.data;
+      // Try with service_type filter first, fall back to fetching all and filtering client-side
+      let plans = [];
+      try {
+        const response = await api.get(`/pricing-plans?currency=${currency}&service_type=ai_agent`);
+        plans = response.data;
+      } catch {
+        // Fallback: fetch all plans and filter client-side
+        const response = await api.get(`/pricing-plans?currency=${currency}`);
+        plans = response.data.filter(p => p.plan_id?.startsWith('agent_'));
+      }
+      // If service_type filter returned empty, try without it
+      if (plans.length === 0) {
+        const response = await api.get(`/pricing-plans?currency=${currency}`);
+        plans = response.data.filter(p => p.plan_id?.startsWith('agent_'));
+      }
       
       const agentPlanMap = {};
       plans.forEach(plan => {
