@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../utils/api';
@@ -8,13 +9,13 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
-import { Briefcase, MapPin, DollarSign, TrendingUp, Search, Settings, ExternalLink, Loader2, FileText, Crown, Lock, CheckCircle, X } from 'lucide-react';
+import { Briefcase, MapPin, DollarSign, TrendingUp, Search, Settings, ExternalLink, Loader2, FileText, Crown, Lock, CheckCircle, X, Upload } from 'lucide-react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 
 const JOB_SEARCH_MESSAGES = [
-  { text: 'Scanning Google Jobs for your role...', icon: '🔍' },
-  { text: 'Checking RemoteOK for remote opportunities...', icon: '🌍' },
-  { text: 'Searching Jobicy for matching positions...', icon: '📋' },
+  { text: 'Scanning job boards for your role...', icon: '🔍' },
+  { text: 'Checking remote opportunities...', icon: '🌍' },
+  { text: 'Searching for matching positions...', icon: '📋' },
   { text: 'AI is reading job descriptions...', icon: '🤖' },
   { text: 'Scoring each job against your resume...', icon: '📊' },
   { text: 'Ranking your best matches...', icon: '🏆' },
@@ -87,19 +88,27 @@ function EliteGate() {
   return (
     <DashboardLayout title="🎯 AI Job Search Agent">
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Card className="max-w-md w-full border-2 border-amber-500/30">
+        <Card className="max-w-md w-full border-2 border-[#06b6d4]/30">
           <CardContent className="p-8 text-center">
-            <Lock className="w-16 h-16 text-amber-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Elite Feature</h2>
+            <Lock className="w-16 h-16 text-[#06b6d4] mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Unlock AI Agents</h2>
             <p className="text-gray-500 dark:text-slate-400 mb-6">
-              AI Job Search Agent is available exclusively for Elite plan members. Upgrade to get daily AI-powered job matches delivered to your inbox.
+              Get daily AI-powered job matches and referral connections delivered to your inbox.
             </p>
-            <Link to="/mentee/book">
-              <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white w-full">
-                <Crown className="w-4 h-4 mr-2" />
-                Upgrade to Elite
-              </Button>
-            </Link>
+            <div className="space-y-3">
+              <Link to="/ai-agents" className="block">
+                <Button className="bg-[#06b6d4] hover:bg-[#0891b2] text-white w-full">
+                  <Briefcase className="w-4 h-4 mr-2" />
+                  Get AI Agent Plan — starts at ₹99
+                </Button>
+              </Link>
+              <Link to="/apply" className="block">
+                <Button variant="outline" className="w-full border-amber-500/30 text-amber-500 hover:bg-amber-500/10">
+                  <Crown className="w-4 h-4 mr-2" />
+                  Get Elite Plan — includes AI Agents free
+                </Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -131,6 +140,8 @@ export default function MenteeJobSearch() {
   });
 
   const [resumeText, setResumeText] = useState('');
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null); // { message, onConfirm }
 
   useEffect(() => {
     loadPreferences();
@@ -245,34 +256,44 @@ export default function MenteeJobSearch() {
     }
   };
 
-  const handleResetPreferences = async () => {
-    if (!window.confirm('Reset all preferences and saved matches?')) return;
-    try {
-      await api.delete('/ai-agents/job-preferences');
-      setPreferences(null);
-      setJobMatches([]);
-      setFormData({
-        job_title: '', location: '', skills: '', experience_years: 0,
-        expected_salary: '', preferred_companies: '', telegram_id: '', enable_sheets_logging: false
-      });
-      setShowSettings(true);
-      toast.success('Preferences reset!');
-    } catch (error) {
-      toast.error('Failed to reset preferences');
-    }
+  const handleResetPreferences = () => {
+    setConfirmDialog({
+      message: 'Reset all preferences and saved matches? This cannot be undone.',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          await api.delete('/ai-agents/job-preferences');
+          setPreferences(null);
+          setJobMatches([]);
+          setFormData({
+            job_title: '', location: '', skills: '', experience_years: 0,
+            expected_salary: '', preferred_companies: '', telegram_id: '', enable_sheets_logging: false
+          });
+          setShowSettings(true);
+          toast.success('Preferences reset!');
+        } catch (error) {
+          toast.error('Failed to reset preferences');
+        }
+      },
+    });
   };
 
-  const handleResetRecommendations = async () => {
-    if (!window.confirm('This will clear all your saved job matches and applied history. Continue?')) return;
-    try {
-      await api.delete('/ai-agents/reset-recommendations');
-      setJobMatches([]);
-      setAppliedJobs(new Set());
-      setActiveTab('jobs');
-      toast.success('All recommendations cleared! Search again to get fresh results.');
-    } catch (error) {
-      toast.error('Failed to reset recommendations');
-    }
+  const handleResetRecommendations = () => {
+    setConfirmDialog({
+      message: 'This will clear all your saved job matches and applied history. Continue?',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          await api.delete('/ai-agents/reset-recommendations');
+          setJobMatches([]);
+          setAppliedJobs(new Set());
+          setActiveTab('jobs');
+          toast.success('All recommendations cleared! Search again to get fresh results.');
+        } catch (error) {
+          toast.error('Failed to reset recommendations');
+        }
+      },
+    });
   };
 
   const handleDeleteJob = async (job) => {
@@ -287,6 +308,51 @@ export default function MenteeJobSearch() {
       toast.success('Job removed');
     } catch (error) {
       toast.error('Failed to remove job');
+    }
+  };
+
+  const handleFileUpload = async (file) => {
+    const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+    const allowedExts = ['pdf', 'docx', 'txt'];
+    const ext = file.name.split('.').pop().toLowerCase();
+
+    if (!allowedTypes.includes(file.type) && !allowedExts.includes(ext)) {
+      toast.error('Please upload a PDF, DOCX, or TXT file');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File too large. Maximum 5MB.');
+      return;
+    }
+
+    setUploadedFile(file.name);
+    setParsing(true);
+    try {
+      const formPayload = new FormData();
+      formPayload.append('file', file);
+      const res = await api.post('/ai-agents/upload-resume', formPayload, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const parsed = res.data.data;
+      const newFormData = { ...formData };
+      if (parsed.job_title) newFormData.job_title = parsed.job_title;
+      if (parsed.location) newFormData.location = parsed.location;
+      if (parsed.skills?.length) newFormData.skills = parsed.skills.join(', ');
+      if (parsed.experience_years) newFormData.experience_years = parsed.experience_years.toString();
+      setFormData(newFormData);
+      setResumeText('');
+      toast.success(`Resume parsed from ${file.name}`);
+
+      // Auto-search if we have job_title and location
+      if (newFormData.job_title && newFormData.location) {
+        handleSearch(newFormData);
+      }
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Failed to parse resume file';
+      toast.error(msg);
+      setUploadedFile(null);
+    } finally {
+      setParsing(false);
     }
   };
 
@@ -390,7 +456,7 @@ export default function MenteeJobSearch() {
       <div className="space-y-6">
         {/* Description */}
         <p className="text-gray-600 dark:text-slate-400">
-          Paste your resume → AI extracts skills → finds matching jobs in your city. Or set preferences manually.
+          Upload your resume → AI extracts skills → finds matching jobs in your city. Or set preferences manually.
         </p>
 
         {/* Resume Upload — Always Visible */}
@@ -398,14 +464,62 @@ export default function MenteeJobSearch() {
           <CardContent className="p-5">
             <div className="flex items-center gap-2 mb-3">
               <FileText className="w-5 h-5 text-blue-500" />
-              <span className="font-semibold">Step 1: Paste Your Resume</span>
+              <span className="font-semibold">Step 1: Upload Your Resume</span>
               <Badge variant="secondary" className="text-xs">AI Powered</Badge>
             </div>
+
+            {/* File Upload Zone */}
+            <label
+              htmlFor="resume-file-input"
+              className="relative block border-2 border-dashed border-blue-500/30 rounded-xl p-6 text-center hover:border-blue-500/60 transition-colors cursor-pointer mb-3"
+              onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-blue-500', 'bg-blue-500/10'); }}
+              onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove('border-blue-500', 'bg-blue-500/10'); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('border-blue-500', 'bg-blue-500/10');
+                const file = e.dataTransfer.files[0];
+                if (file) handleFileUpload(file);
+              }}
+            >
+              <input
+                id="resume-file-input"
+                type="file"
+                accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload(file);
+                  e.target.value = '';
+                }}
+              />
+              <Upload className="w-8 h-8 text-blue-500/60 mx-auto mb-2" />
+              <p className="text-sm font-medium">Drop your resume here or click to browse</p>
+              <p className="text-xs text-gray-500 mt-1">PDF, DOCX, or TXT — Max 5MB</p>
+              <p className="text-xs text-amber-500 mt-2">AI will extract your skills. You'll need to fill in job title, location, and experience below.</p>
+              {uploadedFile && (
+                <div className="mt-3 flex items-center justify-center gap-2 text-sm text-blue-500">
+                  <FileText className="w-4 h-4" />
+                  <span>{uploadedFile}</span>
+                  <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setUploadedFile(null); }} className="text-gray-400 hover:text-red-400">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </label>
+
+            {/* Or divider */}
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+              <span className="text-xs text-gray-400">or paste text</span>
+              <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+            </div>
+
+            {/* Text paste fallback */}
             <textarea
               value={resumeText}
               onChange={(e) => setResumeText(e.target.value)}
-              placeholder="Paste your full resume text here... AI will extract your skills, experience, and role to find the best matching jobs."
-              className="w-full h-28 p-3 rounded-md border bg-white dark:bg-slate-800 text-sm resize-none mb-3"
+              placeholder="Paste your resume text here as an alternative..."
+              className="w-full h-20 p-3 rounded-md border bg-white dark:bg-slate-800 text-sm resize-none mb-3"
             />
             <div className="flex items-center gap-3">
               <Button onClick={handleParseResume} disabled={parsing || !resumeText.trim()} className="flex items-center gap-2">
@@ -559,9 +673,9 @@ export default function MenteeJobSearch() {
                                 <DollarSign className="w-3 h-3" /> {job.salary}
                               </Badge>
                             )}
-                            {job.source && (
+                            {job.source && job.source === 'AI Curated' && (
                               <Badge variant="secondary" className="text-xs">
-                                {job.source === 'AI Curated' ? '🤖 AI Suggested' : `✅ ${job.source}`}
+                                🤖 AI Suggested
                               </Badge>
                             )}
                           </div>
@@ -619,6 +733,22 @@ export default function MenteeJobSearch() {
           </div>
         )}
       </div>
+
+      {/* Confirmation Dialog — rendered via portal to escape layout z-index */}
+      {confirmDialog && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setConfirmDialog(null)} />
+          <div className="relative bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm mx-4 shadow-2xl border border-gray-200 dark:border-slate-700">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">Are you sure?</h3>
+            <p className="text-sm text-gray-600 dark:text-slate-300 mb-6">{confirmDialog.message}</p>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setConfirmDialog(null)}>Cancel</Button>
+              <Button className="bg-red-500 hover:bg-red-600 text-white" onClick={confirmDialog.onConfirm}>Confirm</Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </DashboardLayout>
   );
 }

@@ -201,7 +201,7 @@ class PricingPlan(BaseModel):
 class PricingPlanCreate(BaseModel):
     plan_id: str
     name: str
-    service_type: str = "mock_interview"  # mock_interview, mentorship, resume_review
+    service_type: str = "mock_interview"  # mock_interview, mentorship, resume_review, ai_agent
     price: int  # in paise
     price_inr: Optional[int] = None  # INR in paise
     price_usd: Optional[int] = None  # USD in cents
@@ -221,7 +221,7 @@ class PricingPlanCreate(BaseModel):
 
 class PricingPlanUpdate(BaseModel):
     name: Optional[str] = None
-    service_type: Optional[str] = None  # mock_interview, mentorship, resume_review
+    service_type: Optional[str] = None  # mock_interview, mentorship, resume_review, ai_agent
     price: Optional[int] = None  # in paise (deprecated, use price_inr)
     price_inr: Optional[int] = None  # INR in paise
     price_usd: Optional[int] = None  # USD in cents
@@ -6411,6 +6411,7 @@ PLAN_PRICES = {
     "agent_trial": 9900,    # ₹99 in paise (first month trial)
     "agent_monthly": 19900, # ₹199 in paise
     "agent_quarterly": 59900, # ₹599 in paise (3 months, save ₹98)
+    "agent_yearly": 149900,  # ₹1,499 in paise (12 months, save 37%)
 }
 
 # USD prices for all plans (in cents)
@@ -6430,6 +6431,7 @@ PLAN_PRICES_USD = {
     "agent_trial": 200,     # $2 in cents
     "agent_monthly": 400,   # $4 in cents
     "agent_quarterly": 1000, # $10 in cents (3 months, save $2)
+    "agent_yearly": 1800,   # $18 in cents (12 months, save 37%)
 }
 
 PLAN_NAMES = {
@@ -6448,6 +6450,7 @@ PLAN_NAMES = {
     "agent_trial": "AI Agent Trial (1 Month)",
     "agent_monthly": "AI Agent Monthly",
     "agent_quarterly": "AI Agent Quarterly (3 Months)",
+    "agent_yearly": "AI Agent Yearly",
 }
 
 async def get_pricing_plan(plan_id: str):
@@ -6509,6 +6512,7 @@ async def get_pricing_plan(plan_id: str):
             "agent_trial": 1,
             "agent_monthly": 1,
             "agent_quarterly": 3,
+            "agent_yearly": 12,
         }
         price_inr = PLAN_PRICES[plan_id]
         price_usd = PLAN_PRICES_USD.get(plan_id, int(price_inr * 0.012))  # Use USD dict or fallback conversion
@@ -6939,6 +6943,20 @@ async def verify_payment(data: VerifyPaymentRequest):
                     "referral_guidance": False
                 }
             },
+            "agent_yearly": {
+                "interview_quota_total": 0,
+                "plan_features": {
+                    "mock_interviews": 0,
+                    "resume_reviews": 0,
+                    "resume_review_type": "none",
+                    "offline_profile_creation": 0,
+                    "ai_tools_access": "full",
+                    "community_access": False,
+                    "priority_support": True,
+                    "strategy_calls": 0,
+                    "referral_guidance": False
+                }
+            },
         }
         
         plan_config = plan_configs.get(order["plan_id"], plan_configs["starter"])
@@ -7073,6 +7091,20 @@ async def verify_payment(data: VerifyPaymentRequest):
                     "ai_tools_access": "full",
                     "community_access": False,
                     "priority_support": False,
+                    "strategy_calls": 0,
+                    "referral_guidance": False
+                }
+            },
+            "agent_yearly": {
+                "interview_quota_total": 0,
+                "plan_features": {
+                    "mock_interviews": 0,
+                    "resume_reviews": 0,
+                    "resume_review_type": "none",
+                    "offline_profile_creation": 0,
+                    "ai_tools_access": "full",
+                    "community_access": False,
+                    "priority_support": True,
                     "strategy_calls": 0,
                     "referral_guidance": False
                 }

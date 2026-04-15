@@ -3,12 +3,13 @@ API Routes for AI Agents
 Job Application Agent & Referral Finder Agent
 """
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, File, UploadFile
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, timezone
 import uuid
+import io
 
 from .job_application_agent import JobApplicationAgent
 from .referral_finder_agent import ReferralFinderAgent
@@ -181,6 +182,110 @@ async def parse_resume(
     )
 
     return {"message": "Resume parsed successfully", "data": parsed_data}
+
+
+@router.post("/upload-resume")
+async def upload_resume_file(
+    file: UploadFile = File(...),
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())
+):
+    """Upload a resume file (PDF, DOCX, TXT) and extract text for parsing"""
+    user = await _get_current_user(credentials)
+    _check_agent_access(user)
+
+    if not job_agent:
+        raise HTTPException(status_code=503, detail="Job agent not initialized")
+
+    # Validate file type
+    allowed_types = {
+        'application/pdf': 'pdf',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+        'text/plain': 'txt',
+        'application/msword': 'doc',
+    }
+    content_type = file.content_type or ''
+    file_ext = file.filename.rsplit('.', 1)[-1].lower() if file.filename else ''
+
+    if content_type not in allowed_types and file_ext not in ('pdf', 'docx', 'txt', 'doc'):
+        raise HTTPException(status_code=400, detail="Unsupported file type. Please upload PDF, DOCX, or TXT.")
+
+    # Read file content
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:  # 5MB limit
+        raise HTTPException(status_code=400, detail="File too large. Maximum 5MB.")
+
+    # Extract text based on file type
+    resume_text = ""
+    detected_type = file_ext or allowed_types.get(content_type, '')
+
+    try:
+        if detected_type == 'pdf':
+            resume_text = _extract_text_from_pdf(content)
+        elif detected_type in ('docx',):
+            resume_text = _extract_text_from_docx(content)
+        elif detected_type == 'txt':
+            resume_text = content.decode('utf-8', errors='replace')
+        elif detected_type == 'doc':
+            raise HTTPException(status_code=400, detail="Old .doc format not supported. Please save as .docx or .pdf.")
+        else:
+            raise HTTPException(status_code=400, detail="Could not determine file type.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to extract text from file: {str(e)}")
+
+    if not resume_text.strip():
+        raise HTTPException(status_code=400, detail="Could not extract any text from the file. Please try a different format.")
+
+    # Parse the extracted text
+    parsed_data = await job_agent.parse_resume(resume_text)
+
+    await _db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {
+            "parsed_resume": parsed_data,
+            "resume_parsed_at": datetime.now(timezone.utc).isoformat(),
+            "resume_filename": file.filename,
+        }}
+    )
+
+    return {
+        "message": "Resume uploaded and parsed successfully",
+        "data": parsed_data,
+        "filename": file.filename,
+        "extracted_length": len(resume_text),
+    }
+
+
+def _extract_text_from_pdf(content: bytes) -> str:
+    """Extract text from PDF bytes using PyPDF2"""
+    try:
+        import PyPDF2
+        reader = PyPDF2.PdfReader(io.BytesIO(content))
+        text_parts = []
+        for page in reader.pages:
+            text = page.extract_text()
+            if text:
+                text_parts.append(text)
+        return "\n".join(text_parts)
+    except ImportError:
+        # Fallback: try pdfplumber
+        try:
+            import pdfplumber
+            with pdfplumber.open(io.BytesIO(content)) as pdf:
+                return "\n".join(page.extract_text() or "" for page in pdf.pages)
+        except ImportError:
+            raise HTTPException(status_code=500, detail="PDF parsing library not installed. Please install PyPDF2 or pdfplumber.")
+
+
+def _extract_text_from_docx(content: bytes) -> str:
+    """Extract text from DOCX bytes using python-docx"""
+    try:
+        import docx
+        doc = docx.Document(io.BytesIO(content))
+        return "\n".join(para.text for para in doc.paragraphs if para.text.strip())
+    except ImportError:
+        raise HTTPException(status_code=500, detail="DOCX parsing library not installed. Please install python-docx.")
 
 
 @router.post("/search-jobs")

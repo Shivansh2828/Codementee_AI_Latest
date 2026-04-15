@@ -8,7 +8,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
-import { Search, Copy, Loader2, Crown, Lock } from 'lucide-react';
+import { Search, Copy, Loader2, Crown, Lock, Briefcase } from 'lucide-react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 
 const REFERRAL_MESSAGES = [
@@ -78,19 +78,27 @@ function EliteGate() {
   return (
     <DashboardLayout title="🤝 AI Referral Finder">
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Card className="max-w-md w-full border-2 border-amber-500/30">
+        <Card className="max-w-md w-full border-2 border-[#06b6d4]/30">
           <CardContent className="p-8 text-center">
-            <Lock className="w-16 h-16 text-amber-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Elite Feature</h2>
+            <Lock className="w-16 h-16 text-[#06b6d4] mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Unlock AI Agents</h2>
             <p className="text-gray-500 dark:text-slate-400 mb-6">
-              AI Referral Finder is available exclusively for Elite plan members. Upgrade to find employees at target companies and get AI-drafted referral messages.
+              Find employees at target companies and get AI-drafted referral messages delivered to you.
             </p>
-            <Link to="/mentee/book">
-              <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white w-full">
-                <Crown className="w-4 h-4 mr-2" />
-                Upgrade to Elite
-              </Button>
-            </Link>
+            <div className="space-y-3">
+              <Link to="/ai-agents" className="block">
+                <Button className="bg-[#06b6d4] hover:bg-[#0891b2] text-white w-full">
+                  <Briefcase className="w-4 h-4 mr-2" />
+                  Get AI Agent Plan — starts at ₹99
+                </Button>
+              </Link>
+              <Link to="/apply" className="block">
+                <Button variant="outline" className="w-full border-amber-500/30 text-amber-500 hover:bg-amber-500/10">
+                  <Crown className="w-4 h-4 mr-2" />
+                  Get Elite Plan — includes AI Agents free
+                </Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BookOpen, Clock, Users, Zap, ChevronRight, Crown, CheckCircle } from 'lucide-react';
+import { ArrowRight, ArrowLeft, BookOpen, Clock, Users, Zap, ChevronRight, Crown, CheckCircle } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -139,6 +139,9 @@ const CoursesLandingPage = () => {
           </div>
 
           <div className="container relative z-10">
+            <Link to="/mentee" className={`inline-flex items-center gap-2 text-sm ${theme.text.muted} hover:text-[#06b6d4] transition-colors mb-6`}>
+              <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+            </Link>
             <div className="max-w-3xl mx-auto text-center">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#06b6d4]/10 border border-[#06b6d4]/30 mb-6">
                 <Zap className="w-4 h-4 text-[#06b6d4]" />

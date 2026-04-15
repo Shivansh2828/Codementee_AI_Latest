@@ -29,7 +29,7 @@ const AgentPurchasePage = () => {
 
   const fetchAgentPlans = async () => {
     try {
-      const response = await api.get(`/pricing-plans?currency=${currency}`);
+      const response = await api.get(`/pricing-plans?currency=${currency}&service_type=ai_agent`);
       const plans = response.data;
       
       // Map agent plans (prices already in paise/cents, formatPrice will handle division)
