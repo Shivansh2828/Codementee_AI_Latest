@@ -91,6 +91,30 @@ AGENT_PLANS = [
         "display_order": 3,
         "currencies": ["INR", "USD"],
     },
+    {
+        "id": str(uuid.uuid4()),
+        "plan_id": "agent_yearly",
+        "name": "AI Agent Yearly",
+        "service_type": "ai_agent",
+        "price": 149900,         # ₹1,499 in paise
+        "price_inr": 149900,
+        "price_usd": 1800,       # $18 in cents
+        "duration_months": 12,
+        "features": [
+            "Job Search Agent — Unlimited searches",
+            "Referral Finder Agent — Unlimited searches",
+            "Auto job alerts (daily email digest)",
+            "Priority support",
+            "Save 37% vs monthly",
+        ],
+        "limits": {
+            "job_searches": -1,
+            "referral_searches": -1,
+        },
+        "is_active": True,
+        "display_order": 4,
+        "currencies": ["INR", "USD"],
+    },
 ]
 
 

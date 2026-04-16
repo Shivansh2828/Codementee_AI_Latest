@@ -148,9 +148,9 @@ const AdminPricing = () => {
       const submitData = {
         name: planForm.name,
         service_type: planForm.service_type,
-        price: parseInt(planForm.price) * 100,
-        price_inr: parseInt(planForm.price) * 100,
-        price_usd: parseInt(planForm.price_usd) * 100,
+        price: parseInt(planForm.price) * 100 || 0,
+        price_inr: parseInt(planForm.price) * 100 || 0,
+        price_usd: parseInt(planForm.price_usd) * 100 || 0,
         duration_months: parseInt(planForm.duration_months),
         features: planForm.features.split('\n').filter(f => f.trim()),
         limits: planForm.limits ? JSON.parse(planForm.limits) : {},
