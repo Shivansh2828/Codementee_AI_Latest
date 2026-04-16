@@ -638,12 +638,20 @@ Object.assign(TOPICS, {
 Object.assign(TOPICS, {
 
   'tech-redis': {
-    slug: 'tech-redis', title: 'Redis', subtitle: 'In-memory data store — caching, queues, pub/sub, and more', duration: '20 min', difficulty: 'Intermediate',
+    slug: 'tech-redis', title: 'Redis', subtitle: 'In-memory data store — caching, queues, pub/sub, and more', duration: '25 min', difficulty: 'Intermediate',
     sections: [
-      { type: 'text', heading: 'What is Redis?', body: `Redis is an in-memory data structure store. It's used as a cache, message broker, and database.\n\n**Key properties:**\n- Sub-millisecond latency\n- Rich data structures\n- Optional persistence\n- Pub/Sub messaging\n- Lua scripting\n- Atomic operations` },
+      { type: 'text', heading: 'What is Redis?', body: `Redis (Remote Dictionary Server) is an in-memory data structure store that serves as a cache, message broker, and lightweight database. It stores all data in RAM, which is why it achieves sub-millisecond latency — reading from memory is 1000x faster than reading from disk.\n\nRedis is single-threaded, which sounds like a limitation but is actually a feature: every operation is atomic without needing locks. A single Redis instance handles ~100,000 operations per second. For higher throughput, use Redis Cluster to shard data across multiple nodes.\n\nIn system design interviews, Redis shows up everywhere. Whenever you need fast lookups, counters, temporary data, or real-time communication between services, Redis is usually the answer.\n\n**Key properties:**\n- Sub-millisecond latency\n- Rich data structures\n- Optional persistence\n- Pub/Sub messaging\n- Lua scripting\n- Atomic operations` },
       { type: 'text', heading: 'Data Structures', body: `**String** — Simple key-value. Counters, sessions, cached objects.\n**List** — Ordered list. Message queues, activity feeds.\n**Set** — Unique values. Tags, unique visitors.\n**Sorted Set** — Set with scores. Leaderboards, rate limiting.\n**Hash** — Field-value pairs. User profiles, objects.\n**Bitmap** — Bit array. Feature flags, daily active users.\n**HyperLogLog** — Approximate cardinality. Unique visitor counts.` },
       { type: 'text', heading: 'Common Use Cases', body: `**Caching:** Store DB query results, API responses\n**Sessions:** Store user session data (TTL-based)\n**Rate Limiting:** INCR + EXPIRE per user/IP\n**Leaderboards:** Sorted sets with scores\n**Pub/Sub:** Real-time notifications\n**Distributed Locks:** SETNX (set if not exists)\n**Job Queues:** List-based queues (LPUSH/BRPOP)` },
-      { type: 'callout', variant: 'info', heading: 'Redis Persistence', body: 'RDB (snapshots): periodic point-in-time snapshots. Fast recovery, some data loss. AOF (append-only file): log every write operation. Slower but no data loss. Use both for production.' },
+      { type: 'text', heading: 'Persistence and Durability', body: `Redis stores everything in memory, so what happens when it restarts? Two persistence options:\n\n**RDB (Redis Database Backup):** Periodic point-in-time snapshots. Redis forks the process and writes the entire dataset to disk. Fast recovery, but you lose data since the last snapshot (typically 1-5 minutes).\n\n**AOF (Append-Only File):** Logs every write operation. On restart, Redis replays the log. More durable (can fsync every second), but slower recovery for large datasets.\n\nFor production, use both: AOF for durability and RDB for fast disaster recovery. For pure caching where data loss is acceptable, disable persistence entirely.` },
+      {
+        type: 'faq', heading: 'Common Interview Questions',
+        questions: [
+          { q: 'What happens when Redis runs out of memory?', a: 'Redis uses an eviction policy. The default is noeviction (returns errors). For caching, use allkeys-lru (evict least recently used keys). Configure maxmemory to set the limit.' },
+          { q: 'Is Redis single-threaded? How can it be fast?', a: 'Yes, the main event loop is single-threaded. It is fast because all data is in memory, operations are O(1) or O(log N), and the single thread avoids lock contention. A single instance handles ~100K ops/sec.' },
+          { q: 'When should I use Redis vs Memcached?', a: 'Redis: rich data structures, persistence, pub/sub, sorted sets. Memcached: simpler, multi-threaded. Default to Redis — it does everything Memcached does and more.' },
+        ],
+      },
     ],
   },
 
@@ -655,6 +663,14 @@ Object.assign(TOPICS, {
       { type: 'text', heading: 'Why Kafka over a Simple Queue?', body: `**Durability:** Messages persist on disk (configurable retention, e.g., 7 days)\n**Replay:** Consumers can re-read old messages\n**Multiple consumers:** Many consumer groups can read the same topic independently\n**High throughput:** Millions of messages/second\n**Ordering:** Guaranteed within a partition\n\n**Use Kafka when:** You need durability, replay, multiple consumers, or very high throughput.` },
       { type: 'text', heading: 'Partitioning Strategy', body: `Partitions enable parallelism. More partitions = more throughput.\n\n**Partition key:** Determines which partition a message goes to\n- Same key → same partition → ordered for that key\n- No key → round-robin across partitions\n\n**Example:** For user events, use user_id as partition key\nAll events for a user go to the same partition → ordered per user` },
       { type: 'callout', variant: 'tip', heading: 'Kafka vs RabbitMQ', body: 'Use Kafka for: event streaming, audit logs, analytics pipelines, replay needed. Use RabbitMQ for: task queues, complex routing, RPC patterns, when you need message acknowledgment and routing flexibility.' },
+      {
+        type: 'faq', heading: 'Common Interview Questions',
+        questions: [
+          { q: 'How does Kafka guarantee message ordering?', a: 'Ordering is guaranteed within a partition, not across partitions. Use a partition key to ensure related messages go to the same partition.' },
+          { q: 'What happens if a Kafka consumer crashes?', a: 'The consumer group rebalances — the crashed consumer\'s partitions are reassigned to other consumers. The new consumer resumes from the last committed offset. Messages are not lost.' },
+          { q: 'When should I use Kafka vs SQS?', a: 'Kafka: event streaming, replay, multiple consumers reading the same data. SQS: simple job queues, when you do not need message retention or replay.' },
+        ],
+      },
     ],
   },
 
@@ -664,7 +680,15 @@ Object.assign(TOPICS, {
       { type: 'text', heading: 'What is Elasticsearch?', body: `Elasticsearch is a distributed search and analytics engine built on Apache Lucene.\n\n**Use cases:**\n- Full-text search (product search, document search)\n- Log analytics (ELK stack)\n- Geospatial search\n- Time-series analytics\n- Autocomplete` },
       { type: 'text', heading: 'How It Works', body: `**Inverted Index:**\nFor each word, store a list of documents containing it.\n"apple" → [doc1, doc3, doc7]\n"banana" → [doc2, doc3]\n\nSearch "apple banana" → find intersection → [doc3]\n\n**Relevance Scoring:**\nTF-IDF (term frequency × inverse document frequency)\nBM25 (improved TF-IDF, default in modern ES)` },
       { type: 'text', heading: 'Architecture', body: `**Index** — Collection of documents (like a DB table)\n**Shard** — Index split into shards for distribution\n**Replica** — Copy of a shard for redundancy\n\n**Write path:** Document → primary shard → replica shards\n**Read path:** Query → any shard (primary or replica)\n\n**Near real-time:** New documents searchable within ~1 second (refresh interval)` },
-      { type: 'callout', variant: 'warning', heading: 'ES is Not a Primary DB', body: 'Elasticsearch is eventually consistent and doesn\'t support transactions. Use it as a search layer on top of your primary DB. Sync data from DB to ES via CDC (Change Data Capture) or event streaming.' },
+      { type: 'callout', variant: 'warning', heading: 'Elasticsearch is NOT a Primary Database', body: 'Elasticsearch is eventually consistent and does not support ACID transactions. Never use it as your source of truth. Store data in PostgreSQL (source of truth), sync to Elasticsearch via CDC or Kafka. Read from PostgreSQL for transactions, read from Elasticsearch for search.' },
+      {
+        type: 'faq', heading: 'Common Interview Questions',
+        questions: [
+          { q: 'How do you keep Elasticsearch in sync with the primary database?', a: 'Use CDC (Change Data Capture): tools like Debezium capture changes from PostgreSQL\'s WAL and publish to Kafka. An Elasticsearch consumer reads from Kafka and updates the index. Near-real-time sync with minimal coupling.' },
+          { q: 'How do you handle autocomplete/typeahead?', a: 'Use Elasticsearch\'s completion suggester or edge n-gram tokenizer. Edge n-grams index prefixes: "apple" → "a", "ap", "app", "appl", "apple". Searching for "app" matches instantly.' },
+          { q: 'When should I use Elasticsearch vs PostgreSQL full-text search?', a: 'PostgreSQL for simple search on small datasets. Elasticsearch for complex relevance scoring, fuzzy matching, autocomplete, faceted search, or millions of documents.' },
+        ],
+      },
     ],
   },
 
@@ -674,6 +698,14 @@ Object.assign(TOPICS, {
       { type: 'text', heading: 'Why PostgreSQL?', body: `PostgreSQL is the go-to relational database for most applications.\n\n**Strengths:**\n- Full ACID compliance\n- Rich data types (JSON, arrays, UUID, geometric)\n- Advanced indexing (B-tree, Hash, GiST, GIN, BRIN)\n- Full-text search built-in\n- PostGIS for geospatial\n- Excellent performance\n- Open source, no licensing costs` },
       { type: 'text', heading: 'Key Features for System Design', body: `**JSONB:** Store and query JSON documents. Indexed. Good for semi-structured data.\n\n**Partitioning:** Range, list, or hash partitioning. Built-in table partitioning.\n\n**Logical Replication:** Stream changes to replicas or external systems (CDC).\n\n**Connection Pooling:** Use PgBouncer. PostgreSQL has high per-connection overhead.\n\n**VACUUM:** Background process that reclaims space from deleted rows. Important for write-heavy tables.` },
       { type: 'callout', variant: 'tip', heading: 'When to Use PostgreSQL', body: 'Default choice for most applications. Use when you need ACID transactions, complex queries, or relational data. Switch to NoSQL only when you have a specific reason (scale, schema flexibility, specific data model).' },
+      {
+        type: 'faq', heading: 'Common Interview Questions',
+        questions: [
+          { q: 'When should I choose PostgreSQL over MongoDB?', a: 'PostgreSQL when you need ACID transactions, complex JOINs, or strong consistency. MongoDB when your data is naturally document-shaped, schema changes frequently, or you need horizontal write scaling. PostgreSQL\'s JSONB blurs the line.' },
+          { q: 'How does PostgreSQL handle concurrent writes?', a: 'MVCC (Multi-Version Concurrency Control). Each transaction sees a snapshot. Writers do not block readers. Concurrent writes to the same row use row-level locks.' },
+          { q: 'What is VACUUM and why does it matter?', a: 'When PostgreSQL updates/deletes a row, the old version is not immediately removed. VACUUM reclaims this dead space. Without it, tables bloat. PostgreSQL runs autovacuum by default.' },
+        ],
+      },
     ],
   },
 
@@ -683,7 +715,15 @@ Object.assign(TOPICS, {
       { type: 'text', heading: 'What is Cassandra?', body: `Cassandra is a distributed wide-column store designed for:\n- Write-heavy workloads\n- Time-series data\n- High availability (no single point of failure)\n- Linear horizontal scalability\n\n**Used by:** Netflix, Apple, Instagram, Discord` },
       { type: 'text', heading: 'Data Model', body: `**Keyspace** → **Table** → **Row**\n\nRows identified by **partition key** (determines which node stores the data)\nWithin a partition, rows sorted by **clustering key**\n\n**Design principle:** Model your data around your queries, not your relationships.\nDenormalize aggressively. Joins don't exist.\n\n**Example — Messages:**\nPartition key: conversation_id\nClustering key: timestamp DESC\nQuery: "Get last 50 messages in conversation X" → single partition read` },
       { type: 'text', heading: 'Consistency Levels', body: `Cassandra lets you choose consistency per query:\n\n**ONE** — Fastest, least consistent. One replica responds.\n**QUORUM** — Majority of replicas respond. Good balance.\n**ALL** — All replicas respond. Slowest, most consistent.\n\n**Tunable consistency:** Write QUORUM + Read QUORUM = strong consistency\nWrite ONE + Read ONE = eventual consistency (fastest)` },
-      { type: 'callout', variant: 'warning', heading: 'Cassandra Anti-patterns', body: 'No JOINs, no transactions, no secondary indexes at scale. Don\'t use Cassandra if you need complex queries or ACID. Use it for: time-series, event logs, message storage, IoT data.' },
+      { type: 'callout', variant: 'warning', heading: 'Cassandra Anti-patterns', body: 'No JOINs, no transactions, no secondary indexes at scale. Do not use Cassandra if you need complex queries or ACID. Use it for: time-series, event logs, message storage, IoT data.' },
+      {
+        type: 'faq', heading: 'Common Interview Questions',
+        questions: [
+          { q: 'When should I use Cassandra vs PostgreSQL?', a: 'Cassandra when you need massive write throughput (millions/sec), time-series data, multi-region replication, or no single point of failure. PostgreSQL for everything else — complex queries, transactions, JOINs.' },
+          { q: 'How does Cassandra achieve high write throughput?', a: 'Writes go to an in-memory buffer (memtable) and a commit log (sequential append). No random disk I/O on writes. Memtables are periodically flushed to disk as SSTables. This LSM-tree approach optimizes for writes at the cost of slower reads.' },
+          { q: 'What is a partition key and why does it matter?', a: 'The partition key determines which node stores the data (via consistent hashing). All data with the same partition key is on the same node. Choose a key with high cardinality that matches your query patterns. Bad partition key = hot spots.' },
+        ],
+      },
     ],
   },
 
