@@ -681,6 +681,28 @@ const Section = ({ section, theme }) => {
     case 'architecture':
       return <ArchitectureDiagram {...section.config} title={section.heading} caption={section.caption} />;
 
+    case 'faq':
+      return (
+        <div className={`mb-8 ${theme.bg.card} ${theme.border.primary} border rounded-2xl overflow-hidden`}>
+          <div className="px-6 py-4 border-b border-[var(--border-primary)]">
+            <h2 className={`text-lg font-bold ${theme.text.primary}`}>❓ {section.heading || 'Frequently Asked Questions'}</h2>
+          </div>
+          <div className="divide-y divide-[var(--border-primary)]">
+            {section.questions.map((faq, i) => (
+              <details key={i} className="group">
+                <summary className={`flex items-center justify-between px-6 py-4 cursor-pointer ${theme.text.primary} font-medium text-sm hover:bg-[var(--bg-secondary)] transition-colors list-none`}>
+                  <span>{faq.q}</span>
+                  <span className="text-[var(--text-muted)] text-xs group-open:rotate-90 transition-transform">▶</span>
+                </summary>
+                <div className={`px-6 pb-4 ${theme.text.secondary} text-sm leading-relaxed`}>
+                  <RichText text={faq.a} theme={theme} />
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
+      );
+
     default:
       return null;
   }
