@@ -842,6 +842,32 @@ Object.assign(TOPICS, {
       { type: 'text', heading: 'Popular Time Series Databases', body: `**InfluxDB** — The most popular dedicated time series database. Uses its own query language (Flux) and a custom storage engine optimized for time series. Good for metrics, events, and IoT. Supports retention policies and continuous queries natively.\n\n**TimescaleDB** — A PostgreSQL extension that adds time series capabilities. You get full SQL support, JOINs, and the entire PostgreSQL ecosystem, plus automatic time-based partitioning (hypertables), compression, and continuous aggregates. Best choice if you already use PostgreSQL and want to add time series without a new database.\n\n**Prometheus** — Not a general-purpose time series DB, but the standard for infrastructure monitoring. Uses a pull model (Prometheus scrapes metrics from your services). Built-in alerting with AlertManager. The default monitoring stack for Kubernetes. Stores data locally with limited retention (typically 15-30 days).\n\n**Apache Druid** — Designed for real-time analytics on event data. Sub-second queries on billions of rows. Used by Airbnb, Netflix, and Alibaba for real-time dashboards. Combines time series storage with OLAP-style aggregation.\n\n**ClickHouse** — Column-oriented database from Yandex. Extremely fast for analytical queries on large datasets. Not strictly a time series DB, but widely used for time series analytics, log analysis, and event tracking. Used by Cloudflare, Uber, and eBay.` },
 
       { type: 'text', heading: 'Data Retention and Downsampling', body: `Storing every data point forever is impractical. A system generating 10,000 metrics/sec produces 315 billion data points per year. The solution is tiered retention:\n\n**Raw data:** Keep for 7 days. Full resolution (every data point). Used for debugging recent issues.\n\n**1-minute aggregates:** Keep for 30 days. Average, min, max, count per minute. Used for dashboards and recent trend analysis.\n\n**1-hour aggregates:** Keep for 1 year. Used for capacity planning and long-term trends.\n\n**Daily aggregates:** Keep forever. Used for year-over-year comparisons and reporting.\n\nThis tiered approach reduces storage by 99%+ while preserving the ability to answer questions at every time scale. Most time series databases support this natively through retention policies and continuous aggregation queries.` },
+      {
+        type: 'architecture', heading: 'Time Series Data Pipeline',
+        caption: 'Metrics flow from services through a collector into the TSDB. Dashboards and alerts consume the data.',
+        config: {
+          width: 800, height: 300,
+          nodes: [
+            { id: 'svc1', label: 'Service A', sublabel: 'Metrics exporter', color: 'blue', x: 20, y: 40, w: 110, h: 50 },
+            { id: 'svc2', label: 'Service B', color: 'blue', x: 20, y: 120, w: 110, h: 50 },
+            { id: 'svc3', label: 'Service N', color: 'blue', x: 20, y: 200, w: 110, h: 50 },
+            { id: 'collector', label: 'Collector', sublabel: 'Prometheus / Telegraf', color: 'cyan', x: 210, y: 110, w: 140, h: 56 },
+            { id: 'tsdb', label: 'Time Series DB', sublabel: 'InfluxDB / TimescaleDB', icon: '📊', color: 'orange', x: 430, y: 40, w: 150, h: 56 },
+            { id: 'downsample', label: 'Downsampler', sublabel: 'Continuous aggregation', color: 'purple', x: 430, y: 140, w: 150, h: 56 },
+            { id: 'grafana', label: 'Grafana', sublabel: 'Dashboards', icon: '📈', color: 'green', x: 650, y: 40, w: 120, h: 50 },
+            { id: 'alertmgr', label: 'AlertManager', sublabel: 'PagerDuty / Slack', icon: '🔔', color: 'red', x: 650, y: 140, w: 120, h: 50 },
+          ],
+          edges: [
+            { from: 'svc1', to: 'collector', label: 'scrape / push' },
+            { from: 'svc2', to: 'collector', label: '' },
+            { from: 'svc3', to: 'collector', label: '' },
+            { from: 'collector', to: 'tsdb', label: 'write metrics', color: 'accent' },
+            { from: 'tsdb', to: 'downsample', label: 'raw → aggregated', dashed: true },
+            { from: 'tsdb', to: 'grafana', label: 'query' },
+            { from: 'tsdb', to: 'alertmgr', label: 'threshold breach' },
+          ],
+        },
+      },
 
       { type: 'callout', variant: 'example', heading: 'When to Use in System Design Interviews', body: `Mention time series databases when designing: monitoring and alerting systems (Prometheus + Grafana), IoT platforms (millions of sensors reporting data), analytics dashboards (real-time metrics), financial trading systems (tick data), or any system that needs to answer "what happened in the last N minutes/hours/days?" efficiently.` },
 
@@ -862,6 +888,11 @@ Object.assign(TOPICS, {
       { type: 'text', heading: 'Why Probabilistic Data Structures?', body: `At massive scale, exact answers become prohibitively expensive. Counting the exact number of unique visitors to a website with 1 billion daily visits would require storing every visitor ID in a set — gigabytes of memory. Checking if a URL has been crawled before across 10 billion URLs requires a massive hash table.\n\nProbabilistic data structures solve this by trading a small, bounded error rate for massive memory savings. A HyperLogLog counts unique visitors using only 12KB of memory (vs gigabytes for exact counting) with ~0.81% error. A Bloom filter checks set membership using a fraction of the memory of a hash set, with a small false positive rate but zero false negatives.\n\nThese data structures appear in system design interviews whenever you are dealing with massive datasets and the interviewer asks "how do you do X efficiently at scale?" Knowing when to reach for a Bloom filter vs a hash set shows real engineering maturity.` },
 
       { type: 'text', heading: 'Bloom Filter — Probabilistic Set Membership', body: `A Bloom filter answers one question: "Is this element in the set?" It can say "definitely not" or "probably yes" — but never gives a false negative.\n\nHow it works: a Bloom filter is a bit array of m bits, initially all zeros. To add an element, hash it with k different hash functions, each producing a position in the bit array. Set those k bits to 1. To check if an element exists, hash it with the same k functions and check if all k positions are 1. If any position is 0, the element is definitely not in the set. If all are 1, the element is probably in the set (but could be a false positive from other elements setting those same bits).\n\nThe false positive rate depends on the size of the bit array (m), the number of hash functions (k), and the number of elements inserted (n). With m = 10 bits per element and k = 7 hash functions, the false positive rate is about 0.8%.\n\n**Where Bloom filters appear in system design:**\n\nWeb crawlers: before crawling a URL, check the Bloom filter. If it says "not seen", crawl it. If it says "probably seen", skip it. A false positive means you skip a URL you have not crawled — acceptable. A false negative would mean crawling the same URL twice — the Bloom filter guarantees this never happens.\n\nDatabases: Cassandra and HBase use Bloom filters to avoid unnecessary disk reads. Before reading an SSTable file, check the Bloom filter. If the key is "definitely not" in this file, skip the disk read entirely.\n\nSpam filters: check if an email address is in the known-spammer set. False positives (blocking a legitimate email) are rare and acceptable. False negatives (letting spam through) never happen.` },
+      {
+        type: 'diagram', variant: 'bloom-filter',
+        heading: 'How a Bloom Filter Works',
+        caption: 'Multiple hash functions map each element to bit positions. All bits must be 1 for a "probably yes".',
+      },
 
       { type: 'text', heading: 'HyperLogLog — Counting Unique Elements', body: `HyperLogLog (HLL) estimates the cardinality (count of unique elements) of a set using a fixed amount of memory — approximately 12KB regardless of whether you are counting 1,000 or 1 billion unique elements. The trade-off is an error rate of about 0.81%.\n\nThe intuition: hash each element to a binary string. Count the maximum number of leading zeros you have ever seen. If the longest run of leading zeros is 10, you have probably seen about 2^10 = 1,024 unique elements (because the probability of seeing 10 leading zeros is 1/1024). HyperLogLog uses multiple "registers" (buckets) and takes the harmonic mean to improve accuracy.\n\nRedis has built-in HyperLogLog support:\n\n\`\`\`\nPFADD visitors:2024-04-17 user_123\nPFADD visitors:2024-04-17 user_456\nPFADD visitors:2024-04-17 user_123  (duplicate — ignored)\nPFCOUNT visitors:2024-04-17  → 2\n\`\`\`\n\n**Where HyperLogLog appears in system design:**\n\nUnique visitor counting: "How many unique users visited the homepage today?" With 100M daily visitors, exact counting requires storing all 100M user IDs. HLL does it in 12KB.\n\nUnique search queries: "How many distinct search terms were used this week?" Same problem, same solution.\n\nA/B testing: "How many unique users saw variant A vs variant B?" HLL per variant, merge with PFMERGE.` },
 
@@ -890,6 +921,32 @@ Object.assign(TOPICS, {
       { type: 'text', heading: 'Popular Vector Databases', body: `**Pinecone** — Fully managed, serverless. No infrastructure to manage. Good for getting started quickly. Supports metadata filtering (find similar vectors WHERE category = "electronics").\n\n**Weaviate** — Open-source, supports hybrid search (combine vector similarity with keyword matching). Built-in vectorization (can generate embeddings for you). Good for RAG applications.\n\n**Qdrant** — Open-source, written in Rust. High performance, supports filtering and payload storage. Good balance of features and speed.\n\n**Milvus** — Open-source, designed for massive scale (billions of vectors). Supports multiple index types (HNSW, IVF, PQ). Used by large enterprises.\n\n**pgvector** — PostgreSQL extension that adds vector similarity search. Store vectors alongside your relational data. No separate database needed. Best for small-to-medium scale (<10M vectors) when you already use PostgreSQL.\n\n**ChromaDB** — Lightweight, open-source, designed for AI applications. Easy to set up, good for prototyping and small-scale RAG.` },
 
       { type: 'text', heading: 'RAG: Retrieval Augmented Generation', body: `RAG is the most important use case for vector databases today. It solves a fundamental limitation of LLMs: they only know what was in their training data. RAG gives them access to your private, up-to-date data.\n\nThe pattern:\n\n1. **Indexing phase:** Split your documents into chunks (500-1000 tokens each). Generate an embedding for each chunk using an embedding model. Store the embeddings + original text in a vector database.\n\n2. **Query phase:** User asks a question. Generate an embedding for the question. Search the vector database for the most similar chunks (nearest neighbors). Pass the retrieved chunks + the question to the LLM as context. The LLM generates an answer grounded in your data.\n\nThis is how ChatGPT plugins, Notion AI, and most "chat with your docs" features work. The vector database is the retrieval engine that finds relevant context for each query.` },
+      {
+        type: 'architecture', heading: 'RAG Pipeline Architecture',
+        caption: 'Documents are chunked and embedded into a vector DB. At query time, relevant chunks are retrieved and passed to the LLM.',
+        config: {
+          width: 800, height: 320,
+          nodes: [
+            { id: 'docs', label: 'Documents', sublabel: 'PDFs, pages, etc.', icon: '📄', color: 'blue', x: 20, y: 40, w: 110, h: 56 },
+            { id: 'chunker', label: 'Chunker', sublabel: 'Split into 500-token chunks', color: 'cyan', x: 190, y: 40, w: 140, h: 56 },
+            { id: 'embedder', label: 'Embedding Model', sublabel: 'OpenAI / Cohere', color: 'purple', x: 400, y: 40, w: 140, h: 56 },
+            { id: 'vectordb', label: 'Vector DB', sublabel: 'Pinecone / pgvector', icon: '🔢', color: 'orange', x: 600, y: 40, w: 130, h: 56 },
+            { id: 'user', label: 'User Query', icon: '💬', color: 'blue', x: 20, y: 200, w: 110, h: 56 },
+            { id: 'embed2', label: 'Embed Query', color: 'purple', x: 220, y: 200, w: 120, h: 56 },
+            { id: 'search', label: 'ANN Search', sublabel: 'Top-K similar', color: 'orange', x: 410, y: 200, w: 130, h: 56 },
+            { id: 'llm', label: 'LLM', sublabel: 'GPT / Claude', icon: '🤖', color: 'green', x: 610, y: 200, w: 120, h: 56 },
+          ],
+          edges: [
+            { from: 'docs', to: 'chunker', label: 'split' },
+            { from: 'chunker', to: 'embedder', label: 'chunks' },
+            { from: 'embedder', to: 'vectordb', label: 'store vectors', color: 'accent' },
+            { from: 'user', to: 'embed2', label: 'embed' },
+            { from: 'embed2', to: 'search', label: 'query vector' },
+            { from: 'search', to: 'llm', label: 'context chunks', color: 'accent' },
+            { from: 'vectordb', to: 'search', label: 'nearest neighbors', dashed: true },
+          ],
+        },
+      },
 
       { type: 'callout', variant: 'example', heading: 'When to Mention Vector DBs in Interviews', body: `Mention vector databases when designing: search systems that need semantic understanding (not just keyword matching), recommendation engines ("find similar products/content"), RAG-powered AI features ("chat with your data"), image search ("find visually similar images"), or anomaly detection ("find unusual patterns in embeddings"). It shows awareness of modern ML infrastructure and differentiates you from candidates who only know traditional databases.` },
 
