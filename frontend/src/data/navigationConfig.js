@@ -20,12 +20,8 @@ export const topNavConfig = [
   },
   {
     label: 'AI Agents',
-    type: 'dropdown',
-    items: [
-      { label: 'AI Job Search', href: '/mentee/job-search', icon: 'Briefcase' },
-      { label: 'Referral Finder', href: '/mentee/referral-finder', icon: 'Target' },
-      { label: 'Pricing & Plans', href: '/ai-agents', icon: 'Bot' },
-    ],
+    type: 'link',
+    href: '/ai-agents',
   },
   {
     label: 'Pricing',

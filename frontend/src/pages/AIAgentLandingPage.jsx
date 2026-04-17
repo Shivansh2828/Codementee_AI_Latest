@@ -97,7 +97,7 @@ const AIAgentLandingPage = () => {
     },
     {
       question: 'Do I need a mentorship plan to use AI Agents?',
-      answer: `No. AI Agents are available as a standalone product starting at ${formatPrice(getPrice('monthly'))}/month. However, if you have an Elite mentorship plan, both agents are included for free.`
+      answer: `No. AI Agents are available as a standalone product starting at ${formatPrice(getPrice('agent_monthly'))}/month. However, if you have an Elite mentorship plan, both agents are included for free.`
     },
     {
       question: 'What job boards does it search?',
@@ -167,7 +167,7 @@ const AIAgentLandingPage = () => {
                   className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-bold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-lg"
                 >
                   <Zap className="w-5 h-5" />
-                  Start for {formatPrice(getPrice('monthly'))}/month
+                  Start for {formatPrice(getPrice('agent_monthly'))}/month
                 </Link>
                 <a
                   href="#pricing"
@@ -495,7 +495,7 @@ const AIAgentLandingPage = () => {
                   className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-bold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all duration-300 shadow-lg text-lg"
                 >
                   <Zap className="w-5 h-5" />
-                  Start for {formatPrice(getPrice('monthly'))}/mo
+                  Start for {formatPrice(getPrice('agent_monthly'))}/mo
                 </Link>
                 <Link
                   to="/register"
