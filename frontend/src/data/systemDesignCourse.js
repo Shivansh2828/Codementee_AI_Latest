@@ -1,5 +1,4 @@
 // System Design Course — Full structured content
-// Mirrors hellointerview.com structure
 
 import { IN_A_HURRY_TOPICS } from './courses/inAHurry';
 import { QUESTION_BREAKDOWN_TOPICS } from './courses/questionBreakdowns';
@@ -85,7 +84,7 @@ export const SECTIONS = [
     color: 'red',
     access: 'elite',
     freeTopics: [],
-    topics: ['advanced-time-series', 'advanced-data-structures', 'advanced-vector-db'],
+    topics: ['advanced-time-series', 'advanced-data-structures', 'advanced-vector-db', 'advanced-event-driven', 'advanced-distributed-transactions', 'advanced-observability'],
   },
 ];
 
@@ -1063,6 +1062,94 @@ Object.assign(TOPICS, {
           { q: 'Can I just use pgvector instead of a dedicated vector database?', a: 'Yes, for small-to-medium scale (<10M vectors). pgvector lets you store vectors alongside relational data in PostgreSQL — no separate infrastructure. For larger scale (100M+ vectors) or when you need advanced features (hybrid search, real-time indexing, distributed search), use a dedicated vector DB like Pinecone, Weaviate, or Milvus.' },
           { q: 'How do you handle embedding model updates?', a: 'When you switch to a new embedding model, all existing vectors become incompatible (different models produce different vector spaces). You must re-embed all documents with the new model. This is expensive but necessary. Strategy: maintain two indexes during migration, switch traffic to the new index when ready, delete the old one.' },
           { q: 'What is the difference between HNSW and IVF indexes?', a: 'HNSW builds a navigable graph — higher accuracy (95-99% recall), higher memory usage, good for real-time search. IVF clusters vectors and searches only nearby clusters — lower memory, faster indexing, but lower accuracy. HNSW is the default choice for most applications. IVF + PQ is better when memory is constrained and you have billions of vectors.' },
+        ],
+      },
+    ],
+  },
+  'advanced-event-driven': {
+    slug: 'advanced-event-driven', title: 'Event-Driven Architecture', subtitle: 'Building loosely coupled systems with events, CQRS, and event sourcing', duration: '30 min', difficulty: 'Advanced',
+    sections: [
+      { type: 'text', heading: 'What is Event-Driven Architecture?', body: `In a traditional request-driven architecture, services call each other directly: the Order Service calls the Payment Service, which calls the Notification Service. Each service knows about the others — they are tightly coupled.\n\nIn an event-driven architecture, services communicate through events. The Order Service publishes an "OrderCreated" event to a message broker (Kafka). The Payment Service, Notification Service, and Analytics Service each subscribe to this event and react independently. The Order Service does not know or care who consumes the event.\n\nThis decoupling is powerful: you can add new consumers (a fraud detection service) without changing the producer. Services can fail independently — if the Notification Service is down, orders still process. And the event log (Kafka) serves as a durable record of everything that happened.` },
+
+      { type: 'text', heading: 'Event Sourcing', body: `Traditional systems store the current state: "Order #123 status = SHIPPED." Event sourcing stores every state change as an immutable event:\n\n1. OrderCreated { id: 123, items: [...], total: 5000 }\n2. PaymentReceived { id: 123, amount: 5000 }\n3. OrderShipped { id: 123, tracking: "TRK456" }\n\nThe current state is derived by replaying all events. This gives you a complete audit trail, the ability to reconstruct state at any point in time, and the ability to build new views by replaying events through a new projection.\n\nEvent sourcing is used by financial systems (every transaction is an event), collaborative editing (every keystroke is an event), and any system where audit trails are critical.\n\nThe trade-off: querying current state requires replaying events (slow) or maintaining a materialized view (complexity). Most systems use event sourcing for the write side and materialized views for the read side (CQRS).` },
+
+      { type: 'text', heading: 'CQRS — Command Query Responsibility Segregation', body: `CQRS separates the write model (commands) from the read model (queries) entirely.\n\nThe write side accepts commands ("CreateOrder", "ShipOrder") and produces events. The events are stored in an event store (Kafka, EventStoreDB).\n\nThe read side consumes events and builds optimized read models (materialized views). A product page view might be a single denormalized document in MongoDB. A search index might be in Elasticsearch. A dashboard might be in a time-series DB.\n\nEach read model is optimized for its specific query pattern. No JOINs, no complex queries — just fast lookups.\n\nThe trade-off: eventual consistency between write and read sides. After a write, the read model may take milliseconds to seconds to update. For most applications, this is acceptable. For critical reads (checking your own order status after placing it), route to the write model directly.` },
+
+      {
+        type: 'architecture', heading: 'Event-Driven Architecture with CQRS',
+        caption: 'Commands go to the write model. Events flow through Kafka. Read models are built from events.',
+        config: {
+          width: 800, height: 300,
+          nodes: [
+            { id: 'client', label: 'Client', icon: '📱', color: 'blue', x: 20, y: 110, w: 90, h: 50 },
+            { id: 'cmd', label: 'Command API', sublabel: 'Write side', color: 'green', x: 160, y: 110, w: 120, h: 50 },
+            { id: 'eventstore', label: 'Kafka', sublabel: 'Event store', icon: '📨', color: 'yellow', x: 350, y: 110, w: 110, h: 50 },
+            { id: 'read1', label: 'Search Index', sublabel: 'Elasticsearch', color: 'orange', x: 540, y: 30, w: 120, h: 45 },
+            { id: 'read2', label: 'Feed Cache', sublabel: 'Redis', color: 'red', x: 540, y: 110, w: 120, h: 45 },
+            { id: 'read3', label: 'Analytics', sublabel: 'ClickHouse', color: 'purple', x: 540, y: 190, w: 120, h: 45 },
+            { id: 'query', label: 'Query API', sublabel: 'Read side', color: 'cyan', x: 700, y: 110, w: 90, h: 50 },
+          ],
+          edges: [
+            { from: 'client', to: 'cmd', label: 'commands', color: 'accent' },
+            { from: 'cmd', to: 'eventstore', label: 'events' },
+            { from: 'eventstore', to: 'read1', label: '' },
+            { from: 'eventstore', to: 'read2', label: '' },
+            { from: 'eventstore', to: 'read3', label: '' },
+            { from: 'client', to: 'query', label: 'queries', dashed: true },
+          ],
+        },
+      },
+
+      {
+        type: 'faq', heading: 'Frequently Asked Interview Questions',
+        questions: [
+          { q: 'When should I use event-driven architecture?', a: 'When services need to be loosely coupled, when multiple consumers need to react to the same event, when you need an audit trail, or when you need to build multiple read models from the same data. Do not use it for simple CRUD applications — the complexity is not worth it.' },
+          { q: 'What is the difference between event sourcing and event-driven architecture?', a: 'Event-driven architecture is a communication pattern — services communicate through events. Event sourcing is a storage pattern — you store events instead of current state. You can use event-driven architecture without event sourcing (most systems do). Event sourcing implies event-driven, but not vice versa.' },
+          { q: 'How do you handle eventual consistency in CQRS?', a: 'Accept it for most reads (feeds, search results, dashboards). For critical reads where the user must see their own write immediately, route to the write model directly or use a "read-your-writes" pattern: after a write, read from the write DB for a short window (5 seconds), then fall back to the read model.' },
+        ],
+      },
+    ],
+  },
+
+  'advanced-distributed-transactions': {
+    slug: 'advanced-distributed-transactions', title: 'Distributed Transactions', subtitle: 'Two-phase commit, sagas, and consistency in distributed systems', duration: '25 min', difficulty: 'Advanced',
+    sections: [
+      { type: 'text', heading: 'The Problem: Transactions Across Services', body: `In a monolith with a single database, transactions are simple: BEGIN, do your work, COMMIT or ROLLBACK. The database guarantees atomicity — either all changes happen or none do.\n\nIn a microservices architecture, each service has its own database. An operation like "place an order" spans multiple services: create the order (Order DB), reserve inventory (Inventory DB), charge payment (Payment DB). There is no single database transaction that spans all three.\n\nIf the payment fails after inventory is reserved, you need to "undo" the reservation. This is the distributed transaction problem — one of the hardest challenges in distributed systems.` },
+
+      { type: 'text', heading: 'Two-Phase Commit (2PC)', body: `2PC is the traditional solution. A coordinator asks all participants: "Can you commit?" (Phase 1: Prepare). If all say yes, the coordinator says "Commit" (Phase 2: Commit). If any says no, the coordinator says "Abort."\n\nThe problem: 2PC is a blocking protocol. If the coordinator crashes after Phase 1 but before Phase 2, all participants are stuck holding locks, waiting for a decision that may never come. This reduces availability — if any participant is down, the entire transaction blocks.\n\n2PC is used within a single database (PostgreSQL uses it internally for multi-statement transactions) but is rarely used across services in modern architectures. The availability cost is too high.` },
+
+      { type: 'text', heading: 'Sagas — The Modern Alternative', body: `Sagas replace a single distributed transaction with a sequence of local transactions, each with a compensating action:\n\n1. Create order (PENDING) → compensate: cancel order\n2. Reserve inventory → compensate: release inventory\n3. Charge payment → compensate: refund payment\n4. Confirm order (COMPLETED)\n\nIf step 3 fails, execute compensations in reverse: release inventory (undo step 2), cancel order (undo step 1).\n\nSagas are eventually consistent — there is a window where the order exists but payment has not been charged. Your UI must handle this: show "Processing..." instead of "Confirmed."\n\nOrchestration (central coordinator manages the saga) is preferred over choreography (services react to events) for complex flows because the logic is in one place and easier to debug.` },
+
+      { type: 'text', heading: 'Idempotency — The Safety Net', body: `In distributed systems, messages can be delivered more than once (network retries, consumer restarts). Every operation in a saga must be idempotent — safe to execute multiple times with the same result.\n\nThe pattern: include a unique idempotency key with every message. Before processing, check if this key was already processed. If yes, return the cached result. If no, process and store the result.\n\nThis is the same pattern used in payment systems (Stripe requires an idempotency key) and is essential for any distributed transaction.` },
+
+      {
+        type: 'faq', heading: 'Frequently Asked Interview Questions',
+        questions: [
+          { q: 'Why not just use 2PC everywhere?', a: '2PC is blocking — if the coordinator or any participant fails, all participants hold locks and wait. This reduces availability, which is unacceptable for most web applications. Sagas trade strong consistency for availability, which is the right trade-off for most systems.' },
+          { q: 'How do you handle a compensating transaction that fails?', a: 'Retry with exponential backoff. If it still fails after N retries, move to a dead letter queue for manual intervention. Log everything for debugging. This is a rare edge case but must be handled.' },
+          { q: 'What tools implement the saga pattern?', a: 'Temporal (most popular, open source, created by ex-Uber engineers), AWS Step Functions (serverless, AWS-native), Cadence (Uber\'s original, predecessor to Temporal), and custom implementations using Kafka for event choreography.' },
+        ],
+      },
+    ],
+  },
+
+  'advanced-observability': {
+    slug: 'advanced-observability', title: 'Observability & Monitoring', subtitle: 'Logging, metrics, tracing, and alerting for distributed systems', duration: '25 min', difficulty: 'Advanced',
+    sections: [
+      { type: 'text', heading: 'Why Observability Matters', body: `In a monolith, debugging is straightforward: read the logs, set a breakpoint, reproduce the issue. In a distributed system with 50 microservices, a single user request might touch 10 services. When something goes wrong, you need to trace the request across all 10 services to find the failure.\n\nObservability is the ability to understand what is happening inside your system by examining its outputs: logs, metrics, and traces. Without it, you are flying blind. In system design interviews, mentioning observability proactively shows operational maturity — you are not just designing for the happy path.` },
+
+      { type: 'text', heading: 'The Three Pillars', body: `**Logs** — Discrete events with timestamps. "2024-04-17 14:23:01 ERROR PaymentService: Card declined for order #123." Use structured logging (JSON) so logs are searchable. Centralize logs with ELK stack (Elasticsearch + Logstash + Kibana) or Datadog. Include a correlation ID (request_id) in every log so you can trace a request across services.\n\n**Metrics** — Numerical measurements over time. CPU usage, request latency (p50, p95, p99), error rate, queue depth, cache hit rate. Collected by Prometheus, visualized in Grafana. Metrics tell you what is happening (error rate is 5%) but not why.\n\n**Traces** — The journey of a single request across services. A trace shows: User → API Gateway (2ms) → Order Service (15ms) → Payment Service (200ms) → Notification Service (5ms). You can see that the Payment Service is the bottleneck. Tools: Jaeger, Zipkin, AWS X-Ray. Implemented using OpenTelemetry (standard instrumentation library).` },
+
+      { type: 'text', heading: 'Alerting — Knowing Before Users Do', body: `Monitoring without alerting is just watching. You need automated alerts that notify the on-call engineer when something is wrong.\n\n**What to alert on:**\n- Error rate > 1% for 5 minutes (something is broken)\n- p99 latency > 2 seconds for 5 minutes (something is slow)\n- CPU > 80% for 10 minutes (need to scale)\n- Queue depth growing for 15 minutes (consumers are falling behind)\n- Disk usage > 85% (will run out soon)\n\n**Alert fatigue:** Too many alerts and engineers start ignoring them. Only alert on actionable conditions. Use severity levels: critical (page someone at 3am), warning (investigate during business hours), info (log for review).\n\nTools: PagerDuty, OpsGenie for on-call routing. AlertManager (Prometheus) for alert rules. Slack/email for non-critical notifications.` },
+
+      { type: 'text', heading: 'Health Checks and Circuit Breakers', body: `Every service should expose a health check endpoint (GET /health) that returns 200 if the service is healthy. The load balancer checks this endpoint every few seconds and removes unhealthy instances from rotation.\n\nA good health check verifies: the service process is running, it can connect to its database, it can connect to Redis, and critical dependencies are reachable. A shallow health check (just return 200) misses dependency failures.\n\nCircuit breakers complement health checks: if a downstream service is failing, stop calling it. Return a fallback response (cached data, default value, or error) instead of waiting for timeouts. This prevents cascade failures where one slow service takes down the entire system.` },
+
+      {
+        type: 'faq', heading: 'Frequently Asked Interview Questions',
+        questions: [
+          { q: 'What is the difference between monitoring and observability?', a: 'Monitoring tells you when something is wrong (alert: error rate > 5%). Observability tells you why (trace shows the payment gateway is timing out). Monitoring is reactive (predefined dashboards). Observability is exploratory (ask arbitrary questions about system behavior).' },
+          { q: 'What is a correlation ID and why does it matter?', a: 'A unique ID (UUID) generated at the API Gateway and passed through every service in the request chain via headers. Every log line includes this ID. When debugging, search for the correlation ID to see all logs from all services for that single request. Without it, correlating logs across 10 services is nearly impossible.' },
+          { q: 'What SLIs, SLOs, and SLAs should I mention in interviews?', a: 'SLI (Service Level Indicator): a metric (e.g., p99 latency, error rate). SLO (Service Level Objective): a target for the SLI (e.g., p99 latency < 200ms, error rate < 0.1%). SLA (Service Level Agreement): a contract with consequences if the SLO is not met. Mention SLOs when discussing non-functional requirements: "Our SLO for feed latency is p99 < 200ms."' },
         ],
       },
     ],
