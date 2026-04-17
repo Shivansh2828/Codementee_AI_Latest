@@ -6,8 +6,8 @@ import { QUESTION_BREAKDOWN_TOPICS } from './courses/questionBreakdowns';
 
 export const COURSE_META = {
   title: 'System Design',
-  subtitle: 'From zero to designing systems at scale',
-  description: 'A complete, free system design course. Learn concepts, patterns, technologies, and walk through real interview questions.',
+  subtitle: 'Master the art of designing scalable systems',
+  description: 'A complete, free system design course with interactive diagrams, real interview walkthroughs, and hands-on practice. Built for engineers preparing for MAANG interviews.',
   totalTopics: 50,
   estimatedHours: 20,
 };
@@ -16,7 +16,7 @@ export const COURSE_META = {
 export const SECTIONS = [
   {
     id: 'in-a-hurry',
-    title: 'In a Hurry',
+    title: 'Quick Start',
     description: 'The essentials — get interview-ready fast',
     color: 'cyan',
     access: 'free',  // free for everyone
@@ -24,8 +24,8 @@ export const SECTIONS = [
   },
   {
     id: 'core-concepts',
-    title: 'Core Concepts',
-    description: 'Foundational knowledge every engineer needs',
+    title: 'Fundamentals',
+    description: 'The building blocks every engineer needs to master',
     color: 'blue',
     access: 'pro',  // pro + elite
     freeTopics: ['networking-essentials', 'caching', 'numbers-to-know'], // these 3 free as preview
@@ -37,8 +37,8 @@ export const SECTIONS = [
   },
   {
     id: 'question-breakdowns',
-    title: 'Question Breakdowns',
-    description: 'End-to-end walkthroughs of real interview questions',
+    title: 'Interview Questions',
+    description: 'Step-by-step walkthroughs of real interview problems',
     color: 'purple',
     access: 'elite',  // elite only
     freeTopics: ['design-bitly', 'design-rate-limiter'], // 2 free as preview
@@ -53,8 +53,8 @@ export const SECTIONS = [
   },
   {
     id: 'patterns',
-    title: 'Patterns',
-    description: 'Reusable solutions to common system design problems',
+    title: 'Design Patterns',
+    description: 'Reusable solutions you will apply in every interview',
     color: 'green',
     access: 'pro',
     freeTopics: ['pattern-realtime-updates'],
@@ -67,8 +67,8 @@ export const SECTIONS = [
   },
   {
     id: 'key-technologies',
-    title: 'Key Technologies',
-    description: 'Deep dives into the tools that power modern systems',
+    title: 'Tech Deep Dives',
+    description: 'The tools that power modern systems — when and why to use each',
     color: 'orange',
     access: 'pro',
     freeTopics: ['tech-redis'],
@@ -450,8 +450,8 @@ export const TOPICS = {
 
   'numbers-to-know': {
     slug: 'numbers-to-know',
-    title: 'Numbers to Know',
-    subtitle: 'Latency numbers, storage sizes, and back-of-envelope math',
+    title: 'Scale & Estimation',
+    subtitle: 'Latency numbers, storage math, and back-of-envelope calculations',
     duration: '20 min', difficulty: 'Beginner',
     sections: [
       { type: 'text', heading: 'Why Numbers Matter', body: `System design interviews are not just about architecture diagrams — they are about making quantitative arguments. When you say "we need a cache," the interviewer wants to know why. When you say "we need to shard," they want to see the math that proves a single database cannot handle the load.\n\nBack-of-envelope calculations let you estimate whether a design will work before building it. Can a single server handle 10,000 requests per second? How much storage do we need for a year of tweets? Will the data fit in memory? These are the questions that separate hand-wavy answers from convincing ones.\n\nYou do not need to memorize exact numbers. What matters is knowing the order of magnitude — is it milliseconds or microseconds? Gigabytes or terabytes? Being off by 2x is fine. Being off by 1000x means your design is fundamentally wrong.` },

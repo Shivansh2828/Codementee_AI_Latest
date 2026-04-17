@@ -60,7 +60,7 @@ export const IN_A_HURRY_TOPICS = {
     subtitle: 'A structured study plan with timelines, resources, and common mistakes',
     duration: '15 min', difficulty: 'Beginner',
     sections: [
-      { type: 'text', heading: 'The Study Plan', body: `Here is a week-by-week plan that works for most candidates. Adjust based on your experience level and timeline.\n\n**Week 1: Foundations**\nRead the entire "In a Hurry" section (you are doing this now). Learn the building blocks: what is a load balancer, what is a cache, when do you use SQL vs NoSQL. Read "Numbers to Know" — memorize the key latency numbers (RAM: 100ns, SSD: 100μs, network same DC: 0.5ms). These numbers come up in every estimation question.\n\n**Week 2: Core Concepts**\nGo through all 9 Core Concepts: Networking, API Design, Data Modeling, Caching, Sharding, Consistent Hashing, CAP Theorem, Database Indexing, Numbers to Know. For each one, understand: what it is, when to use it, what the trade-offs are, and how to explain it in 2 minutes.\n\n**Week 3: Question Practice**\nDesign 2-3 systems per day. Start with easier ones (URL shortener, rate limiter) and progress to harder ones (YouTube, Uber, WhatsApp). Set a 45-minute timer for each. Talk out loud as if you are in an interview. After each attempt, read the Question Breakdown and compare.\n\n**Week 4: Mock Interviews**\nPractice under real conditions. Find a study partner, use a whiteboard or shared doc, and do full 45-minute mock interviews. Get feedback on both your technical design and your communication. This is the single highest-ROI activity — reading alone is not enough.` },
+      { type: 'text', heading: 'The Study Plan', body: `Here is a week-by-week plan that works for most candidates. Adjust based on your experience level and timeline.\n\n**Week 1: Foundations**\nRead the entire "In a Hurry" section (you are doing this now). Learn the building blocks: what is a load balancer, what is a cache, when do you use SQL vs NoSQL. Read "Scale & Estimation" — memorize the key latency numbers (RAM: 100ns, SSD: 100μs, network same DC: 0.5ms). These numbers come up in every estimation question.\n\n**Week 2: Core Concepts**\nGo through all 9 Core Concepts: Networking, API Design, Data Modeling, Caching, Sharding, Consistent Hashing, CAP Theorem, Database Indexing, Scale & Estimation. For each one, understand: what it is, when to use it, what the trade-offs are, and how to explain it in 2 minutes.\n\n**Week 3: Question Practice**\nDesign 2-3 systems per day. Start with easier ones (URL shortener, rate limiter) and progress to harder ones (YouTube, Uber, WhatsApp). Set a 45-minute timer for each. Talk out loud as if you are in an interview. After each attempt, read the Question Breakdown and compare.\n\n**Week 4: Mock Interviews**\nPractice under real conditions. Find a study partner, use a whiteboard or shared doc, and do full 45-minute mock interviews. Get feedback on both your technical design and your communication. This is the single highest-ROI activity — reading alone is not enough.` },
 
       { type: 'text', heading: 'Common Mistakes That Fail Candidates', body: `These are the patterns I see repeatedly in failed system design interviews. Avoid them and you are already ahead of most candidates.\n\n**1. Jumping to solutions without clarifying requirements.** This is the number one reason mid-level candidates fail. You start drawing boxes before understanding what you are building. Always spend 3-5 minutes on requirements first.\n\n**2. Ignoring scale.** "I would use a PostgreSQL database" is not a system design answer. How many users? How many requests per second? How much data? The scale determines the architecture.\n\n**3. No trade-offs.** Every decision has pros and cons. "I chose Redis for caching because it provides sub-millisecond reads, but the trade-off is that data can be lost on restart if persistence is not configured." Saying trade-offs unprompted shows engineering maturity.\n\n**4. Too much detail too early.** Do not spend 10 minutes designing the database schema before you have a high-level architecture. Get the big picture right first, then dive deep.\n\n**5. Silence.** The interviewer cannot evaluate what they cannot hear. Think out loud. "I am considering two options here... Option A has the advantage of... but Option B would be better for..." Even if you are unsure, verbalizing your thought process shows how you reason.\n\n**6. Not driving the conversation.** At senior+ levels, you are expected to drive. Do not wait for the interviewer to ask "what about caching?" Proactively identify challenges and address them.` },
 
@@ -79,8 +79,8 @@ export const IN_A_HURRY_TOPICS = {
     ],
   },
   'delivery-framework': {
-    slug: 'delivery-framework', title: 'Delivery Framework',
-    subtitle: 'The step-by-step structure to deliver a complete system design in 45 minutes',
+    slug: 'delivery-framework', title: 'The Interview Playbook',
+    subtitle: 'A step-by-step structure to deliver a complete system design in 45 minutes',
     duration: '20 min', difficulty: 'Beginner',
     sections: [
       { type: 'text', heading: 'Why You Need a Framework', body: `The easiest way to fail a system design interview is to not deliver a working system. Without structure, candidates get lost in details, spend too long on one component, or forget key requirements. They run out of time with an incomplete design and no deep dives.\n\nA framework gives you a repeatable structure that works for any question. It ensures you cover all the bases, allocate time correctly, and leave room for the deep dives that differentiate you. Think of it as a checklist — even experienced pilots use checklists because they prevent mistakes under pressure.` },
@@ -112,7 +112,7 @@ export const IN_A_HURRY_TOPICS = {
     ],
   },
   'core-concepts-overview': {
-    slug: 'core-concepts-overview', title: 'Core Concepts Overview',
+    slug: 'core-concepts-overview', title: 'Fundamentals at a Glance',
     subtitle: 'A quick tour of the 9 foundational concepts you need to know',
     duration: '25 min', difficulty: 'Beginner',
     sections: [
@@ -134,13 +134,13 @@ export const IN_A_HURRY_TOPICS = {
 
       { type: 'text', heading: '8. Database Indexing', body: `An index speeds up reads at the cost of slower writes and more storage. Without an index, finding a row requires scanning every row in the table (O(N)). With a B-tree index, it is O(log N).\n\nIndex types: B-tree (default — range queries, equality, ORDER BY), GIN (arrays, JSONB, full-text search), BRIN (time-series, append-only tables).\n\nComposite indexes: column order matters (leftmost prefix rule). Always index foreign keys and columns in WHERE clauses. Do not over-index — every write updates all indexes.\n\n[Read the full topic →](/learn/system-design/database-indexing)` },
 
-      { type: 'text', heading: '9. Numbers to Know', body: `Latency numbers that drive architecture decisions:\n\nRAM access: ~100ns. SSD random read: ~100μs (1000x slower). HDD seek: ~10ms (100x slower than SSD).\n\nNetwork same datacenter: ~0.5ms. Cross-region: ~40ms. Cross-continent: ~150ms.\n\nRedis GET: ~0.1ms. PostgreSQL query: ~5-10ms. That 50-100x difference is why we cache.\n\nBack-of-envelope: 86,400 seconds/day. 100M DAU × 10 actions/day ÷ 86,400 ≈ 12,000 QPS.\n\n[Read the full topic →](/learn/system-design/numbers-to-know)` },
+      { type: 'text', heading: '9. Scale & Estimation', body: `Latency numbers that drive architecture decisions:\n\nRAM access: ~100ns. SSD random read: ~100μs (1000x slower). HDD seek: ~10ms (100x slower than SSD).\n\nNetwork same datacenter: ~0.5ms. Cross-region: ~40ms. Cross-continent: ~150ms.\n\nRedis GET: ~0.1ms. PostgreSQL query: ~5-10ms. That 50-100x difference is why we cache.\n\nBack-of-envelope: 86,400 seconds/day. 100M DAU × 10 actions/day ÷ 86,400 ≈ 12,000 QPS.\n\n[Read the full topic →](/learn/system-design/numbers-to-know)` },
 
       { type: 'callout', variant: 'tip', heading: 'How Deep to Go', body: `These summaries are enough for a quick review. For interview preparation, read each Core Concept topic individually — they contain detailed explanations, diagrams, code examples, and quiz questions.` },
     ],
   },
   'key-technologies-overview': {
-    slug: 'key-technologies-overview', title: 'Key Technologies Overview',
+    slug: 'key-technologies-overview', title: 'Tech Stack Cheat Sheet',
     subtitle: 'The tools that power modern systems — when to use each',
     duration: '20 min', difficulty: 'Beginner',
     sections: [
@@ -162,7 +162,7 @@ export const IN_A_HURRY_TOPICS = {
     ],
   },
   'common-patterns-overview': {
-    slug: 'common-patterns-overview', title: 'Common Patterns Overview',
+    slug: 'common-patterns-overview', title: 'Design Patterns Cheat Sheet',
     subtitle: 'Reusable solutions to problems in every system design interview',
     duration: '20 min', difficulty: 'Beginner',
     sections: [
