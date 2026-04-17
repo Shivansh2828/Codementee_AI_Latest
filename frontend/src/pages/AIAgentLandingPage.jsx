@@ -44,46 +44,35 @@ const AIAgentLandingPage = () => {
   
   const fetchAgentPricing = async () => {
     try {
-      // Try with service_type filter first, fall back to fetching all and filtering client-side
       let plans = [];
       try {
         const response = await api.get(`/pricing-plans?currency=${currency}&service_type=ai_agent`);
         plans = response.data;
       } catch {
-        // Fallback: fetch all plans and filter client-side
         const response = await api.get(`/pricing-plans?currency=${currency}`);
         plans = response.data.filter(p => p.plan_id?.startsWith('agent_'));
       }
-      // If service_type filter returned empty, try without it
-      if (plans.length === 0) {
+      if (!plans || plans.length === 0) {
         const response = await api.get(`/pricing-plans?currency=${currency}`);
         plans = response.data.filter(p => p.plan_id?.startsWith('agent_'));
       }
-      
-      const agentPlanMap = {};
-      plans.forEach(plan => {
-        if (plan.plan_id === 'agent_trial') {
-          agentPlanMap.trial = { price: plan.price, name: plan.name, features: plan.features };
-        } else if (plan.plan_id === 'agent_monthly') {
-          agentPlanMap.monthly = { price: plan.price, name: plan.name, features: plan.features };
-        } else if (plan.plan_id === 'agent_quarterly') {
-          agentPlanMap.quarterly = { price: plan.price, name: plan.name, features: plan.features };
-        } else if (plan.plan_id === 'agent_yearly') {
-          agentPlanMap.yearly = { price: plan.price, name: plan.name, features: plan.features };
-        }
+
+      // Sort by display_order then price
+      plans.sort((a, b) => (a.display_order || 99) - (b.display_order || 99));
+
+      // Find monthly price for savings calc
+      const monthlyPlan = plans.find(p => p.duration_months === 1 && !p.plan_id?.includes('trial'));
+      const monthlyPrice = monthlyPlan?.price || 0;
+
+      const planList = plans.map(plan => {
+        const savings = monthlyPrice && plan.duration_months > 1
+          ? (monthlyPrice * plan.duration_months) - plan.price : null;
+        const savePercent = savings > 0
+          ? Math.round((savings / (monthlyPrice * plan.duration_months)) * 100) : 0;
+        return { ...plan, savings, savePercent };
       });
-      
-      // Calculate savings dynamically
-      if (agentPlanMap.monthly && agentPlanMap.quarterly) {
-        agentPlanMap.quarterly.savings = (agentPlanMap.monthly.price * 3) - agentPlanMap.quarterly.price;
-        agentPlanMap.quarterly.savePercent = Math.round(((agentPlanMap.monthly.price * 3 - agentPlanMap.quarterly.price) / (agentPlanMap.monthly.price * 3)) * 100);
-      }
-      if (agentPlanMap.monthly && agentPlanMap.yearly) {
-        agentPlanMap.yearly.savings = (agentPlanMap.monthly.price * 12) - agentPlanMap.yearly.price;
-        agentPlanMap.yearly.savePercent = Math.round(((agentPlanMap.monthly.price * 12 - agentPlanMap.yearly.price) / (agentPlanMap.monthly.price * 12)) * 100);
-      }
-      
-      setAgentPlans(agentPlanMap);
+
+      setAgentPlans(planList);
     } catch (error) {
       console.error('Failed to fetch agent pricing:', error);
       toast.error('Failed to load pricing');
@@ -92,8 +81,9 @@ const AIAgentLandingPage = () => {
     }
   };
   
-  const getPrice = (plan) => {
-    return agentPlans[plan]?.price || 0;
+  const getPrice = (planId) => {
+    const plan = Array.isArray(agentPlans) ? agentPlans.find(p => p.plan_id === planId) : null;
+    return plan?.price || 0;
   };
 
   const faqs = [
@@ -391,84 +381,61 @@ const AIAgentLandingPage = () => {
               </div>
             </div>
 
-            {/* Duration cards — price only, no repeated features */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-4xl mx-auto mb-12">
-              {/* Trial — One-time */}
-              <div className={`rounded-2xl p-6 ${theme.bg.card} ${theme.border.primary} border hover:border-amber-500/40 transition-all duration-300 text-center relative`}>
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="px-3 py-1 bg-amber-500 text-white text-[10px] font-bold rounded-full shadow-lg">Try It Out</span>
-                </div>
-                <h4 className={`text-lg font-bold ${theme.text.primary} mb-1 mt-1`}>Trial</h4>
-                <p className={`text-[11px] ${theme.text.muted} mb-4`}>One-time • 1 month only</p>
-                <div className="flex items-baseline justify-center gap-1 mb-5">
-                  <span className={`text-3xl font-bold ${theme.text.primary}`}>{formatPrice(getPrice('trial'))}</span>
-                </div>
-                <Link
-                  to="/agent-purchase?plan=agent_trial"
-                  className={`block w-full text-center px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 ${theme.bg.secondary} ${theme.text.primary} border ${theme.border.primary} hover:border-amber-500/50`}
-                >
-                  Start Trial
-                </Link>
-              </div>
+            {/* Dynamic plan cards from DB */}
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${Array.isArray(agentPlans) && agentPlans.length >= 4 ? 'lg:grid-cols-4' : agentPlans.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-5 max-w-4xl mx-auto mb-12`}>
+              {Array.isArray(agentPlans) && agentPlans.map((plan, idx) => {
+                const isTrial = plan.plan_id?.includes('trial');
+                const isPopular = plan.display_order === 2 || plan.plan_id?.includes('quarterly');
+                const durationLabel = plan.duration_months === 1 ? '/mo' : plan.duration_months === 3 ? '/3 mo' : plan.duration_months === 12 ? '/yr' : `/${plan.duration_months} mo`;
+                const perMonth = plan.duration_months > 1 ? Math.round(plan.price / plan.duration_months) : null;
 
-              {/* Monthly */}
-              <div className={`rounded-2xl p-6 ${theme.bg.card} ${theme.border.primary} border hover:border-[#06b6d4]/40 transition-all duration-300 text-center`}>
-                <h4 className={`text-lg font-bold ${theme.text.primary} mb-1`}>Monthly</h4>
-                <p className={`text-[11px] ${theme.text.muted} mb-4`}>Billed every month</p>
-                <div className="flex items-baseline justify-center gap-1 mb-5">
-                  <span className={`text-3xl font-bold ${theme.text.primary}`}>{formatPrice(getPrice('monthly'))}</span>
-                  <span className={`${theme.text.muted} text-sm`}>/mo</span>
-                </div>
-                <Link
-                  to="/agent-purchase?plan=agent_monthly"
-                  className={`block w-full text-center px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 ${theme.bg.secondary} ${theme.text.primary} border ${theme.border.primary} hover:border-[#06b6d4]/50`}
-                >
-                  Get Monthly
-                </Link>
-              </div>
+                return (
+                  <div key={plan.plan_id} className={`rounded-2xl p-6 text-center relative transition-all duration-300 ${
+                    isPopular
+                      ? 'bg-gradient-to-b from-[#06b6d4]/10 to-transparent border-2 border-[#06b6d4]/40'
+                      : `${theme.bg.card} ${theme.border.primary} border hover:border-[#06b6d4]/40`
+                  }`}>
+                    {/* Badge */}
+                    {(isTrial || isPopular) && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <span className={`px-3 py-1 text-white text-[10px] font-bold rounded-full shadow-lg ${isTrial ? 'bg-amber-500' : 'bg-[#06b6d4]'}`}>
+                          {isTrial ? 'Try It Out' : 'Best Value'}
+                        </span>
+                      </div>
+                    )}
 
-              {/* Quarterly — Popular */}
-              <div className="rounded-2xl p-6 bg-gradient-to-b from-[#06b6d4]/10 to-transparent border-2 border-[#06b6d4]/40 relative text-center">
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="px-3 py-1 bg-[#06b6d4] text-white text-[10px] font-bold rounded-full shadow-lg">Best Value</span>
-                </div>
-                <h4 className={`text-lg font-bold ${theme.text.primary} mb-1 mt-1`}>Quarterly</h4>
-                <p className={`text-[11px] ${theme.text.muted} mb-4`}>Billed every 3 months</p>
-                <div className="flex items-baseline justify-center gap-1 mb-1">
-                  <span className={`text-3xl font-bold ${theme.text.primary}`}>{formatPrice(getPrice('quarterly'))}</span>
-                  <span className={`${theme.text.muted} text-sm`}>/3 mo</span>
-                </div>
-                <p className={`text-[11px] mb-1 ${theme.text.muted}`}>~{formatPrice(Math.round(getPrice('quarterly') / 3))}/mo</p>
-                {agentPlans.quarterly?.savePercent > 0 && (
-                  <p className="text-[11px] font-semibold text-green-500 mb-4">Save {agentPlans.quarterly.savePercent}%</p>
-                )}
-                <Link
-                  to="/agent-purchase?plan=agent_quarterly"
-                  className="block w-full text-center px-4 py-2.5 rounded-xl font-semibold text-sm bg-[#06b6d4] text-white hover:bg-[#0891b2] transition-all duration-200 shadow-lg"
-                >
-                  Get Quarterly
-                </Link>
-              </div>
+                    <h4 className={`text-lg font-bold ${theme.text.primary} mb-1 ${isTrial || isPopular ? 'mt-1' : ''}`}>{plan.name}</h4>
+                    <p className={`text-[11px] ${theme.text.muted} mb-4`}>
+                      {isTrial ? 'One-time • 1 month only' : `${plan.duration_months} month${plan.duration_months > 1 ? 's' : ''}`}
+                    </p>
 
-              {/* Yearly */}
-              <div className={`rounded-2xl p-6 ${theme.bg.card} ${theme.border.primary} border hover:border-[#06b6d4]/40 transition-all duration-300 text-center`}>
-                <h4 className={`text-lg font-bold ${theme.text.primary} mb-1`}>Yearly</h4>
-                <p className={`text-[11px] ${theme.text.muted} mb-4`}>Billed annually</p>
-                <div className="flex items-baseline justify-center gap-1 mb-1">
-                  <span className={`text-3xl font-bold ${theme.text.primary}`}>{formatPrice(getPrice('yearly'))}</span>
-                  <span className={`${theme.text.muted} text-sm`}>/yr</span>
-                </div>
-                <p className={`text-[11px] mb-1 ${theme.text.muted}`}>~{formatPrice(Math.round(getPrice('yearly') / 12))}/mo</p>
-                {agentPlans.yearly?.savePercent > 0 && (
-                  <p className="text-[11px] font-semibold text-green-500 mb-4">Save {agentPlans.yearly.savePercent}%</p>
-                )}
-                <Link
-                  to="/agent-purchase?plan=agent_yearly"
-                  className={`block w-full text-center px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 ${theme.bg.secondary} ${theme.text.primary} border ${theme.border.primary} hover:border-[#06b6d4]/50`}
-                >
-                  Get Yearly
-                </Link>
-              </div>
+                    {/* Price */}
+                    <div className="flex items-baseline justify-center gap-1 mb-1">
+                      <span className={`text-3xl font-bold ${theme.text.primary}`}>{formatPrice(plan.price)}</span>
+                      {!isTrial && <span className={`${theme.text.muted} text-sm`}>{durationLabel}</span>}
+                    </div>
+                    {perMonth && (
+                      <p className={`text-[11px] mb-1 ${theme.text.muted}`}>~{formatPrice(perMonth)}/mo</p>
+                    )}
+                    {plan.savePercent > 0 && (
+                      <p className="text-[11px] font-semibold text-green-500 mb-4">Save {plan.savePercent}%</p>
+                    )}
+                    {!plan.savePercent && !perMonth && <div className="mb-4" />}
+
+                    {/* CTA */}
+                    <Link
+                      to={`/agent-purchase?plan=${plan.plan_id}`}
+                      className={`block w-full text-center px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 ${
+                        isPopular
+                          ? 'bg-[#06b6d4] text-white hover:bg-[#0891b2] shadow-lg'
+                          : `${theme.bg.secondary} ${theme.text.primary} border ${theme.border.primary} hover:border-[#06b6d4]/50`
+                      }`}
+                    >
+                      {isTrial ? 'Start Trial' : `Get ${plan.name.replace('AI Agent ', '')}`}
+                    </Link>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Elite callout */}

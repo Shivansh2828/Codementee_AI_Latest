@@ -373,6 +373,42 @@ const DiagramSection = ({ section, theme }) => {
             </div>
           </div>
         )}
+
+        {section.variant === 'bloom-filter' && (
+          <div className="max-w-lg mx-auto">
+            <div className="mb-4">
+              <div className={`text-xs ${theme.text.muted} text-center mb-2`}>Bit Array (m = 16 bits)</div>
+              <div className="flex justify-center gap-0.5">
+                {[0,1,0,1,1,0,0,1,0,0,1,0,1,0,0,1].map((bit, i) => (
+                  <div key={i} className={`w-8 h-8 rounded flex items-center justify-center text-xs font-mono font-bold border ${
+                    bit ? 'bg-[var(--cyan-bg)] border-[var(--cyan-border)] text-[var(--cyan)]' : `${theme.bg.secondary} ${theme.border.primary} ${theme.text.muted}`
+                  }`}>{bit}</div>
+                ))}
+              </div>
+              <div className="flex justify-center gap-0.5 mt-1">
+                {Array(16).fill(0).map((_, i) => (
+                  <div key={i} className={`w-8 text-center text-[8px] ${theme.text.muted}`}>{i}</div>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-3">
+              {[
+                { element: '"apple"', hashes: 'h1→3, h2→4, h3→11', result: 'All 1 → Probably in set', color: 'green' },
+                { element: '"banana"', hashes: 'h1→1, h2→7, h3→15', result: 'All 1 → Probably in set', color: 'green' },
+                { element: '"cherry"', hashes: 'h1→2, h2→5, h3→9', result: 'Bit 2 is 0 → NOT in set', color: 'red' },
+              ].map((item, i) => (
+                <div key={i} className={`flex items-center gap-3 px-4 py-2.5 rounded-lg ${theme.bg.secondary} border ${theme.border.primary}`}>
+                  <span className={`text-sm font-mono font-semibold ${theme.text.primary} w-20`}>{item.element}</span>
+                  <span className={`text-xs ${theme.text.muted} flex-1`}>{item.hashes}</span>
+                  <span className={`text-xs font-medium text-[var(--${item.color})]`}>{item.result}</span>
+                </div>
+              ))}
+            </div>
+            <div className={`mt-3 text-xs ${theme.text.muted} text-center`}>
+              False positives possible. False negatives impossible.
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -680,6 +716,28 @@ const Section = ({ section, theme }) => {
 
     case 'architecture':
       return <ArchitectureDiagram {...section.config} title={section.heading} caption={section.caption} />;
+
+    case 'faq':
+      return (
+        <div className={`mb-8 ${theme.bg.card} ${theme.border.primary} border rounded-2xl overflow-hidden`}>
+          <div className="px-6 py-4 border-b border-[var(--border-primary)]">
+            <h2 className={`text-lg font-bold ${theme.text.primary}`}>❓ {section.heading || 'Frequently Asked Questions'}</h2>
+          </div>
+          <div className="divide-y divide-[var(--border-primary)]">
+            {section.questions.map((faq, i) => (
+              <details key={i} className="group">
+                <summary className={`flex items-center justify-between px-6 py-4 cursor-pointer ${theme.text.primary} font-medium text-sm hover:bg-[var(--bg-secondary)] transition-colors list-none`}>
+                  <span>{faq.q}</span>
+                  <span className="text-[var(--text-muted)] text-xs group-open:rotate-90 transition-transform">▶</span>
+                </summary>
+                <div className={`px-6 pb-4 ${theme.text.secondary} text-sm leading-relaxed`}>
+                  <RichText text={faq.a} theme={theme} />
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
+      );
 
     default:
       return null;
