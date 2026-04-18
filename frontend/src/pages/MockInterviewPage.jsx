@@ -126,7 +126,7 @@ const fallbackPlans = {
   INR: [
     {
       name: 'Starter',
-      price: 199900,
+      price: 249900,
       features: ['1 Mock Interview', 'Detailed feedback report', 'Session recording', 'Study roadmap'],
       subtitle: '1 session',
     },
@@ -138,7 +138,7 @@ const fallbackPlans = {
     },
     {
       name: 'Elite',
-      price: 1499900,
+      price: 999900,
       features: ['6 Mock Interviews', 'Detailed feedback reports', 'Session recordings', 'Study roadmap', 'Resume review', 'Priority scheduling'],
       subtitle: '6 sessions',
     },
@@ -146,19 +146,19 @@ const fallbackPlans = {
   USD: [
     {
       name: 'Starter',
-      price: 2400,
+      price: 1900,
       features: ['1 Mock Interview', 'Detailed feedback report', 'Session recording', 'Study roadmap'],
       subtitle: '1 session',
     },
     {
       name: 'Pro',
-      price: 8400,
+      price: 4500,
       features: ['3 Mock Interviews', 'Detailed feedback reports', 'Session recordings', 'Study roadmap', 'Resume review'],
       subtitle: '3 sessions',
     },
     {
       name: 'Elite',
-      price: 18000,
+      price: 12300,
       features: ['6 Mock Interviews', 'Detailed feedback reports', 'Session recordings', 'Study roadmap', 'Resume review', 'Priority scheduling'],
       subtitle: '6 sessions',
     },
