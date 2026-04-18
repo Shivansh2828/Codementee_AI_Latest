@@ -1,13 +1,12 @@
 // System Design Course — Full structured content
-// Mirrors hellointerview.com structure
 
 import { IN_A_HURRY_TOPICS } from './courses/inAHurry';
 import { QUESTION_BREAKDOWN_TOPICS } from './courses/questionBreakdowns';
 
 export const COURSE_META = {
   title: 'System Design',
-  subtitle: 'From zero to designing systems at scale',
-  description: 'A complete, free system design course. Learn concepts, patterns, technologies, and walk through real interview questions.',
+  subtitle: 'Master the art of designing scalable systems',
+  description: 'A complete, free system design course with interactive diagrams, real interview walkthroughs, and hands-on practice. Built for engineers preparing for MAANG interviews.',
   totalTopics: 50,
   estimatedHours: 20,
 };
@@ -16,7 +15,7 @@ export const COURSE_META = {
 export const SECTIONS = [
   {
     id: 'in-a-hurry',
-    title: 'In a Hurry',
+    title: 'Quick Start',
     description: 'The essentials — get interview-ready fast',
     color: 'cyan',
     access: 'free',  // free for everyone
@@ -24,8 +23,8 @@ export const SECTIONS = [
   },
   {
     id: 'core-concepts',
-    title: 'Core Concepts',
-    description: 'Foundational knowledge every engineer needs',
+    title: 'Fundamentals',
+    description: 'The building blocks every engineer needs to master',
     color: 'blue',
     access: 'pro',  // pro + elite
     freeTopics: ['networking-essentials', 'caching', 'numbers-to-know'], // these 3 free as preview
@@ -37,8 +36,8 @@ export const SECTIONS = [
   },
   {
     id: 'question-breakdowns',
-    title: 'Question Breakdowns',
-    description: 'End-to-end walkthroughs of real interview questions',
+    title: 'Interview Questions',
+    description: 'Step-by-step walkthroughs of real interview problems',
     color: 'purple',
     access: 'elite',  // elite only
     freeTopics: ['design-bitly', 'design-rate-limiter'], // 2 free as preview
@@ -53,8 +52,8 @@ export const SECTIONS = [
   },
   {
     id: 'patterns',
-    title: 'Patterns',
-    description: 'Reusable solutions to common system design problems',
+    title: 'Design Patterns',
+    description: 'Reusable solutions you will apply in every interview',
     color: 'green',
     access: 'pro',
     freeTopics: ['pattern-realtime-updates'],
@@ -62,12 +61,13 @@ export const SECTIONS = [
       'pattern-realtime-updates', 'pattern-scaling-reads',
       'pattern-scaling-writes', 'pattern-large-blobs',
       'pattern-long-running-tasks', 'pattern-multi-step-processes',
+      'pattern-microservices', 'pattern-availability', 'pattern-security',
     ],
   },
   {
     id: 'key-technologies',
-    title: 'Key Technologies',
-    description: 'Deep dives into the tools that power modern systems',
+    title: 'Tech Deep Dives',
+    description: 'The tools that power modern systems — when and why to use each',
     color: 'orange',
     access: 'pro',
     freeTopics: ['tech-redis'],
@@ -84,7 +84,7 @@ export const SECTIONS = [
     color: 'red',
     access: 'elite',
     freeTopics: [],
-    topics: ['advanced-time-series', 'advanced-data-structures', 'advanced-vector-db'],
+    topics: ['advanced-time-series', 'advanced-data-structures', 'advanced-vector-db', 'advanced-event-driven', 'advanced-distributed-transactions', 'advanced-observability'],
   },
 ];
 
@@ -449,8 +449,8 @@ export const TOPICS = {
 
   'numbers-to-know': {
     slug: 'numbers-to-know',
-    title: 'Numbers to Know',
-    subtitle: 'Latency numbers, storage sizes, and back-of-envelope math',
+    title: 'Scale & Estimation',
+    subtitle: 'Latency numbers, storage math, and back-of-envelope calculations',
     duration: '20 min', difficulty: 'Beginner',
     sections: [
       { type: 'text', heading: 'Why Numbers Matter', body: `System design interviews are not just about architecture diagrams — they are about making quantitative arguments. When you say "we need a cache," the interviewer wants to know why. When you say "we need to shard," they want to see the math that proves a single database cannot handle the load.\n\nBack-of-envelope calculations let you estimate whether a design will work before building it. Can a single server handle 10,000 requests per second? How much storage do we need for a year of tweets? Will the data fit in memory? These are the questions that separate hand-wavy answers from convincing ones.\n\nYou do not need to memorize exact numbers. What matters is knowing the order of magnitude — is it milliseconds or microseconds? Gigabytes or terabytes? Being off by 2x is fine. Being off by 1000x means your design is fundamentally wrong.` },
@@ -628,6 +628,111 @@ Object.assign(TOPICS, {
           { q: 'When should I use choreography vs orchestration?', a: 'Choreography (event-driven) for simple sagas with 2-3 steps where services are loosely coupled. Orchestration (central coordinator) for complex sagas with 5+ steps, branching logic, or when you need clear visibility into the saga state. Most production systems with complex workflows use orchestration (Temporal, AWS Step Functions).' },
           { q: 'How do you handle a compensating transaction that fails?', a: 'Retry with exponential backoff. If it still fails after N retries, move to a dead letter queue for manual intervention. This is a rare edge case but must be handled. Some systems use a "compensation log" that records all compensations needed, and a background job retries failed compensations periodically.' },
           { q: 'What is the difference between a saga and a distributed transaction (2PC)?', a: '2PC (two-phase commit) locks all participants until the transaction completes — strong consistency but blocks on any failure. Sagas use compensating transactions — eventually consistent but never block. Sagas are preferred in microservices because 2PC reduces availability (if any participant is down, the entire transaction fails).' },
+        ],
+      },
+    ],
+  },
+  'pattern-microservices': {
+    slug: 'pattern-microservices', title: 'Microservices vs Monolith', subtitle: 'When to split, when to stay together, and how to migrate', duration: '30 min', difficulty: 'Intermediate',
+    sections: [
+      { type: 'text', heading: 'The Monolith — Where Every Application Starts', body: `A monolith is a single deployable unit that contains all of your application's code. The user service, order service, payment service, notification service — all in one codebase, one deployment, one database.\n\nMonoliths get a bad reputation, but they are the right choice for most early-stage applications. They are simple to develop (one codebase), simple to deploy (one artifact), simple to test (one test suite), and simple to debug (one log stream). Instagram ran as a Django monolith serving 400 million users. Shopify is still largely a monolith.\n\nThe problems emerge at scale — not user scale, but team scale. When 50 engineers are working on the same codebase, deployments become risky (one bug in the payment module takes down the entire application), development slows down (merge conflicts, long CI pipelines), and teams cannot deploy independently.` },
+
+      { type: 'text', heading: 'Microservices — Independent, Deployable Services', body: `Microservices split the monolith into small, independent services, each owning a specific business domain. The user service is its own deployable with its own database. The order service is separate. The payment service is separate.\n\nEach service communicates via APIs (REST, gRPC) or events (Kafka). Each team owns their service end-to-end: development, testing, deployment, monitoring.\n\nBenefits:\n\n**Independent deployment** — Deploy the payment service without touching the user service. If the payment deploy has a bug, only payments are affected.\n\n**Technology flexibility** — The recommendation service can use Python + ML libraries while the payment service uses Java + strict typing. Each team picks the best tool for their domain.\n\n**Independent scaling** — The search service needs 20 instances during Black Friday. The user service needs 2. Scale each independently.\n\n**Team autonomy** — Each team owns their service. No merge conflicts with other teams. Faster development cycles.` },
+
+      { type: 'text', heading: 'The Trade-offs — Microservices Are Not Free', body: `Microservices solve organizational scaling problems but introduce distributed systems complexity:\n\n**Network calls instead of function calls.** A function call takes nanoseconds. A network call takes milliseconds and can fail. Every service-to-service call needs timeout handling, retries, and circuit breakers.\n\n**Distributed transactions.** In a monolith, transferring money is one database transaction. In microservices, it spans the account service and the ledger service — you need sagas or eventual consistency.\n\n**Operational overhead.** Instead of monitoring one application, you monitor 50. Each needs its own CI/CD pipeline, logging, alerting, and on-call rotation. You need service discovery, distributed tracing (Jaeger, Zipkin), and centralized logging (ELK stack).\n\n**Data consistency.** Each service owns its database. No JOINs across services. If the order service needs user data, it must call the user service API or maintain a local copy (eventual consistency).\n\nThe rule of thumb: start with a monolith. Split into microservices only when team size and deployment frequency demand it — typically when you have 20+ engineers working on the same codebase.` },
+
+      {
+        type: 'architecture', heading: 'Monolith vs Microservices',
+        caption: 'Monolith: one deployment, one database. Microservices: independent services with their own databases.',
+        config: {
+          width: 800, height: 320,
+          nodes: [
+            { id: 'mono-client', label: 'Client', icon: '📱', color: 'blue', x: 20, y: 60, w: 80, h: 50 },
+            { id: 'mono-app', label: 'Monolith', sublabel: 'All code in one app', color: 'orange', x: 140, y: 40, w: 130, h: 80 },
+            { id: 'mono-db', label: 'Single DB', icon: '🗄️', color: 'blue', x: 310, y: 60, w: 90, h: 50 },
+            { id: 'ms-client', label: 'Client', icon: '📱', color: 'blue', x: 20, y: 210, w: 80, h: 50 },
+            { id: 'ms-gw', label: 'API Gateway', color: 'cyan', x: 140, y: 210, w: 100, h: 50 },
+            { id: 'ms-user', label: 'User Svc', color: 'green', x: 290, y: 170, w: 90, h: 40 },
+            { id: 'ms-order', label: 'Order Svc', color: 'green', x: 290, y: 220, w: 90, h: 40 },
+            { id: 'ms-pay', label: 'Payment Svc', color: 'green', x: 290, y: 270, w: 90, h: 40 },
+            { id: 'ms-db1', label: 'User DB', color: 'blue', x: 430, y: 170, w: 70, h: 35 },
+            { id: 'ms-db2', label: 'Order DB', color: 'blue', x: 430, y: 220, w: 70, h: 35 },
+            { id: 'ms-db3', label: 'Pay DB', color: 'blue', x: 430, y: 270, w: 70, h: 35 },
+          ],
+          edges: [
+            { from: 'mono-client', to: 'mono-app', label: '' },
+            { from: 'mono-app', to: 'mono-db', label: '' },
+            { from: 'ms-client', to: 'ms-gw', label: '' },
+            { from: 'ms-gw', to: 'ms-user', label: '' },
+            { from: 'ms-gw', to: 'ms-order', label: '' },
+            { from: 'ms-gw', to: 'ms-pay', label: '' },
+            { from: 'ms-user', to: 'ms-db1', label: '' },
+            { from: 'ms-order', to: 'ms-db2', label: '' },
+            { from: 'ms-pay', to: 'ms-db3', label: '' },
+          ],
+        },
+      },
+
+      { type: 'text', heading: 'How to Talk About This in Interviews', body: `In most system design interviews, you are implicitly designing a microservices architecture — each "service" you draw (Ride Service, Location Service, Matching Service) is a microservice. You do not need to explicitly discuss monolith vs microservices unless the interviewer asks.\n\nBut if asked: "I would start with a modular monolith — clear module boundaries but one deployment. As the team grows beyond 15-20 engineers, I would extract the highest-traffic or most-independently-deployed modules into microservices, starting with the ones that have the clearest domain boundaries."` },
+
+      {
+        type: 'faq', heading: 'Frequently Asked Interview Questions',
+        questions: [
+          { q: 'When should you move from monolith to microservices?', a: 'When team size makes independent deployment necessary (typically 20+ engineers), when different parts of the system need to scale independently, or when deployment risk is too high (one bug takes down everything). Do not split for technical reasons alone — split for organizational reasons.' },
+          { q: 'How do microservices communicate?', a: 'Synchronous: REST or gRPC for request-response (user service calls payment service). Asynchronous: Kafka or message queues for event-driven communication (order service publishes "OrderCreated", notification service consumes it). Prefer async for decoupling.' },
+          { q: 'What is a service mesh?', a: 'A dedicated infrastructure layer (Istio, Linkerd) that handles service-to-service communication: load balancing, retries, circuit breakers, mutual TLS, observability. It runs as a sidecar proxy alongside each service, so the application code does not need to implement these concerns.' },
+        ],
+      },
+    ],
+  },
+
+  'pattern-availability': {
+    slug: 'pattern-availability', title: 'Availability & Failover', subtitle: 'Designing systems that survive failures — redundancy, replication, and failover', duration: '30 min', difficulty: 'Intermediate',
+    sections: [
+      { type: 'text', heading: 'What is Availability?', body: `Availability is the percentage of time a system is operational and serving requests. It is measured in "nines":\n\n**99% (two nines)** — 3.65 days of downtime per year. Unacceptable for most production systems.\n**99.9% (three nines)** — 8.77 hours of downtime per year. Acceptable for internal tools.\n**99.99% (four nines)** — 52.6 minutes of downtime per year. Standard for production web applications.\n**99.999% (five nines)** — 5.26 minutes of downtime per year. Required for critical infrastructure (payment systems, emergency services).\n\nEach additional nine is exponentially harder and more expensive to achieve. Going from 99.9% to 99.99% requires fundamentally different architecture — redundancy at every layer, automated failover, and no single points of failure.` },
+
+      { type: 'text', heading: 'Eliminating Single Points of Failure', body: `A single point of failure (SPOF) is any component whose failure takes down the entire system. In a system design interview, the interviewer will often ask "what happens if X goes down?" Your answer should always be: "we have redundancy."\n\n**Load Balancer** — Run multiple instances. Use DNS round-robin or a cloud provider's managed load balancer (AWS ALB) which is inherently redundant.\n\n**Application Servers** — Run multiple stateless instances behind the load balancer. If one dies, the load balancer routes to the others. This is why servers must be stateless — no user data stored on the server.\n\n**Database** — Run a primary with one or more replicas. If the primary fails, promote a replica (failover). PostgreSQL streaming replication, MySQL replication, or managed services (AWS RDS Multi-AZ) handle this.\n\n**Cache (Redis)** — Run Redis Sentinel or Redis Cluster with replicas. If the primary Redis node fails, Sentinel promotes a replica automatically.\n\n**Message Queue (Kafka)** — Each partition has replicas on different brokers. If a broker fails, the replica takes over as partition leader.` },
+
+      { type: 'text', heading: 'Failover Patterns', body: `**Active-Passive (Hot Standby)**\nThe active server handles all traffic. The passive server is idle but receives replicated data. If the active fails, the passive takes over (failover). Downtime during failover: seconds to minutes.\n\nUsed for: databases (primary-replica), Redis (Sentinel), single-leader systems.\n\nTrade-off: the passive server is wasted capacity during normal operation.\n\n**Active-Active**\nMultiple servers handle traffic simultaneously. If one fails, the others absorb its load. No failover delay — traffic is already distributed.\n\nUsed for: stateless application servers (behind a load balancer), multi-region deployments (each region serves its local users).\n\nTrade-off: more complex — need to handle data consistency across active nodes. For databases, this means multi-master replication with conflict resolution.\n\n**Circuit Breaker**\nWhen a downstream service is failing, stop calling it instead of waiting for timeouts. The circuit breaker "opens" after N consecutive failures, returning errors immediately. Periodically, it allows one test request through ("half-open"). If it succeeds, the circuit closes and normal traffic resumes.\n\nThis prevents cascade failures — if the payment service is down, the order service fails fast instead of queuing up thousands of timeout requests that consume threads and memory.` },
+
+      { type: 'animation', id: 'circuit-breaker', heading: 'Circuit Breaker Pattern', body: 'Closed (normal) → Open (failing, reject all) → Half-Open (test one request) → Closed or Open.' },
+
+      { type: 'text', heading: 'Replication Strategies', body: `**Synchronous replication:** The primary waits for the replica to acknowledge the write before confirming to the client. Guarantees no data loss on failover. Trade-off: higher write latency (must wait for replica).\n\n**Asynchronous replication:** The primary confirms the write immediately, then sends it to the replica in the background. Lower latency, but the replica may be slightly behind. If the primary fails before replicating, those writes are lost.\n\n**Semi-synchronous:** The primary waits for at least one replica to acknowledge, but not all. Balances durability and latency. Used by MySQL semi-sync replication.\n\nFor most systems: use asynchronous replication for read replicas (slight staleness is acceptable) and synchronous replication for the failover replica (no data loss on primary failure).` },
+
+      { type: 'text', heading: 'Multi-Region Availability', body: `For global applications, a single region is a SPOF — if the entire AWS us-east-1 region goes down (it has happened), your application is offline.\n\nMulti-region deployment runs your application in 2+ geographic regions. Each region has its own application servers, caches, and database replicas. Users are routed to the nearest region via GeoDNS or a global load balancer.\n\nThe hard part is data: how do you keep databases in sync across regions? Options:\n\n**Read replicas in each region:** Writes go to the primary region, replicas in other regions serve reads. Cross-region replication lag: 50-200ms. Good for read-heavy workloads.\n\n**Multi-master (active-active):** Each region can accept writes. Conflicts resolved by last-write-wins, vector clocks, or CRDTs. Used by DynamoDB Global Tables, Cassandra.\n\n**Region-specific data:** Users in EU are served by the EU region, their data lives there. No cross-region replication needed for user-specific data. Good for compliance (GDPR).` },
+
+      {
+        type: 'faq', heading: 'Frequently Asked Interview Questions',
+        questions: [
+          { q: 'What is the difference between availability and reliability?', a: 'Availability is the percentage of time the system is operational. Reliability is the probability that the system performs correctly for a given period. A system can be available (responding to requests) but unreliable (returning wrong results). Both matter, but availability is what interviewers usually ask about.' },
+          { q: 'How do you achieve 99.99% availability?', a: 'Redundancy at every layer (no SPOF), automated failover (no human intervention needed), health checks with fast detection (<10 seconds), graceful degradation (serve cached data if DB is down), multi-AZ deployment (survive datacenter failure), and comprehensive monitoring with alerting.' },
+          { q: 'What happens to in-flight requests during failover?', a: 'They fail. The client must retry. This is why idempotency matters — retried requests must be safe to execute multiple times. For critical operations (payments), use idempotency keys so retries do not cause duplicate charges.' },
+          { q: 'What is graceful degradation?', a: 'When a component fails, the system continues operating with reduced functionality instead of failing completely. Example: if the recommendation service is down, show trending items instead of personalized recommendations. If Redis is down, fall back to database queries (slower but functional).' },
+        ],
+      },
+    ],
+  },
+
+  'pattern-security': {
+    slug: 'pattern-security', title: 'Security Basics', subtitle: 'Authentication, authorization, encryption, and common vulnerabilities', duration: '25 min', difficulty: 'Intermediate',
+    sections: [
+      { type: 'text', heading: 'Why Security Matters in System Design', body: `Security is not a feature you add later — it is baked into every design decision. In interviews, mentioning security proactively shows engineering maturity. You do not need to be a security expert, but you should know the basics: how authentication works, how to protect data in transit and at rest, and how to prevent the most common attacks.\n\nThe interviewer is not expecting a security deep dive, but they will notice if you say "we store passwords in plain text" or "the API accepts any request without authentication." These are red flags.` },
+
+      { type: 'text', heading: 'Authentication — Who Are You?', body: `Authentication verifies the identity of the user or service making a request.\n\n**JWT (JSON Web Tokens)** — The standard for modern APIs. After login, the server creates a signed token containing the user's ID, roles, and expiration time. The client sends this token in the Authorization header with every request. The server verifies the signature without hitting a database — the token is self-contained.\n\nKeep JWTs short-lived (15-60 minutes). Use refresh tokens for long-lived sessions. JWTs cannot be revoked before expiration (unless you maintain a blacklist, which defeats the purpose of stateless tokens).\n\n**OAuth 2.0** — The framework for "Sign in with Google/GitHub." The user authenticates with the identity provider (Google), which gives your app a token to access the user's data. Complex but standard for third-party integrations.\n\n**API Keys** — Simple tokens for server-to-server communication. Identify the calling application, not the user. Good for rate limiting per client. Not suitable for user-specific access control.` },
+
+      { type: 'text', heading: 'Authorization — What Are You Allowed to Do?', body: `Authorization determines what an authenticated user can access.\n\n**RBAC (Role-Based Access Control)** — Users are assigned roles (admin, editor, viewer). Each role has permissions. When a request comes in, check: does this user's role have permission for this action on this resource? Simple and widely used.\n\n**ABAC (Attribute-Based Access Control)** — Policies based on user attributes (department, location), resource attributes (classification, owner), and environment (time of day, IP address). More flexible than RBAC but more complex.\n\nIn system design: always check authorization at the API layer. Never trust the client to enforce access control. "The frontend hides the delete button" is not security — the API must reject unauthorized requests regardless of what the frontend shows.` },
+
+      { type: 'text', heading: 'Encryption — Protecting Data', body: `**In transit (HTTPS/TLS):** All communication between client and server must use HTTPS. TLS encrypts data so eavesdroppers cannot read it. There is no excuse for serving an API over plain HTTP in production. In interviews, mention this early and move on — it is table stakes.\n\n**At rest:** Sensitive data stored in databases or object storage should be encrypted. AWS services (RDS, S3) support encryption at rest with managed keys (KMS). This protects against physical theft of storage media.\n\n**Passwords:** Never store passwords in plain text. Use bcrypt, scrypt, or Argon2 to hash passwords with a salt. These algorithms are intentionally slow, making brute-force attacks impractical. When a user logs in, hash the provided password and compare with the stored hash.\n\n**Sensitive data (credit cards):** Never store raw credit card numbers. Use tokenization — the payment provider (Stripe, Razorpay) stores the card and gives you a token. You store the token, not the card. This is required by PCI DSS compliance.` },
+
+      { type: 'text', heading: 'Common Vulnerabilities to Mention', body: `**SQL Injection:** Never concatenate user input into SQL queries. Use parameterized queries or an ORM. This is the #1 web vulnerability and interviewers expect you to know it.\n\n**XSS (Cross-Site Scripting):** Sanitize all user-generated content before rendering in HTML. Use Content Security Policy headers. Frameworks like React auto-escape by default.\n\n**CSRF (Cross-Site Request Forgery):** Use CSRF tokens for state-changing requests from browsers. SameSite cookies help prevent this.\n\n**Rate Limiting:** Protect APIs from brute-force attacks and DDoS. Limit requests per user/IP per time window. Return 429 Too Many Requests.\n\n**CORS (Cross-Origin Resource Sharing):** Do not set Access-Control-Allow-Origin: * on authenticated endpoints. Whitelist specific origins.\n\n**Input Validation:** Validate all input on the server. Check types, lengths, ranges, and formats. Never trust data from the client.` },
+
+      {
+        type: 'faq', heading: 'Frequently Asked Interview Questions',
+        questions: [
+          { q: 'How do you store passwords securely?', a: 'Hash with bcrypt (or Argon2) with a unique salt per password. Never store plain text. Never use MD5 or SHA-256 for passwords (too fast, vulnerable to brute force). bcrypt is intentionally slow (~100ms per hash), making brute-force attacks impractical.' },
+          { q: 'What is the difference between authentication and authorization?', a: 'Authentication: "Who are you?" (verify identity — login, JWT, OAuth). Authorization: "What can you do?" (check permissions — RBAC, ABAC). Authentication happens first, then authorization.' },
+          { q: 'How do you handle API security in microservices?', a: 'External requests: authenticate at the API Gateway (validate JWT). Internal service-to-service: use mutual TLS (mTLS) or service mesh (Istio) for encrypted, authenticated communication. Never expose internal services to the public internet.' },
+          { q: 'What is the principle of least privilege?', a: 'Give each component only the minimum permissions it needs. The search service should not have write access to the payment database. Database users should have only the permissions their service requires. This limits the blast radius of a security breach.' },
         ],
       },
     ],
@@ -957,6 +1062,94 @@ Object.assign(TOPICS, {
           { q: 'Can I just use pgvector instead of a dedicated vector database?', a: 'Yes, for small-to-medium scale (<10M vectors). pgvector lets you store vectors alongside relational data in PostgreSQL — no separate infrastructure. For larger scale (100M+ vectors) or when you need advanced features (hybrid search, real-time indexing, distributed search), use a dedicated vector DB like Pinecone, Weaviate, or Milvus.' },
           { q: 'How do you handle embedding model updates?', a: 'When you switch to a new embedding model, all existing vectors become incompatible (different models produce different vector spaces). You must re-embed all documents with the new model. This is expensive but necessary. Strategy: maintain two indexes during migration, switch traffic to the new index when ready, delete the old one.' },
           { q: 'What is the difference between HNSW and IVF indexes?', a: 'HNSW builds a navigable graph — higher accuracy (95-99% recall), higher memory usage, good for real-time search. IVF clusters vectors and searches only nearby clusters — lower memory, faster indexing, but lower accuracy. HNSW is the default choice for most applications. IVF + PQ is better when memory is constrained and you have billions of vectors.' },
+        ],
+      },
+    ],
+  },
+  'advanced-event-driven': {
+    slug: 'advanced-event-driven', title: 'Event-Driven Architecture', subtitle: 'Building loosely coupled systems with events, CQRS, and event sourcing', duration: '30 min', difficulty: 'Advanced',
+    sections: [
+      { type: 'text', heading: 'What is Event-Driven Architecture?', body: `In a traditional request-driven architecture, services call each other directly: the Order Service calls the Payment Service, which calls the Notification Service. Each service knows about the others — they are tightly coupled.\n\nIn an event-driven architecture, services communicate through events. The Order Service publishes an "OrderCreated" event to a message broker (Kafka). The Payment Service, Notification Service, and Analytics Service each subscribe to this event and react independently. The Order Service does not know or care who consumes the event.\n\nThis decoupling is powerful: you can add new consumers (a fraud detection service) without changing the producer. Services can fail independently — if the Notification Service is down, orders still process. And the event log (Kafka) serves as a durable record of everything that happened.` },
+
+      { type: 'text', heading: 'Event Sourcing', body: `Traditional systems store the current state: "Order #123 status = SHIPPED." Event sourcing stores every state change as an immutable event:\n\n1. OrderCreated { id: 123, items: [...], total: 5000 }\n2. PaymentReceived { id: 123, amount: 5000 }\n3. OrderShipped { id: 123, tracking: "TRK456" }\n\nThe current state is derived by replaying all events. This gives you a complete audit trail, the ability to reconstruct state at any point in time, and the ability to build new views by replaying events through a new projection.\n\nEvent sourcing is used by financial systems (every transaction is an event), collaborative editing (every keystroke is an event), and any system where audit trails are critical.\n\nThe trade-off: querying current state requires replaying events (slow) or maintaining a materialized view (complexity). Most systems use event sourcing for the write side and materialized views for the read side (CQRS).` },
+
+      { type: 'text', heading: 'CQRS — Command Query Responsibility Segregation', body: `CQRS separates the write model (commands) from the read model (queries) entirely.\n\nThe write side accepts commands ("CreateOrder", "ShipOrder") and produces events. The events are stored in an event store (Kafka, EventStoreDB).\n\nThe read side consumes events and builds optimized read models (materialized views). A product page view might be a single denormalized document in MongoDB. A search index might be in Elasticsearch. A dashboard might be in a time-series DB.\n\nEach read model is optimized for its specific query pattern. No JOINs, no complex queries — just fast lookups.\n\nThe trade-off: eventual consistency between write and read sides. After a write, the read model may take milliseconds to seconds to update. For most applications, this is acceptable. For critical reads (checking your own order status after placing it), route to the write model directly.` },
+
+      {
+        type: 'architecture', heading: 'Event-Driven Architecture with CQRS',
+        caption: 'Commands go to the write model. Events flow through Kafka. Read models are built from events.',
+        config: {
+          width: 800, height: 300,
+          nodes: [
+            { id: 'client', label: 'Client', icon: '📱', color: 'blue', x: 20, y: 110, w: 90, h: 50 },
+            { id: 'cmd', label: 'Command API', sublabel: 'Write side', color: 'green', x: 160, y: 110, w: 120, h: 50 },
+            { id: 'eventstore', label: 'Kafka', sublabel: 'Event store', icon: '📨', color: 'yellow', x: 350, y: 110, w: 110, h: 50 },
+            { id: 'read1', label: 'Search Index', sublabel: 'Elasticsearch', color: 'orange', x: 540, y: 30, w: 120, h: 45 },
+            { id: 'read2', label: 'Feed Cache', sublabel: 'Redis', color: 'red', x: 540, y: 110, w: 120, h: 45 },
+            { id: 'read3', label: 'Analytics', sublabel: 'ClickHouse', color: 'purple', x: 540, y: 190, w: 120, h: 45 },
+            { id: 'query', label: 'Query API', sublabel: 'Read side', color: 'cyan', x: 700, y: 110, w: 90, h: 50 },
+          ],
+          edges: [
+            { from: 'client', to: 'cmd', label: 'commands', color: 'accent' },
+            { from: 'cmd', to: 'eventstore', label: 'events' },
+            { from: 'eventstore', to: 'read1', label: '' },
+            { from: 'eventstore', to: 'read2', label: '' },
+            { from: 'eventstore', to: 'read3', label: '' },
+            { from: 'client', to: 'query', label: 'queries', dashed: true },
+          ],
+        },
+      },
+
+      {
+        type: 'faq', heading: 'Frequently Asked Interview Questions',
+        questions: [
+          { q: 'When should I use event-driven architecture?', a: 'When services need to be loosely coupled, when multiple consumers need to react to the same event, when you need an audit trail, or when you need to build multiple read models from the same data. Do not use it for simple CRUD applications — the complexity is not worth it.' },
+          { q: 'What is the difference between event sourcing and event-driven architecture?', a: 'Event-driven architecture is a communication pattern — services communicate through events. Event sourcing is a storage pattern — you store events instead of current state. You can use event-driven architecture without event sourcing (most systems do). Event sourcing implies event-driven, but not vice versa.' },
+          { q: 'How do you handle eventual consistency in CQRS?', a: 'Accept it for most reads (feeds, search results, dashboards). For critical reads where the user must see their own write immediately, route to the write model directly or use a "read-your-writes" pattern: after a write, read from the write DB for a short window (5 seconds), then fall back to the read model.' },
+        ],
+      },
+    ],
+  },
+
+  'advanced-distributed-transactions': {
+    slug: 'advanced-distributed-transactions', title: 'Distributed Transactions', subtitle: 'Two-phase commit, sagas, and consistency in distributed systems', duration: '25 min', difficulty: 'Advanced',
+    sections: [
+      { type: 'text', heading: 'The Problem: Transactions Across Services', body: `In a monolith with a single database, transactions are simple: BEGIN, do your work, COMMIT or ROLLBACK. The database guarantees atomicity — either all changes happen or none do.\n\nIn a microservices architecture, each service has its own database. An operation like "place an order" spans multiple services: create the order (Order DB), reserve inventory (Inventory DB), charge payment (Payment DB). There is no single database transaction that spans all three.\n\nIf the payment fails after inventory is reserved, you need to "undo" the reservation. This is the distributed transaction problem — one of the hardest challenges in distributed systems.` },
+
+      { type: 'text', heading: 'Two-Phase Commit (2PC)', body: `2PC is the traditional solution. A coordinator asks all participants: "Can you commit?" (Phase 1: Prepare). If all say yes, the coordinator says "Commit" (Phase 2: Commit). If any says no, the coordinator says "Abort."\n\nThe problem: 2PC is a blocking protocol. If the coordinator crashes after Phase 1 but before Phase 2, all participants are stuck holding locks, waiting for a decision that may never come. This reduces availability — if any participant is down, the entire transaction blocks.\n\n2PC is used within a single database (PostgreSQL uses it internally for multi-statement transactions) but is rarely used across services in modern architectures. The availability cost is too high.` },
+
+      { type: 'text', heading: 'Sagas — The Modern Alternative', body: `Sagas replace a single distributed transaction with a sequence of local transactions, each with a compensating action:\n\n1. Create order (PENDING) → compensate: cancel order\n2. Reserve inventory → compensate: release inventory\n3. Charge payment → compensate: refund payment\n4. Confirm order (COMPLETED)\n\nIf step 3 fails, execute compensations in reverse: release inventory (undo step 2), cancel order (undo step 1).\n\nSagas are eventually consistent — there is a window where the order exists but payment has not been charged. Your UI must handle this: show "Processing..." instead of "Confirmed."\n\nOrchestration (central coordinator manages the saga) is preferred over choreography (services react to events) for complex flows because the logic is in one place and easier to debug.` },
+
+      { type: 'text', heading: 'Idempotency — The Safety Net', body: `In distributed systems, messages can be delivered more than once (network retries, consumer restarts). Every operation in a saga must be idempotent — safe to execute multiple times with the same result.\n\nThe pattern: include a unique idempotency key with every message. Before processing, check if this key was already processed. If yes, return the cached result. If no, process and store the result.\n\nThis is the same pattern used in payment systems (Stripe requires an idempotency key) and is essential for any distributed transaction.` },
+
+      {
+        type: 'faq', heading: 'Frequently Asked Interview Questions',
+        questions: [
+          { q: 'Why not just use 2PC everywhere?', a: '2PC is blocking — if the coordinator or any participant fails, all participants hold locks and wait. This reduces availability, which is unacceptable for most web applications. Sagas trade strong consistency for availability, which is the right trade-off for most systems.' },
+          { q: 'How do you handle a compensating transaction that fails?', a: 'Retry with exponential backoff. If it still fails after N retries, move to a dead letter queue for manual intervention. Log everything for debugging. This is a rare edge case but must be handled.' },
+          { q: 'What tools implement the saga pattern?', a: 'Temporal (most popular, open source, created by ex-Uber engineers), AWS Step Functions (serverless, AWS-native), Cadence (Uber\'s original, predecessor to Temporal), and custom implementations using Kafka for event choreography.' },
+        ],
+      },
+    ],
+  },
+
+  'advanced-observability': {
+    slug: 'advanced-observability', title: 'Observability & Monitoring', subtitle: 'Logging, metrics, tracing, and alerting for distributed systems', duration: '25 min', difficulty: 'Advanced',
+    sections: [
+      { type: 'text', heading: 'Why Observability Matters', body: `In a monolith, debugging is straightforward: read the logs, set a breakpoint, reproduce the issue. In a distributed system with 50 microservices, a single user request might touch 10 services. When something goes wrong, you need to trace the request across all 10 services to find the failure.\n\nObservability is the ability to understand what is happening inside your system by examining its outputs: logs, metrics, and traces. Without it, you are flying blind. In system design interviews, mentioning observability proactively shows operational maturity — you are not just designing for the happy path.` },
+
+      { type: 'text', heading: 'The Three Pillars', body: `**Logs** — Discrete events with timestamps. "2024-04-17 14:23:01 ERROR PaymentService: Card declined for order #123." Use structured logging (JSON) so logs are searchable. Centralize logs with ELK stack (Elasticsearch + Logstash + Kibana) or Datadog. Include a correlation ID (request_id) in every log so you can trace a request across services.\n\n**Metrics** — Numerical measurements over time. CPU usage, request latency (p50, p95, p99), error rate, queue depth, cache hit rate. Collected by Prometheus, visualized in Grafana. Metrics tell you what is happening (error rate is 5%) but not why.\n\n**Traces** — The journey of a single request across services. A trace shows: User → API Gateway (2ms) → Order Service (15ms) → Payment Service (200ms) → Notification Service (5ms). You can see that the Payment Service is the bottleneck. Tools: Jaeger, Zipkin, AWS X-Ray. Implemented using OpenTelemetry (standard instrumentation library).` },
+
+      { type: 'text', heading: 'Alerting — Knowing Before Users Do', body: `Monitoring without alerting is just watching. You need automated alerts that notify the on-call engineer when something is wrong.\n\n**What to alert on:**\n- Error rate > 1% for 5 minutes (something is broken)\n- p99 latency > 2 seconds for 5 minutes (something is slow)\n- CPU > 80% for 10 minutes (need to scale)\n- Queue depth growing for 15 minutes (consumers are falling behind)\n- Disk usage > 85% (will run out soon)\n\n**Alert fatigue:** Too many alerts and engineers start ignoring them. Only alert on actionable conditions. Use severity levels: critical (page someone at 3am), warning (investigate during business hours), info (log for review).\n\nTools: PagerDuty, OpsGenie for on-call routing. AlertManager (Prometheus) for alert rules. Slack/email for non-critical notifications.` },
+
+      { type: 'text', heading: 'Health Checks and Circuit Breakers', body: `Every service should expose a health check endpoint (GET /health) that returns 200 if the service is healthy. The load balancer checks this endpoint every few seconds and removes unhealthy instances from rotation.\n\nA good health check verifies: the service process is running, it can connect to its database, it can connect to Redis, and critical dependencies are reachable. A shallow health check (just return 200) misses dependency failures.\n\nCircuit breakers complement health checks: if a downstream service is failing, stop calling it. Return a fallback response (cached data, default value, or error) instead of waiting for timeouts. This prevents cascade failures where one slow service takes down the entire system.` },
+
+      {
+        type: 'faq', heading: 'Frequently Asked Interview Questions',
+        questions: [
+          { q: 'What is the difference between monitoring and observability?', a: 'Monitoring tells you when something is wrong (alert: error rate > 5%). Observability tells you why (trace shows the payment gateway is timing out). Monitoring is reactive (predefined dashboards). Observability is exploratory (ask arbitrary questions about system behavior).' },
+          { q: 'What is a correlation ID and why does it matter?', a: 'A unique ID (UUID) generated at the API Gateway and passed through every service in the request chain via headers. Every log line includes this ID. When debugging, search for the correlation ID to see all logs from all services for that single request. Without it, correlating logs across 10 services is nearly impossible.' },
+          { q: 'What SLIs, SLOs, and SLAs should I mention in interviews?', a: 'SLI (Service Level Indicator): a metric (e.g., p99 latency, error rate). SLO (Service Level Objective): a target for the SLI (e.g., p99 latency < 200ms, error rate < 0.1%). SLA (Service Level Agreement): a contract with consequences if the SLO is not met. Mention SLOs when discussing non-functional requirements: "Our SLO for feed latency is p99 < 200ms."' },
         ],
       },
     ],
