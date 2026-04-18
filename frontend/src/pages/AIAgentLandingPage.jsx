@@ -167,7 +167,7 @@ const AIAgentLandingPage = () => {
                   className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-bold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-lg"
                 >
                   <Zap className="w-5 h-5" />
-                  Start for {formatPrice(getPrice('agent_monthly'))}/month
+                  Launch Offer — {formatPrice(getPrice('agent_monthly'))}/month
                 </Link>
                 <a
                   href="#pricing"
@@ -384,10 +384,11 @@ const AIAgentLandingPage = () => {
             {/* Dynamic plan cards from DB */}
             <div className={`grid grid-cols-1 sm:grid-cols-2 ${Array.isArray(agentPlans) && agentPlans.length >= 4 ? 'lg:grid-cols-4' : agentPlans.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-5 max-w-4xl mx-auto mb-12`}>
               {Array.isArray(agentPlans) && agentPlans.map((plan, idx) => {
-                const isTrial = plan.plan_id?.includes('trial');
+                const isLaunchOffer = plan.launch_offer || plan.original_price_inr > 0;
                 const isPopular = plan.display_order === 2 || plan.plan_id?.includes('quarterly');
                 const durationLabel = plan.duration_months === 1 ? '/mo' : plan.duration_months === 3 ? '/3 mo' : plan.duration_months === 12 ? '/yr' : `/${plan.duration_months} mo`;
                 const perMonth = plan.duration_months > 1 ? Math.round(plan.price / plan.duration_months) : null;
+                const originalPrice = plan.original_price_inr || plan.original_price || 0;
 
                 return (
                   <div key={plan.plan_id} className={`rounded-2xl p-6 text-center relative transition-all duration-300 ${
@@ -396,31 +397,38 @@ const AIAgentLandingPage = () => {
                       : `${theme.bg.card} ${theme.border.primary} border hover:border-[#06b6d4]/40`
                   }`}>
                     {/* Badge */}
-                    {(isTrial || isPopular) && (
+                    {(isLaunchOffer || isPopular) && (
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                        <span className={`px-3 py-1 text-white text-[10px] font-bold rounded-full shadow-lg ${isTrial ? 'bg-amber-500' : 'bg-[#06b6d4]'}`}>
-                          {isTrial ? 'Try It Out' : 'Best Value'}
+                        <span className={`px-3 py-1 text-white text-[10px] font-bold rounded-full shadow-lg ${isLaunchOffer && !isPopular ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-[#06b6d4]'}`}>
+                          {isLaunchOffer && !isPopular ? '🔥 Launch Offer' : 'Best Value'}
                         </span>
                       </div>
                     )}
 
-                    <h4 className={`text-lg font-bold ${theme.text.primary} mb-1 ${isTrial || isPopular ? 'mt-1' : ''}`}>{plan.name}</h4>
+                    <h4 className={`text-lg font-bold ${theme.text.primary} mb-1 ${isLaunchOffer || isPopular ? 'mt-1' : ''}`}>{plan.name}</h4>
                     <p className={`text-[11px] ${theme.text.muted} mb-4`}>
-                      {isTrial ? 'One-time • 1 month only' : `${plan.duration_months} month${plan.duration_months > 1 ? 's' : ''}`}
+                      {`${plan.duration_months} month${plan.duration_months > 1 ? 's' : ''}`}
                     </p>
 
-                    {/* Price */}
-                    <div className="flex items-baseline justify-center gap-1 mb-1">
-                      <span className={`text-3xl font-bold ${theme.text.primary}`}>{formatPrice(plan.price)}</span>
-                      {!isTrial && <span className={`${theme.text.muted} text-sm`}>{durationLabel}</span>}
+                    {/* Price with strikethrough for launch offer */}
+                    <div className="flex items-baseline justify-center gap-2 mb-1">
+                      {isLaunchOffer && originalPrice > 0 && (
+                        <span className={`text-lg line-through ${theme.text.muted}`}>{formatPrice(originalPrice)}</span>
+                      )}
+                      <span className={`text-3xl font-bold ${isLaunchOffer ? 'text-green-500' : theme.text.primary}`}>{formatPrice(plan.price)}</span>
+                      <span className={`${theme.text.muted} text-sm`}>{durationLabel}</span>
                     </div>
+                    {isLaunchOffer && originalPrice > 0 && (
+                      <p className="text-[11px] font-semibold text-green-500 mb-1">Save {Math.round(((originalPrice - plan.price) / originalPrice) * 100)}% — Limited time</p>
+                    )}
                     {perMonth && (
                       <p className={`text-[11px] mb-1 ${theme.text.muted}`}>~{formatPrice(perMonth)}/mo</p>
                     )}
                     {plan.savePercent > 0 && (
                       <p className="text-[11px] font-semibold text-green-500 mb-4">Save {plan.savePercent}%</p>
                     )}
-                    {!plan.savePercent && !perMonth && <div className="mb-4" />}
+                    {!plan.savePercent && !perMonth && !isLaunchOffer && <div className="mb-4" />}
+                    {(isLaunchOffer && !perMonth) && <div className="mb-3" />}
 
                     {/* CTA */}
                     <Link
@@ -428,10 +436,12 @@ const AIAgentLandingPage = () => {
                       className={`block w-full text-center px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 ${
                         isPopular
                           ? 'bg-[#06b6d4] text-white hover:bg-[#0891b2] shadow-lg'
-                          : `${theme.bg.secondary} ${theme.text.primary} border ${theme.border.primary} hover:border-[#06b6d4]/50`
+                          : isLaunchOffer
+                            ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 shadow-lg'
+                            : `${theme.bg.secondary} ${theme.text.primary} border ${theme.border.primary} hover:border-[#06b6d4]/50`
                       }`}
                     >
-                      {isTrial ? 'Start Trial' : `Get ${plan.name.replace('AI Agent ', '')}`}
+                      {isLaunchOffer ? 'Grab Launch Offer' : `Get ${plan.name.replace('AI Agent ', '')}`}
                     </Link>
                   </div>
                 );
@@ -495,7 +505,7 @@ const AIAgentLandingPage = () => {
                   className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-bold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all duration-300 shadow-lg text-lg"
                 >
                   <Zap className="w-5 h-5" />
-                  Start for {formatPrice(getPrice('agent_monthly'))}/mo
+                  Launch Offer — {formatPrice(getPrice('agent_monthly'))}/mo
                 </Link>
                 <Link
                   to="/register"
