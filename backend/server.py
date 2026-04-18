@@ -4132,7 +4132,15 @@ async def get_public_pricing_plans(response: Response, currency: str = "INR", se
     # Build query filter
     query = {"is_active": True}
     if service_type is not None:
-        query["service_type"] = service_type
+        # For mock_interview, also include plans that have no service_type field (backward compat)
+        if service_type == "mock_interview":
+            query["$or"] = [
+                {"service_type": "mock_interview"},
+                {"service_type": {"$exists": False}},
+                {"service_type": None}
+            ]
+        else:
+            query["service_type"] = service_type
     
     plans = await db.pricing_plans.find(query).sort("display_order", 1).to_list(100)
     
