@@ -46,6 +46,8 @@ const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const RefundPolicy = lazy(() => import("./pages/RefundPolicy"));
 const ContactUs = lazy(() => import("./pages/ContactUs"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const MockInterviewPage = lazy(() => import("./pages/MockInterviewPage"));
 const PracticePage = lazy(() => import("./pages/PracticePage"));
 const MentorshipPage = lazy(() => import("./pages/MentorshipPage"));
@@ -141,6 +143,8 @@ function App() {
             <Route path="/refund-policy" element={<RefundPolicy />} />
             <Route path="/contact" element={<ContactUs />} />
             <Route path="/payment/success" element={<PaymentSuccess />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/mock-interviews" element={<MockInterviewPage />} />
             <Route path="/practice" element={<PracticePage />} />
             <Route path="/mentorship" element={<MentorshipPage />} />

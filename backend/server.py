@@ -598,7 +598,7 @@ async def create_cashfree_order(amount_usd: int, customer_details: dict, order_i
         raise HTTPException(status_code=500, detail=f"Payment gateway error: {str(e)}")
 
 # ============ EMAIL FUNCTIONS ============
-async def send_welcome_email(name: str, email: str, plan_name: str, amount: int):
+async def send_welcome_email(name: str, email: str, plan_name: str, amount: int, currency: str = "INR"):
     """Send welcome email to new mentee after successful payment"""
     try:
         html_content = f"""
@@ -643,7 +643,7 @@ async def send_welcome_email(name: str, email: str, plan_name: str, amount: int)
                                                     </tr>
                                                     <tr>
                                                         <td style="color: #94a3b8; padding: 8px 0; font-size: 14px;">Amount Paid</td>
-                                                        <td style="color: #10b981; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">₹{amount:,}</td>
+                                                        <td style="color: #10b981; padding: 8px 0; font-size: 14px; text-align: right; font-weight: 600;">{"$" if currency == "USD" else "₹"}{amount:,}</td>
                                                     </tr>
                                                 </table>
                                             </td>
@@ -800,6 +800,53 @@ async def send_upgrade_email(name: str, email: str, plan_name: str, amount: int)
         return result
     except Exception as e:
         logger.error(f"Failed to send upgrade email to {email}: {str(e)}")
+        return None
+
+async def send_purchase_notification_email(name: str, email: str, plan_name: str, amount: int, currency: str = "INR", payment_gateway: str = "razorpay"):
+    """Send ka-ching notification to admin when a purchase is made"""
+    try:
+        currency_symbol = "$" if currency == "USD" else "₹"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <body style="margin: 0; padding: 40px; font-family: Arial, sans-serif; background-color: #0f172a;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #1e293b; border-radius: 16px; overflow: hidden;">
+                <div style="padding: 30px; text-align: center; border-bottom: 1px solid #334155;">
+                    <span style="font-size: 48px;">💰</span>
+                </div>
+                <div style="padding: 40px; text-align: center;">
+                    <h1 style="color: #10b981; margin: 0 0 10px 0; font-size: 28px;">Ka-Ching! New Purchase 🎉</h1>
+                    <p style="color: #e2e8f0; font-size: 18px; margin: 0 0 30px 0;">
+                        <strong>{name}</strong> just purchased <strong style="color: #06b6d4;">{plan_name}</strong>
+                    </p>
+                    <div style="background-color: #0f172a; border-radius: 12px; padding: 24px; margin: 0 0 20px 0;">
+                        <p style="color: #10b981; font-size: 36px; font-weight: 700; margin: 0;">{currency_symbol}{amount:,}</p>
+                        <p style="color: #94a3b8; font-size: 14px; margin: 8px 0 0 0;">via {payment_gateway.title()}</p>
+                    </div>
+                    <table width="100%" style="margin-top: 20px;">
+                        <tr><td style="color: #94a3b8; padding: 6px 0; font-size: 14px;">Customer</td><td style="color: #e2e8f0; padding: 6px 0; font-size: 14px; text-align: right;">{name}</td></tr>
+                        <tr><td style="color: #94a3b8; padding: 6px 0; font-size: 14px;">Email</td><td style="color: #e2e8f0; padding: 6px 0; font-size: 14px; text-align: right;">{email}</td></tr>
+                        <tr><td style="color: #94a3b8; padding: 6px 0; font-size: 14px;">Plan</td><td style="color: #06b6d4; padding: 6px 0; font-size: 14px; text-align: right;">{plan_name}</td></tr>
+                        <tr><td style="color: #94a3b8; padding: 6px 0; font-size: 14px;">Gateway</td><td style="color: #e2e8f0; padding: 6px 0; font-size: 14px; text-align: right;">{payment_gateway.title()}</td></tr>
+                    </table>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        params = {
+            "from": SENDER_EMAIL,
+            "to": [BCC_EMAIL or "support@codementee.com"],
+            "subject": f"💰 Ka-Ching! {currency_symbol}{amount:,} — {name} purchased {plan_name}",
+            "html": html_content
+        }
+        
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Purchase notification sent for {email}")
+        return result
+    except Exception as e:
+        logger.error(f"Failed to send purchase notification: {str(e)}")
         return None
 
 async def send_booking_request_email(mentor_name: str, mentor_email: str, mentee_name: str, company_name: str, slots: list):
@@ -3343,6 +3390,92 @@ async def login(credentials: UserLogin):
 @api_router.get("/auth/me")
 async def get_me(user=Depends(get_current_user)):
     return serialize_doc(dict(user))
+
+# ============ FORGOT / RESET PASSWORD ============
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
+
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://codementee.io')
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(data: ForgotPasswordRequest):
+    """Send password reset email"""
+    user = await db.users.find_one({"email": data.email})
+    # Always return success to prevent email enumeration
+    if not user:
+        return {"message": "If an account exists with this email, you'll receive a password reset link"}
+    
+    # Generate reset token (JWT with short expiry)
+    reset_token = jwt.encode(
+        {"sub": user["id"], "type": "reset", "exp": datetime.now(timezone.utc) + timedelta(hours=1)},
+        SECRET_KEY, algorithm="HS256"
+    )
+    
+    # Store token in DB
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"reset_token": reset_token, "reset_token_expires": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()}}
+    )
+    
+    # Send reset email
+    reset_link = f"{FRONTEND_URL}/reset-password?token={reset_token}"
+    try:
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <body style="margin: 0; padding: 40px; font-family: Arial, sans-serif; background-color: #0f172a;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #1e293b; border-radius: 16px; overflow: hidden;">
+                <div style="padding: 30px; text-align: center; border-bottom: 1px solid #334155;">
+                    <img src="{LOGO_URL}" alt="Codementee" style="height: 50px;" />
+                </div>
+                <div style="padding: 40px;">
+                    <h1 style="color: #06b6d4; margin: 0 0 20px 0; font-size: 24px;">Reset Your Password</h1>
+                    <p style="color: #e2e8f0; font-size: 16px;">Hi {user.get('name', 'there')},</p>
+                    <p style="color: #94a3b8; font-size: 14px; line-height: 1.6;">We received a request to reset your password. Click the button below to set a new password. This link expires in 1 hour.</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="{reset_link}" style="display: inline-block; background-color: #06b6d4; color: #0f172a; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px;">Reset Password</a>
+                    </div>
+                    <p style="color: #64748b; font-size: 12px;">If you didn't request this, you can safely ignore this email.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        params = {"from": SENDER_EMAIL, "to": [data.email], "subject": "Reset Your Password — Codementee", "html": html_content}
+        await asyncio.to_thread(resend.Emails.send, params)
+    except Exception as e:
+        logger.error(f"Failed to send reset email: {e}")
+    
+    return {"message": "If an account exists with this email, you'll receive a password reset link"}
+
+@api_router.post("/auth/reset-password")
+async def reset_password(data: ResetPasswordRequest):
+    """Reset password using token"""
+    try:
+        payload = jwt.decode(data.token, SECRET_KEY, algorithms=["HS256"])
+        if payload.get("type") != "reset":
+            raise HTTPException(status_code=400, detail="Invalid reset token")
+        user_id = payload["sub"]
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=400, detail="Reset link has expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=400, detail="Invalid reset token")
+    
+    user = await db.users.find_one({"id": user_id, "reset_token": data.token})
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or already used reset token")
+    
+    # Update password and clear token
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"password": hash_password(data.password)}, "$unset": {"reset_token": "", "reset_token_expires": ""}}
+    )
+    
+    return {"message": "Password reset successfully. You can now login with your new password."}
 
 # ============ ADMIN ROUTES ============
 
@@ -6846,6 +6979,13 @@ async def verify_payment(data: VerifyPaymentRequest):
                 amount=int(order["amount"] / 100)  # Convert paise to rupees
             ))
             
+            # Send purchase notification to admin
+            asyncio.create_task(send_purchase_notification_email(
+                name=order["name"], email=order["email"], plan_name=order["plan_name"],
+                amount=int(order["amount"] / 100), currency=order.get("currency", "INR"),
+                payment_gateway="razorpay"
+            ))
+            
             return {
                 "success": True,
                 "message": f"Payment successful! {additional_mocks} mock interview(s) added to your account.",
@@ -6983,6 +7123,13 @@ async def verify_payment(data: VerifyPaymentRequest):
             amount=int(order["amount"] / 100)  # Convert paise to rupees
         ))
         
+        # Send purchase notification to admin
+        asyncio.create_task(send_purchase_notification_email(
+            name=order["name"], email=order["email"], plan_name=order["plan_name"],
+            amount=int(order["amount"] / 100), currency=order.get("currency", "INR"),
+            payment_gateway="razorpay"
+        ))
+        
         return {
             "success": True,
             "message": "Payment successful! Your account has been upgraded.",
@@ -7113,7 +7260,15 @@ async def verify_payment(data: VerifyPaymentRequest):
             name=order["name"],
             email=order["email"],
             plan_name=order["plan_name"],
-            amount=int(order["amount"] / 100)  # Convert paise to rupees
+            amount=int(order["amount"] / 100),  # Convert paise to rupees
+            currency=order.get("currency", "INR")
+        ))
+        
+        # Send purchase notification to admin
+        asyncio.create_task(send_purchase_notification_email(
+            name=order["name"], email=order["email"], plan_name=order["plan_name"],
+            amount=int(order["amount"] / 100), currency=order.get("currency", "INR"),
+            payment_gateway="razorpay"
         ))
         
         return {
@@ -7180,13 +7335,40 @@ async def cashfree_webhook(request: Request):
             # Create or update user account (same logic as Razorpay)
             existing_user = await db.users.find_one({"email": order["email"]})
             
+            # Plan config lookup (matching Razorpay verify_payment flow)
+            plan_configs = {
+                "starter": {
+                    "interview_quota_total": 1,
+                    "plan_features": {
+                        "mock_interviews": 1, "resume_reviews": 1, "resume_review_type": "email",
+                        "offline_profile_creation": 0, "ai_tools_access": "limited",
+                        "community_access": False, "priority_support": False,
+                        "strategy_calls": 0, "referral_guidance": False
+                    }
+                },
+                "pro": {
+                    "interview_quota_total": 3,
+                    "plan_features": {
+                        "mock_interviews": 3, "resume_reviews": 1, "resume_review_type": "call",
+                        "offline_profile_creation": 0, "ai_tools_access": "full",
+                        "community_access": True, "priority_support": False,
+                        "strategy_calls": 1, "referral_guidance": False
+                    }
+                },
+                "elite": {
+                    "interview_quota_total": 6,
+                    "plan_features": {
+                        "mock_interviews": 6, "resume_reviews": 1, "resume_review_type": "call",
+                        "offline_profile_creation": 1, "ai_tools_access": "full",
+                        "community_access": True, "priority_support": True,
+                        "strategy_calls": 0, "referral_guidance": True
+                    }
+                }
+            }
+            plan_config = plan_configs.get(order["plan_id"], {"interview_quota_total": 3, "plan_features": {}})
+            
             if existing_user:
                 # Upgrade existing user
-                plan_config = {
-                    "interview_quota_total": 3,  # Default, adjust based on plan
-                    "plan_features": {}
-                }
-                
                 await db.users.update_one(
                     {"email": order["email"]},
                     {"$set": {
@@ -7195,6 +7377,7 @@ async def cashfree_webhook(request: Request):
                         "plan_name": order["plan_name"],
                         "interview_quota_total": plan_config["interview_quota_total"],
                         "interview_quota_remaining": plan_config["interview_quota_total"],
+                        "plan_features": plan_config["plan_features"],
                         "updated_at": datetime.now(timezone.utc).isoformat()
                     }}
                 )
@@ -7212,8 +7395,9 @@ async def cashfree_webhook(request: Request):
                     "mentor_id": None,
                     "current_role": order.get("current_role", ""),
                     "target_role": order.get("target_role", ""),
-                    "interview_quota_total": 3,
-                    "interview_quota_remaining": 3,
+                    "interview_quota_total": plan_config["interview_quota_total"],
+                    "interview_quota_remaining": plan_config["interview_quota_total"],
+                    "plan_features": plan_config["plan_features"],
                     "created_at": datetime.now(timezone.utc).isoformat()
                 }
                 await db.users.insert_one(user_doc)
@@ -7223,7 +7407,15 @@ async def cashfree_webhook(request: Request):
                 name=order["name"],
                 email=order["email"],
                 plan_name=order["plan_name"],
-                amount=int(order["amount"] / 100)  # Convert cents to dollars
+                amount=int(order["amount"] / 100),  # Convert cents to dollars
+                currency=order.get("currency", "USD")
+            ))
+            
+            # Send purchase notification to admin
+            asyncio.create_task(send_purchase_notification_email(
+                name=order["name"], email=order["email"], plan_name=order["plan_name"],
+                amount=int(order["amount"] / 100), currency=order.get("currency", "USD"),
+                payment_gateway="cashfree"
             ))
             
             return {"status": "success"}
@@ -7247,7 +7439,7 @@ async def cashfree_order_status(order_id: str):
         user = await db.users.find_one({"email": order["email"]})
         token = None
         if user:
-            token = create_access_token({"sub": user["email"], "role": user["role"]})
+            token = create_token(user["id"], user["role"])
         return {
             "status": "paid",
             "message": "Payment successful",
@@ -7316,7 +7508,7 @@ async def cashfree_order_status(order_id: str):
                             await db.users.insert_one(user_doc)
                         
                         user = await db.users.find_one({"email": order["email"]})
-                        token = create_access_token({"sub": user["email"], "role": user["role"]}) if user else None
+                        token = create_token(user["id"], user["role"]) if user else None
                         return {
                             "status": "paid",
                             "message": "Payment successful",
