@@ -28,7 +28,8 @@ const AdminPayments = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const totalRevenue = orders.filter(o => o.status === 'paid').reduce((sum, o) => sum + (o.amount || 0), 0) / 100;
+  const inrRevenue = orders.filter(o => o.status === 'paid' && o.currency !== 'USD').reduce((sum, o) => sum + (o.amount || 0), 0) / 100;
+  const usdRevenue = orders.filter(o => o.status === 'paid' && o.currency === 'USD').reduce((sum, o) => sum + (o.amount || 0), 0) / 100;
   const paidCount = orders.filter(o => o.status === 'paid').length;
   const pendingCount = orders.filter(o => o.status === 'pending').length;
 
@@ -38,7 +39,8 @@ const AdminPayments = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div className="bg-[#171717] rounded-xl border border-[#404040] p-6">
           <p className="text-gray-500 text-sm">Total Revenue</p>
-          <p className="text-3xl font-bold text-emerald-400 mt-1">₹{totalRevenue.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-emerald-400 mt-1">₹{inrRevenue.toLocaleString()}</p>
+          {usdRevenue > 0 && <p className="text-lg font-semibold text-emerald-300 mt-0.5">${usdRevenue.toLocaleString()}</p>}
         </div>
         <div className="bg-[#171717] rounded-xl border border-[#404040] p-6">
           <p className="text-gray-500 text-sm">Successful Payments</p>
@@ -105,7 +107,7 @@ const AdminPayments = () => {
                     <p className="text-gray-500 text-sm">{order.email}</p>
                   </td>
                   <td className="p-4 text-gray-400">{planNames[order.plan_id] || order.plan_id}</td>
-                  <td className="p-4 text-[#06b6d4] font-semibold">₹{((order.amount || 0) / 100).toLocaleString()}</td>
+                  <td className="p-4 text-[#06b6d4] font-semibold">{order.currency === 'USD' ? '$' : '₹'}{((order.amount || 0) / 100).toLocaleString()}</td>
                   <td className="p-4">
                     {order.status === 'paid' ? (
                       <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-emerald-500/20 text-emerald-400">
