@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Loader2, ArrowRight } from 'lucide-react';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
@@ -7,6 +7,7 @@ import api from '../utils/api';
 
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [status, setStatus] = useState('verifying'); // verifying | success | failed
   const [message, setMessage] = useState('Verifying your payment...');
   const orderId = searchParams.get('order_id');
@@ -31,6 +32,10 @@ const PaymentSuccess = () => {
         if (data.access_token) {
           localStorage.setItem('token', data.access_token);
         }
+        // Auto-redirect after 3 seconds
+        setTimeout(() => {
+          navigate('/mentee');
+        }, 3000);
       } else if (data.status === 'pending') {
         // Poll again after a delay (webhook may not have arrived yet)
         setMessage('Payment is being processed...');
