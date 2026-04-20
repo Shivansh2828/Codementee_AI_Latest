@@ -1,16 +1,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, ChevronRight, BookOpen, Zap, Users, ArrowRight, ArrowLeft, Lock, Crown } from 'lucide-react';
+import { Clock, ChevronRight, BookOpen, Zap, Users, ArrowRight, ArrowLeft, Lock, Crown, HelpCircle } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { SECTIONS, TOPICS, COURSE_META, getTopicAccess } from '../../data/systemDesignCourse';
+import { INTERVIEW_FAQ } from '../../data/courses/interviewFAQ';
 
 const difficultyColor = {
-  Beginner: 'text-green-400',
-  Intermediate: 'text-yellow-400',
-  Advanced: 'text-red-400',
+  Beginner: 'text-[var(--green)]',
+  Intermediate: 'text-[var(--yellow)]',
+  Advanced: 'text-[var(--red)]',
 };
 
 const sectionBorderColor = {
@@ -23,18 +24,18 @@ const sectionBorderColor = {
 };
 
 const sectionBadgeColor = {
-  cyan: 'bg-cyan-500/10 text-cyan-400',
-  blue: 'bg-blue-500/10 text-blue-400',
-  purple: 'bg-purple-500/10 text-purple-400',
-  green: 'bg-green-500/10 text-green-400',
-  orange: 'bg-orange-500/10 text-orange-400',
-  red: 'bg-red-500/10 text-red-400',
+  cyan: 'bg-[var(--cyan-bg)] text-[var(--cyan)]',
+  blue: 'bg-[var(--blue-bg)] text-[var(--blue)]',
+  purple: 'bg-[var(--purple-bg)] text-[var(--purple)]',
+  green: 'bg-[var(--green-bg)] text-[var(--green)]',
+  orange: 'bg-[var(--orange-bg)] text-[var(--orange)]',
+  red: 'bg-[var(--red-bg)] text-[var(--red)]',
 };
 
 const accessBadgeMap = {
   free: null,
-  pro: { label: 'Pro', color: 'bg-blue-500/20 text-blue-400' },
-  elite: { label: 'Elite', color: 'bg-purple-500/20 text-purple-400' },
+  pro: { label: 'Pro', color: 'bg-[var(--blue-bg)] text-[var(--blue)]' },
+  elite: { label: 'Elite', color: 'bg-[var(--purple-bg)] text-[var(--purple)]' },
 };
 
 const SystemDesignIndex = () => {
@@ -49,10 +50,15 @@ const SystemDesignIndex = () => {
         <div className="container max-w-5xl mx-auto px-4">
 
           {/* Back to Courses */}
-          <Link to="/learn" className={`inline-flex items-center gap-2 text-sm ${theme.text.muted} hover:text-[#06b6d4] transition-colors mb-8`}>
-            <ArrowLeft className="w-4 h-4" />
-            All Courses
-          </Link>
+          <div className="flex items-center gap-4 mb-8">
+            <Link to="/mentee" className={`inline-flex items-center gap-2 text-sm ${theme.text.muted} hover:text-[#06b6d4] transition-colors`}>
+              <ArrowLeft className="w-4 h-4" /> Dashboard
+            </Link>
+            <span className={`text-sm ${theme.text.muted}`}>/</span>
+            <Link to="/learn" className={`text-sm ${theme.text.muted} hover:text-[#06b6d4] transition-colors`}>
+              All Courses
+            </Link>
+          </div>
 
           {/* Hero */}
           <div className="text-center mb-14">
@@ -151,10 +157,10 @@ const SystemDesignIndex = () => {
                                 {topic.title}
                               </p>
                               {access === 'preview' && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-semibold shrink-0">Preview</span>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--yellow-bg)] text-[var(--yellow)] font-semibold shrink-0">Preview</span>
                               )}
                               {topic.comingSoon && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-500/20 text-gray-400 font-semibold shrink-0">Coming Soon</span>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-tertiary)] text-[var(--text-muted)] font-semibold shrink-0">Coming Soon</span>
                               )}
                             </div>
                             <div className="flex items-center gap-2 mt-1">
@@ -201,6 +207,27 @@ const SystemDesignIndex = () => {
           </div>
           )}
 
+        </div>
+
+        {/* Interview FAQ */}
+        <div className="container max-w-4xl mx-auto px-4 pb-20">
+          <div className="flex items-center gap-3 mb-8">
+            <HelpCircle className="w-6 h-6 text-[var(--accent)]" />
+            <h2 className={`text-2xl font-bold ${theme.text.primary}`}>Interview FAQ</h2>
+          </div>
+          <div className="space-y-3">
+            {INTERVIEW_FAQ.map((faq, i) => (
+              <details key={i} className={`group ${theme.bg.card} border ${theme.border.primary} rounded-xl overflow-hidden`}>
+                <summary className={`flex items-center justify-between px-5 py-4 cursor-pointer ${theme.text.primary} font-medium text-sm hover:bg-[var(--bg-secondary)] transition-colors list-none`}>
+                  <span>{faq.q}</span>
+                  <ChevronRight className="w-4 h-4 shrink-0 transition-transform group-open:rotate-90" />
+                </summary>
+                <div className={`px-5 pb-4 ${theme.text.secondary} text-sm leading-relaxed`}>
+                  {faq.a}
+                </div>
+              </details>
+            ))}
+          </div>
         </div>
       </main>
       <Footer />

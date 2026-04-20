@@ -36,6 +36,16 @@ export const sidebarConfig = {
   mentee: [
     { path: '/mentee', label: 'Dashboard', icon: 'LayoutDashboard', section: null },
     {
+      label: 'AI Tools',
+      icon: 'Bot',
+      section: 'ai-tools',
+      collapsible: true,
+      items: [
+        { path: '/mentee/job-search', label: 'AI Job Search', icon: 'Briefcase' },
+        { path: '/mentee/referral-finder', label: 'Referral Finder', icon: 'Target' },
+      ],
+    },
+    {
       label: 'Learn',
       icon: 'GraduationCap',
       section: 'learn',
@@ -57,6 +67,7 @@ export const sidebarConfig = {
         { path: '/mentee/feedbacks', label: 'My Feedbacks', icon: 'MessageSquare' },
         { path: '/mentee/resume-review', label: 'Resume Review', icon: 'FileText' },
         { path: '/mentee/mentorship', label: '1:1 Mentorship', icon: 'Users' },
+        { path: '/mentee/transactions', label: 'Transactions', icon: 'CreditCard' },
       ],
     },
     {
@@ -68,5 +79,6 @@ export const sidebarConfig = {
         { path: '/mentee/community', label: 'Forum', icon: 'MessageCircle' },
       ],
     },
+    { path: '/mentee/bug-reports', label: 'Support & Help', icon: 'Headphones', section: null },
   ],
 };
