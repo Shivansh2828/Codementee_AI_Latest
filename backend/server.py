@@ -849,6 +849,55 @@ async def send_purchase_notification_email(name: str, email: str, plan_name: str
         logger.error(f"Failed to send purchase notification: {str(e)}")
         return None
 
+async def send_signup_welcome_email(name: str, email: str):
+    """Send welcome email when a user signs up (free registration)"""
+    try:
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <body style="margin: 0; padding: 40px; font-family: Arial, sans-serif; background-color: #0f172a;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #1e293b; border-radius: 16px; overflow: hidden;">
+                <div style="padding: 30px; text-align: center; border-bottom: 1px solid #334155;">
+                    <img src="{LOGO_URL}" alt="Codementee" style="height: 50px;" />
+                </div>
+                <div style="padding: 40px;">
+                    <h1 style="color: #06b6d4; margin: 0 0 20px 0; font-size: 28px;">Welcome to Codementee! 👋</h1>
+                    <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6;">Hi <strong>{name}</strong>,</p>
+                    <p style="color: #94a3b8; font-size: 14px; line-height: 1.6;">Thanks for signing up! You now have access to explore the Codementee dashboard and see what we offer.</p>
+                    <h3 style="color: #e2e8f0; margin: 30px 0 16px 0; font-size: 18px;">Here's what you can do:</h3>
+                    <ul style="color: #94a3b8; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+                        <li>Explore the dashboard and AI tools</li>
+                        <li>Browse available mock interview slots</li>
+                        <li>Check out our mentorship and resume review services</li>
+                        <li>Upgrade anytime to unlock mock interviews with MAANG engineers</li>
+                    </ul>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="https://codementee.io/login" style="display: inline-block; background-color: #06b6d4; color: #0f172a; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px;">Go to Dashboard</a>
+                    </div>
+                    <p style="color: #94a3b8; font-size: 14px;">Questions? Reach out at <a href="mailto:support@codementee.com" style="color: #06b6d4; text-decoration: none;">support@codementee.com</a></p>
+                </div>
+                <div style="padding: 24px 40px; background-color: #0f172a; border-top: 1px solid #334155;">
+                    <p style="color: #64748b; font-size: 12px; margin: 0; text-align: center;">© 2025 Codementee. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        params = {
+            "from": SENDER_EMAIL,
+            "to": [email],
+            "subject": f"Welcome to Codementee, {name}! 👋",
+            "html": html_content
+        }
+        if BCC_EMAIL:
+            params["bcc"] = [BCC_EMAIL]
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Signup welcome email sent to {email}")
+        return result
+    except Exception as e:
+        logger.error(f"Failed to send signup welcome email to {email}: {str(e)}")
+        return None
+
 async def send_booking_request_email(mentor_name: str, mentor_email: str, mentee_name: str, company_name: str, slots: list):
     """Send email to mentor when mentee requests a booking"""
     try:
@@ -3294,6 +3343,9 @@ async def register_free_user(data: FreeUserCreate):
     }
     
     await db.users.insert_one(user_doc)
+    
+    # Send welcome email with BCC to support
+    asyncio.create_task(send_signup_welcome_email(data.name, data.email))
     
     # Generate token for auto-login
     token = create_token(user_doc["id"], user_doc["role"])
@@ -7471,7 +7523,7 @@ async def cashfree_order_status(order_id: str):
                 if resp.status_code == 200:
                     cf_data = resp.json()
                     if cf_data.get("order_status") == "PAID":
-                        # Process the payment (same as webhook)
+                        # Process the payment
                         await db.orders.update_one(
                             {"id": order_id},
                             {"$set": {
@@ -7479,25 +7531,52 @@ async def cashfree_order_status(order_id: str):
                                 "paid_at": datetime.now(timezone.utc).isoformat()
                             }}
                         )
+                        
+                        # Use proper plan configs (matching webhook flow)
+                        plan_configs = {
+                            "starter": {"interview_quota_total": 1, "plan_features": {
+                                "mock_interviews": 1, "resume_reviews": 1, "resume_review_type": "email",
+                                "offline_profile_creation": 0, "ai_tools_access": "limited",
+                                "community_access": False, "priority_support": False,
+                                "strategy_calls": 0, "referral_guidance": False
+                            }},
+                            "pro": {"interview_quota_total": 3, "plan_features": {
+                                "mock_interviews": 3, "resume_reviews": 1, "resume_review_type": "call",
+                                "offline_profile_creation": 0, "ai_tools_access": "full",
+                                "community_access": True, "priority_support": False,
+                                "strategy_calls": 1, "referral_guidance": False
+                            }},
+                            "elite": {"interview_quota_total": 6, "plan_features": {
+                                "mock_interviews": 6, "resume_reviews": 1, "resume_review_type": "call",
+                                "offline_profile_creation": 1, "ai_tools_access": "full",
+                                "community_access": True, "priority_support": True,
+                                "strategy_calls": 0, "referral_guidance": True
+                            }}
+                        }
+                        plan_config = plan_configs.get(order.get("plan_id", ""), {"interview_quota_total": 3, "plan_features": {}})
+                        
+                        # Create mentorship subscription if applicable
+                        if order.get("plan_id", "").startswith("mentorship_"):
+                            plan_info = await db.pricing_plans.find_one({"plan_id": order["plan_id"]})
+                            if plan_info:
+                                await create_mentorship_subscription(order, plan_info)
+                        
                         # Activate user
                         existing_user = await db.users.find_one({"email": order["email"]})
                         if existing_user:
-                            plan_info = await get_pricing_plan(order["plan_id"])
-                            quota = plan_info.get("limits", {}).get("mock_interviews", 3) if plan_info else 3
                             await db.users.update_one(
                                 {"email": order["email"]},
                                 {"$set": {
                                     "status": "Active",
                                     "plan_id": order["plan_id"],
                                     "plan_name": order.get("plan_name", ""),
-                                    "interview_quota_total": quota,
-                                    "interview_quota_remaining": quota,
+                                    "interview_quota_total": plan_config["interview_quota_total"],
+                                    "interview_quota_remaining": plan_config["interview_quota_total"],
+                                    "plan_features": plan_config["plan_features"],
                                     "updated_at": datetime.now(timezone.utc).isoformat()
                                 }}
                             )
                         else:
-                            plan_info = await get_pricing_plan(order["plan_id"])
-                            quota = plan_info.get("limits", {}).get("mock_interviews", 3) if plan_info else 3
                             user_doc = {
                                 "id": str(uuid.uuid4()),
                                 "name": order["name"],
@@ -7509,11 +7588,24 @@ async def cashfree_order_status(order_id: str):
                                 "plan_name": order.get("plan_name", ""),
                                 "current_role": order.get("current_role", ""),
                                 "target_role": order.get("target_role", ""),
-                                "interview_quota_total": quota,
-                                "interview_quota_remaining": quota,
+                                "interview_quota_total": plan_config["interview_quota_total"],
+                                "interview_quota_remaining": plan_config["interview_quota_total"],
+                                "plan_features": plan_config["plan_features"],
                                 "created_at": datetime.now(timezone.utc).isoformat()
                             }
                             await db.users.insert_one(user_doc)
+                        
+                        # Send emails
+                        asyncio.create_task(send_welcome_email(
+                            name=order["name"], email=order["email"],
+                            plan_name=order.get("plan_name", ""), amount=int(order["amount"] / 100),
+                            currency=order.get("currency", "USD")
+                        ))
+                        asyncio.create_task(send_purchase_notification_email(
+                            name=order["name"], email=order["email"],
+                            plan_name=order.get("plan_name", ""), amount=int(order["amount"] / 100),
+                            currency=order.get("currency", "USD"), payment_gateway="cashfree"
+                        ))
                         
                         user = await db.users.find_one({"email": order["email"]})
                         token = create_token(user["id"], user["role"]) if user else None
@@ -7522,8 +7614,26 @@ async def cashfree_order_status(order_id: str):
                             "message": "Payment successful",
                             "access_token": token
                         }
+                    elif cf_data.get("order_status") == "ACTIVE":
+                        # Still processing
+                        return {"status": "pending", "message": "Payment is being processed"}
+                    else:
+                        # Failed or expired
+                        cf_status = cf_data.get("order_status", "UNKNOWN")
+                        await db.orders.update_one(
+                            {"id": order_id},
+                            {"$set": {"status": "failed", "updated_at": datetime.now(timezone.utc).isoformat()}}
+                        )
+                        return {"status": "failed", "message": f"Payment {cf_status.lower()}. Please try again or contact support."}
+                else:
+                    logger.error(f"Cashfree API returned {resp.status_code}: {resp.text}")
+                    return {"status": "pending", "message": "Payment verification in progress. Please wait.", "cf_api_status": resp.status_code}
+        except ImportError:
+            logger.error("httpx not installed - cannot check Cashfree API directly")
+            return {"status": "pending", "message": "Payment is being processed. You will receive an email confirmation shortly."}
         except Exception as e:
-            logger.error(f"Cashfree status check error: {e}")
+            logger.error(f"Cashfree status check error: {e}", exc_info=True)
+            return {"status": "pending", "message": "Payment verification in progress. If you were charged, your account will be activated shortly."}
     
     return {"status": "pending", "message": "Payment is being processed"}
 
