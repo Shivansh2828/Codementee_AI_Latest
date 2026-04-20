@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useCurrency } from '../../contexts/CurrencyContext';
-import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus, DollarSign, FileText, MessageCircle, BarChart3, TrendingUp, ChevronDown, ChevronRight, Bug, Briefcase, Target, Crown, Headphones, Search, Lock, GraduationCap, Server, Code, Layers, Receipt } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus, DollarSign, FileText, MessageCircle, BarChart3, TrendingUp, ChevronDown, ChevronRight, Bug, Briefcase, Target, Crown, Headphones, Search, Lock, GraduationCap, Server, Code, Layers, Receipt, RefreshCw } from 'lucide-react';
 import ThemeToggle from '../ui/ThemeToggle';
 import { Badge } from '../ui/badge';
 import BugReportModal from '../BugReportModal';
@@ -20,7 +20,6 @@ const DashboardLayout = ({ children, title }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [bugReportOpen, setBugReportOpen] = useState(false);
-  const [starterPrice, setStarterPrice] = useState(null);
   const [expandedSections, setExpandedSections] = useState({ learn: true, coaching: true, community: true });
   const dropdownRef = useRef(null);
 
@@ -36,22 +35,6 @@ const DashboardLayout = ({ children, title }) => {
   const toggleSection = (section) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
-
-  // Fetch starter plan price
-  useEffect(() => {
-    const fetchStarterPrice = async () => {
-      try {
-        const response = await api.get(`/pricing-plans?currency=${currency}`);
-        const starter = response.data.find(plan => plan.plan_id === 'starter');
-        if (starter) {
-          setStarterPrice(starter.price);
-        }
-      } catch (error) {
-        console.error('Failed to fetch starter price:', error);
-      }
-    };
-    fetchStarterPrice();
-  }, [currency]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -531,21 +514,25 @@ const DashboardLayout = ({ children, title }) => {
                             </Link>
                           )}
                           
-                          {/* Out of Quota - Buy Single Mock */}
-                          {(user?.interview_quota_remaining === 0 && user?.plan_id) && (
-                            <Link 
-                              to="/mentee/book"
-                              onClick={() => setProfileDropdownOpen(false)}
-                              className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 hover:bg-green-500/20 ${theme.text.primary} transition-colors w-full mb-1`}
+                          
+                          {/* Account needs update - quota_total is 0 but user has a paid plan */}
+                          {(user?.interview_quota_total === 0 && user?.plan_id && !user?.plan_id.startsWith('agent_') && user?.status !== 'Free') && (
+                            <button
+                              onClick={async () => {
+                                setProfileDropdownOpen(false);
+                                try {
+                                  // Re-login to trigger quota migration on the backend
+                                  window.location.reload();
+                                } catch (e) {}
+                              }}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 hover:bg-yellow-500/20 ${theme.text.primary} transition-colors w-full mb-1`}
                             >
-                              <Calendar size={16} className="text-green-400" />
+                              <RefreshCw size={16} className="text-yellow-400" />
                               <div className="flex-1 text-left">
-                                <p className="text-sm font-medium">Buy Single Mock</p>
-                                <p className={`${theme.text.muted} text-xs`}>
-                                  {starterPrice ? `Starting from ${formatPrice(starterPrice)}` : 'Loading...'}
-                                </p>
+                                <p className="text-sm font-medium">Update Account</p>
+                                <p className={`${theme.text.muted} text-xs`}>Refresh to sync your plan details</p>
                               </div>
-                            </Link>
+                            </button>
                           )}
                         </>
                       )}
