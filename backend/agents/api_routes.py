@@ -67,6 +67,7 @@ class ResumeParseRequest(BaseModel):
 class JobSearchRequest(BaseModel):
     job_title: str
     location: str
+    experience_years: Optional[int] = None
     max_results: int = 50
 
 class ReferralSearchRequest(BaseModel):
@@ -318,13 +319,15 @@ async def search_jobs(
 
         user_profile = {
             "skills": all_skills,
-            "total_years": preferences.get("experience_years", 0),
+            "total_years": data.experience_years if data.experience_years is not None else preferences.get("experience_years", 0),
             "location": preferences.get("location", ""),
             "expected_salary": preferences.get("expected_salary", 0),
             "preferred_companies": preferences.get("preferred_companies", [])
         }
 
-        _logger.info(f"Searching jobs: title={data.job_title}, location={data.location}")
+        exp_years = user_profile["total_years"]
+
+        _logger.info(f"Searching jobs: title={data.job_title}, location={data.location}, exp={exp_years}y")
 
         jobs = await job_agent.search_jobs(
             user_profile=user_profile,
@@ -334,6 +337,18 @@ async def search_jobs(
         )
 
         _logger.info(f"Found {len(jobs)} jobs, now scoring...")
+
+        # Filter out jobs requiring significantly more experience than the user has
+        # Only apply if user explicitly set their experience (not 0/null)
+        if exp_years and exp_years > 0:
+            filtered = []
+            for job in jobs:
+                req_exp = job.get("required_experience", 0) or 0
+                # Allow jobs requiring up to 2 years more than user has (stretch roles)
+                if req_exp <= exp_years + 2:
+                    filtered.append(job)
+            _logger.info(f"Experience filter: {len(jobs)} → {len(filtered)} jobs (user has {exp_years}y)")
+            jobs = filtered
 
         # Batch score all jobs in a single AI call (much faster)
         scored_jobs = await job_agent.score_jobs_batch(jobs, user_profile)
@@ -364,6 +379,7 @@ async def search_jobs(
                     "reasoning": job.get("reasoning"),
                     "recommendation": job.get("recommendation"),
                     "source": job.get("source", ""),
+                    "required_experience": job.get("required_experience", 0),
                     "status": "found",
                     "created_at": datetime.now(timezone.utc).isoformat()
                 })
@@ -379,15 +395,23 @@ async def search_jobs(
 async def get_job_matches(
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
     limit: int = 20,
-    min_score: int = 60
+    min_score: int = 60,
+    max_experience: Optional[int] = None
 ):
     """Get user's saved job matches"""
     user = await _get_current_user(credentials)
     _check_agent_access(user)
 
-    matches = await _db.job_matches.find(
-        {"user_id": user["id"], "score": {"$gte": min_score}}
-    ).sort("created_at", -1).limit(limit).to_list(length=limit)
+    query = {"user_id": user["id"], "score": {"$gte": min_score}}
+    if max_experience is not None:
+        query["$or"] = [
+            {"required_experience": {"$lte": max_experience}},
+            {"required_experience": {"$exists": False}},
+            {"required_experience": None},
+            {"required_experience": 0},
+        ]
+
+    matches = await _db.job_matches.find(query).sort("created_at", -1).limit(limit).to_list(length=limit)
 
     for match in matches:
         if '_id' in match:

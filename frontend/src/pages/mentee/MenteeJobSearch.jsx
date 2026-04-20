@@ -142,6 +142,20 @@ export default function MenteeJobSearch() {
   const [resumeText, setResumeText] = useState('');
   const [uploadedFile, setUploadedFile] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null); // { message, onConfirm }
+  const [expFilter, setExpFilter] = useState('all'); // 'all', '0-1', '2-3', '4-5', '6+'
+
+  // Auto-set experience filter based on user preferences (only if explicitly set)
+  useEffect(() => {
+    if (preferences?.experience_years && parseInt(preferences.experience_years) > 0) {
+      const yrs = parseInt(preferences.experience_years);
+      if (yrs <= 1) setExpFilter('0-1');
+      else if (yrs <= 3) setExpFilter('2-3');
+      else if (yrs <= 5) setExpFilter('4-5');
+      else setExpFilter('6+');
+    } else {
+      setExpFilter('all');
+    }
+  }, [preferences]);
 
   useEffect(() => {
     loadPreferences();
@@ -243,6 +257,7 @@ export default function MenteeJobSearch() {
       const res = await api.post('/ai-agents/search-jobs', {
         job_title: preferences.job_title,
         location: preferences.location,
+        experience_years: parseInt(preferences.experience_years) || 0,
         max_results: 30
       });
       toast.success(`Found ${res.data.total_found || 0} jobs!`);
@@ -415,6 +430,7 @@ export default function MenteeJobSearch() {
       const res = await api.post('/ai-agents/search-jobs', {
         job_title: jobTitle,
         location: location,
+        experience_years: parseInt(formData.experience_years) || 0,
         max_results: 30
       });
       toast.success(`Found ${res.data.total_found || 0} jobs!`);
@@ -445,9 +461,29 @@ export default function MenteeJobSearch() {
     .filter(job => isApplied(job))
     .sort((a, b) => (b.score || 0) - (a.score || 0));
 
+  const filterByExp = (jobs) => {
+    if (expFilter === 'all') return jobs;
+    return jobs.filter(job => {
+      // Use stored required_experience, or guess from title
+      let req = job.required_experience || 0;
+      if (!req && job.title) {
+        const t = job.title.toLowerCase();
+        if (/\b(senior|sr\.?|lead|staff|principal)\b/.test(t)) req = 5;
+        else if (/\b(sde.?2|sde.?ii|mid|engineer ii)\b/.test(t)) req = 3;
+        else if (/\b(junior|jr\.?|intern|entry|fresher|new grad|sde.?1|sde.?i)\b/.test(t)) req = 0;
+        else req = 2; // default mid-level
+      }
+      if (expFilter === '0-1') return req <= 1;
+      if (expFilter === '2-3') return req >= 1 && req <= 3;
+      if (expFilter === '4-5') return req >= 3 && req <= 5;
+      if (expFilter === '6+') return req >= 5;
+      return true;
+    });
+  };
+
   const displayJobs = activeTab === 'applied'
     ? appliedJobsList
-    : jobMatches.filter(job => !isApplied(job)).sort((a, b) => (b.score || 0) - (a.score || 0));
+    : filterByExp(jobMatches.filter(job => !isApplied(job))).sort((a, b) => (b.score || 0) - (a.score || 0));
 
   if (!isElite) return <EliteGate />;
 
@@ -606,7 +642,7 @@ export default function MenteeJobSearch() {
             {/* Tab toggle */}
             {(jobMatches.length > 0 || appliedJobs.size > 0) && (
               <div className="mb-4">
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap items-center">
                   <button
                     onClick={() => { setActiveTab('jobs'); loadJobMatches(); }}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -615,7 +651,7 @@ export default function MenteeJobSearch() {
                         : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400'
                     }`}
                   >
-                    📬 Jobs For You ({jobMatches.filter(j => !isApplied(j)).length})
+                    📬 Jobs For You ({filterByExp(jobMatches.filter(j => !isApplied(j))).length})
                   </button>
                   <button
                     onClick={() => setActiveTab('applied')}
@@ -627,6 +663,21 @@ export default function MenteeJobSearch() {
                   >
                     ✅ Applied ({appliedJobs.size})
                   </button>
+
+                  {/* Experience filter */}
+                  {activeTab === 'jobs' && (
+                    <select
+                      value={expFilter}
+                      onChange={(e) => setExpFilter(e.target.value)}
+                      className="px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400 border-0 outline-none cursor-pointer"
+                    >
+                      <option value="all">All Experience</option>
+                      <option value="0-1">Fresher / 0-1 yrs</option>
+                      <option value="2-3">2-3 yrs</option>
+                      <option value="4-5">4-5 yrs</option>
+                      <option value="6+">6+ yrs (Senior)</option>
+                    </select>
+                  )}
                 </div>
                 {activeTab === 'jobs' && (
                   <p className="text-xs text-gray-500 dark:text-slate-400 mt-2">

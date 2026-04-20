@@ -110,12 +110,28 @@ Return JSON: {"skills":["list"],"total_years":number,"current_role":"string",
         all_jobs = []
         loop = asyncio.get_running_loop()
 
+        # Build experience-aware search query
+        exp_years = user_profile.get("total_years", 0) or 0
+        exp_suffix = ""
+        if exp_years > 0:
+            if exp_years <= 1:
+                exp_suffix = "entry level junior fresher"
+            elif exp_years <= 3:
+                exp_suffix = ""  # default mid-level, no modifier needed
+            elif exp_years <= 6:
+                exp_suffix = "senior"
+            else:
+                exp_suffix = "senior lead staff"
+        # If exp_years is 0 or not set, don't add any level modifier — show all levels
+
+        search_title = f"{job_title} {exp_suffix}".strip() if exp_suffix else job_title
+
         # 1) SerpAPI — real Google Jobs results (primary source), paginated
         serp_jobs = await loop.run_in_executor(
-            None, self._search_serpapi, job_title, location, min(max_results, 30)
+            None, self._search_serpapi, search_title, location, min(max_results, 30)
         )
         all_jobs.extend(serp_jobs)
-        logger.info(f"SerpAPI returned {len(serp_jobs)} real jobs")
+        logger.info(f"SerpAPI returned {len(serp_jobs)} real jobs for '{search_title}'")
 
         # 2) Supplement with free APIs
         scraped = await asyncio.gather(
@@ -384,6 +400,14 @@ Location: {location}
 Candidate skills: {', '.join(profile.get('skills', [])[:10])}
 Experience: {profile.get('total_years', 0)} years
 Expected salary: {profile.get('expected_salary', 'Not specified')}
+
+CRITICAL: The candidate has {profile.get('total_years', 0)} years of experience.
+- Only generate jobs that require {profile.get('total_years', 0)} years or LESS experience.
+- If candidate has 0-1 years: generate entry-level, fresher, junior, intern, SDE-1 roles ONLY.
+- If candidate has 2-4 years: generate mid-level, SDE-1, SDE-2 roles. No senior/lead roles.
+- If candidate has 5-8 years: generate senior, SDE-2, SDE-3 roles. Can include some lead roles.
+- If candidate has 8+ years: generate senior, lead, staff, principal roles.
+- NEVER generate jobs requiring more experience than the candidate has.
 
 Every single job MUST be located in {location} or be Remote. No exceptions."""
 
