@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Clock, ChevronRight, BookOpen, Lightbulb, AlertTriangle, Info, Menu, X, CheckCircle, XCircle, Code2, Layers, Zap, Lock, Crown } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Clock, ChevronRight, ChevronDown, BookOpen, Lightbulb, AlertTriangle, Info, Menu, X, CheckCircle, XCircle, Code2, Layers, Zap, Lock, Crown } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -757,6 +757,23 @@ const SystemDesignLesson = () => {
   const currentIndex = allSlugs.indexOf(slug);
   const access = getTopicAccess(slug, user);
 
+  // Track which sidebar sections are expanded — auto-expand the section containing the current topic
+  const currentSectionId = SECTIONS.find(s => s.topics.includes(slug))?.id;
+  const [expandedSections, setExpandedSections] = useState(() => {
+    return currentSectionId ? { [currentSectionId]: true } : {};
+  });
+
+  const toggleSection = (sectionId) => {
+    setExpandedSections(prev => ({ ...prev, [sectionId]: !prev[sectionId] }));
+  };
+
+  // Auto-expand the section when navigating to a new topic
+  useEffect(() => {
+    if (currentSectionId) {
+      setExpandedSections(prev => ({ ...prev, [currentSectionId]: true }));
+    }
+  }, [currentSectionId]);
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [slug]);
@@ -772,33 +789,32 @@ const SystemDesignLesson = () => {
     );
   }
 
-  // Locked — show upgrade prompt
+  // Locked — show login prompt
   if (access === 'locked') {
     return (
       <div className={`min-h-screen ${theme.bg.primary}`}>
         <Header />
         <div className="pt-24 pb-20 flex items-center justify-center">
           <div className="max-w-md mx-auto text-center px-4">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-amber-500/10 flex items-center justify-center">
-              <Lock className="w-10 h-10 text-amber-500" />
+            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-[#06b6d4]/10 flex items-center justify-center">
+              <Lock className="w-10 h-10 text-[#06b6d4]" />
             </div>
             <h1 className={`text-2xl font-bold ${theme.text.primary} mb-3`}>{topic.title}</h1>
             <p className={`${theme.text.secondary} mb-6`}>
-              This lesson requires a paid plan. Upgrade to unlock all system design content.
+              Sign in to access all System Design content for free.
             </p>
             <div className="space-y-3">
               <Link
-                to="/apply"
-                className="block w-full px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all text-center"
+                to="/login"
+                className="block w-full px-6 py-3 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-semibold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all text-center"
               >
-                <Crown className="w-4 h-4 inline mr-2" />
-                Get Elite — Full Access
+                Sign In
               </Link>
               <Link
-                to="/apply"
-                className={`block w-full px-6 py-3 ${theme.bg.card} ${theme.border.primary} border rounded-xl ${theme.text.primary} font-medium text-center hover:border-blue-500/50 transition-all`}
+                to="/register"
+                className={`block w-full px-6 py-3 ${theme.bg.card} ${theme.border.primary} border rounded-xl ${theme.text.primary} font-medium text-center hover:border-[#06b6d4]/50 transition-all`}
               >
-                Get Pro — Partial Access
+                Create Account
               </Link>
               <Link
                 to="/learn/system-design"
@@ -827,43 +843,38 @@ const SystemDesignLesson = () => {
               System Design
             </Link>
           </div>
-          <nav className="p-3 space-y-4">
-            {SECTIONS.map((section) => (
-              <div key={section.id}>
-                <div className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider ${theme.text.muted} flex items-center gap-1.5`}>
-                  <span>{section.title}</span>
-                </div>
-                {section.topics.map((topicSlug) => {
-                  const t = TOPICS[topicSlug];
-                  if (!t) return null;
-                  const topicAccess = getTopicAccess(topicSlug, user);
-                  const isTopicLocked = topicAccess === 'locked';
-                  if (isTopicLocked) {
+          <nav className="p-3 space-y-1">
+            {SECTIONS.map((section) => {
+              const isExpanded = expandedSections[section.id];
+              return (
+                <div key={section.id}>
+                  <button
+                    onClick={() => toggleSection(section.id)}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider ${theme.text.muted} hover:text-[#06b6d4] transition-colors rounded-lg ${theme.bg.hover}`}
+                  >
+                    <span className="truncate">{section.title}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`} />
+                  </button>
+                  {isExpanded && section.topics.map((topicSlug) => {
+                    const t = TOPICS[topicSlug];
+                    if (!t) return null;
                     return (
-                      <div key={topicSlug} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${theme.text.muted} cursor-not-allowed`}>
-                        
+                      <Link
+                        key={topicSlug}
+                        to={`/learn/system-design/${topicSlug}`}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
+                          topicSlug === slug
+                            ? 'bg-[#06b6d4]/20 text-[#06b6d4] font-medium'
+                            : `${theme.text.secondary} ${theme.bg.hover}`
+                        }`}
+                      >
                         <span className="truncate">{t.title}</span>
-                        <Lock className="w-3 h-3 ml-auto shrink-0" />
-                      </div>
+                      </Link>
                     );
-                  }
-                  return (
-                    <Link
-                      key={topicSlug}
-                      to={`/learn/system-design/${topicSlug}`}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
-                        topicSlug === slug
-                          ? 'bg-[#06b6d4]/20 text-[#06b6d4] font-medium'
-                          : `${theme.text.secondary} ${theme.bg.hover}`
-                      }`}
-                    >
-                      
-                      <span className="truncate">{t.title}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            ))}
+                  })}
+                </div>
+              );
+            })}
           </nav>
         </aside>
 
@@ -875,41 +886,37 @@ const SystemDesignLesson = () => {
                 <Link to="/learn/system-design" className={`text-sm ${theme.text.muted}`}>System Design</Link>
                 <button onClick={() => setSidebarOpen(false)}><X className={`w-5 h-5 ${theme.text.secondary}`} /></button>
               </div>
-              <nav className="p-3 space-y-4">
-                {SECTIONS.map((section) => (
-                  <div key={section.id}>
-                    <div className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider ${theme.text.muted} flex items-center gap-1.5`}>
-                      <span>{section.title}</span>
-                    </div>
-                    {section.topics.map((topicSlug) => {
-                      const t = TOPICS[topicSlug];
-                      if (!t) return null;
-                      const topicAccess = getTopicAccess(topicSlug, user);
-                      if (topicAccess === 'locked') {
+              <nav className="p-3 space-y-1">
+                {SECTIONS.map((section) => {
+                  const isExpanded = expandedSections[section.id];
+                  return (
+                    <div key={section.id}>
+                      <button
+                        onClick={() => toggleSection(section.id)}
+                        className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider ${theme.text.muted} hover:text-[#06b6d4] transition-colors rounded-lg ${theme.bg.hover}`}
+                      >
+                        <span className="truncate">{section.title}</span>
+                        <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`} />
+                      </button>
+                      {isExpanded && section.topics.map((topicSlug) => {
+                        const t = TOPICS[topicSlug];
+                        if (!t) return null;
                         return (
-                          <div key={topicSlug} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${theme.text.muted} cursor-not-allowed`}>
-                            
+                          <Link
+                            key={topicSlug}
+                            to={`/learn/system-design/${topicSlug}`}
+                            onClick={() => setSidebarOpen(false)}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
+                              topicSlug === slug ? 'bg-[#06b6d4]/20 text-[#06b6d4] font-medium' : `${theme.text.secondary} ${theme.bg.hover}`
+                            }`}
+                          >
                             <span className="truncate">{t.title}</span>
-                            <Lock className="w-3 h-3 ml-auto shrink-0" />
-                          </div>
+                          </Link>
                         );
-                      }
-                      return (
-                        <Link
-                          key={topicSlug}
-                          to={`/learn/system-design/${topicSlug}`}
-                          onClick={() => setSidebarOpen(false)}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
-                            topicSlug === slug ? 'bg-[#06b6d4]/20 text-[#06b6d4] font-medium' : `${theme.text.secondary} ${theme.bg.hover}`
-                          }`}
-                        >
-                          
-                          <span className="truncate">{t.title}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                ))}
+                      })}
+                    </div>
+                  );
+                })}
               </nav>
             </div>
             <div className="flex-1 bg-black/50" onClick={() => setSidebarOpen(false)} />
@@ -965,25 +972,6 @@ const SystemDesignLesson = () => {
             ))}
 
             {/* Preview upgrade banner */}
-            {access === 'preview' && (
-              <div className="mt-10 p-6 rounded-2xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 text-center">
-                <Crown className="w-8 h-8 text-amber-500 mx-auto mb-3" />
-                <h3 className={`text-lg font-bold ${theme.text.primary} mb-2`}>You're viewing a free preview</h3>
-                <p className={`${theme.text.secondary} text-sm mb-4 max-w-md mx-auto`}>
-                  Upgrade to unlock all topics, question breakdowns, patterns, and technologies.
-                </p>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <Link to="/apply" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all">
-                    <Crown className="w-4 h-4" />
-                    Get Elite — Full Access
-                  </Link>
-                  <Link to="/apply" className={`inline-flex items-center gap-2 px-6 py-3 ${theme.bg.card} ${theme.border.primary} border rounded-xl ${theme.text.primary} font-medium hover:border-blue-500/50 transition-all`}>
-                    Get Pro — Partial Access
-                  </Link>
-                </div>
-              </div>
-            )}
-
             {/* Navigation */}
             <div className={`flex items-center justify-between mt-14 pt-8 border-t ${theme.border.primary}`}>
               {prev ? (
