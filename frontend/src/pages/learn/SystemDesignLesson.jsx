@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Clock, ChevronRight, ChevronDown, BookOpen, Lightbulb, AlertTriangle, Info, Menu, X, CheckCircle, XCircle, Code2, Layers, Zap, Lock, Crown } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Clock, ChevronRight, ChevronDown, BookOpen, Lightbulb, AlertTriangle, Info, Menu, X, CheckCircle, XCircle, Code2, Layers, Zap, Lock, Crown, Calendar } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -971,7 +971,38 @@ const SystemDesignLesson = () => {
               <Section key={i} section={section} theme={theme} />
             ))}
 
-            {/* Preview upgrade banner */}
+            {/* Mock Interview CTA — show after design questions and advanced topics */}
+            {(slug.startsWith('design-') || slug.startsWith('advanced-')) && (
+              <div className={`mt-10 mb-4 p-6 md:p-8 rounded-2xl bg-gradient-to-r from-[#06b6d4]/10 to-[#8b5cf6]/10 border border-[#06b6d4]/30 text-center`}>
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <Calendar className="w-6 h-6 text-[#06b6d4]" />
+                  <Zap className="w-5 h-5 text-[#8b5cf6]" />
+                </div>
+                <h3 className={`text-lg md:text-xl font-bold ${theme.text.primary} mb-2`}>
+                  Ready to experience a real interview?
+                </h3>
+                <p className={`${theme.text.secondary} text-sm mb-5 max-w-md mx-auto`}>
+                  Practice this design question with a MAANG engineer in a live mock interview. Get detailed feedback on your approach, communication, and areas to improve.
+                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <Link
+                    to="/mock-interviews"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-semibold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all duration-200 shadow-lg"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    Book a Mock Interview
+                  </Link>
+                  <Link
+                    to="/mentorship"
+                    className={`inline-flex items-center gap-2 px-6 py-3 ${theme.bg.card} border ${theme.border.primary} rounded-xl ${theme.text.primary} font-medium hover:border-[#06b6d4]/50 transition-all duration-200`}
+                  >
+                    Explore 1:1 Mentorship
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              </div>
+            )}
+
             {/* Navigation */}
             <div className={`flex items-center justify-between mt-14 pt-8 border-t ${theme.border.primary}`}>
               {prev ? (

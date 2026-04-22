@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, ChevronRight, BookOpen, Zap, Users, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Clock, ChevronRight, BookOpen, Zap, Users, ArrowRight, ArrowLeft, MapPin } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -70,6 +70,7 @@ const DevOpsIndex = () => {
             <div className="flex flex-wrap items-center justify-center gap-6 text-sm mb-8">
               {[
                 { icon: BookOpen, text: `${DEVOPS_META.totalTopics} topics` },
+                { icon: MapPin, text: '30-Day Roadmap included' },
                 { icon: Clock, text: 'Self-paced' },
                 { icon: Users, text: 'Free with login' },
               ].map((item, i) => (
