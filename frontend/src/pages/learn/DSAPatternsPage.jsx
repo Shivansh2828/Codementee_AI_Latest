@@ -194,7 +194,7 @@ const DSAPatternsPage = () => {
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--green-bg)] border border-[var(--green-border)] mb-6">
               <Zap className="w-4 h-4 text-[var(--green)]" />
-              <span className="text-sm font-semibold text-[var(--green)]">100% Free — Track Your Progress</span>
+              <span className="text-sm font-semibold text-[var(--green)]">Free with login — Track Your Progress</span>
             </div>
             <h1 className={`text-4xl md:text-5xl font-bold ${theme.text.primary} mb-4`}>{DSA_META.title}</h1>
             <p className={`text-lg ${theme.text.secondary} max-w-2xl mx-auto mb-6`}>{DSA_META.subtitle}</p>
@@ -203,6 +203,24 @@ const DSAPatternsPage = () => {
               <div className={`flex items-center gap-2 ${theme.text.muted}`}><CheckCircle className="w-4 h-4 text-[var(--green)]" /><span>{totalCompleted}/{totalProblems} solved</span></div>
             </div>
           </div>
+
+          {/* Login gate — content only for authenticated users */}
+          {!isAuthenticated ? (
+          <div className={`mt-10 p-8 rounded-2xl ${theme.bg.card} border-2 border-[#06b6d4]/20 text-center`}>
+            <Zap className="w-8 h-8 text-[#06b6d4] mx-auto mb-3" />
+            <h3 className={`text-xl font-bold ${theme.text.primary} mb-2`}>Sign in to access DSA patterns</h3>
+            <p className={`${theme.text.secondary} mb-6 text-sm max-w-lg mx-auto`}>All DSA content is free for logged-in users. Create an account or sign in to get full access and track your progress.</p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link to="/login" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-semibold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all duration-200">
+                Sign In <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link to="/register" className={`inline-flex items-center gap-2 px-6 py-3 ${theme.button.secondary} rounded-xl transition-all duration-200`}>
+                Create Account <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+          ) : (
+          <>
 
           {/* Overall Progress Bar */}
           <div className={`${theme.bg.card} ${theme.border.primary} border rounded-2xl p-5 mb-6`}>
@@ -291,6 +309,8 @@ const DSAPatternsPage = () => {
               Book a Mock Interview <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
+          </>
+          )}
         </div>
       </main>
       <Footer />

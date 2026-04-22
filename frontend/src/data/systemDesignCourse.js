@@ -1169,42 +1169,9 @@ export const getSectionForTopic = (slug) =>
  * Returns: 'full' | 'locked' | 'preview'
  */
 export const getTopicAccess = (slug, user) => {
-  const section = getSectionForTopic(slug);
-  if (!section) return 'full';
-
-  const planId = user?.plan_id || null;
-  const role = user?.role || null;
-
-  // Admins and mentors always get full access
-  if (role === 'admin' || role === 'mentor') return 'full';
-
-  // Elite plan or elite plan_id → full access to everything
-  if (planId === 'elite') return 'full';
-
-  // Free section — always accessible
-  if (section.access === 'free') return 'full';
-
-  // Check if this specific topic is in the free preview list
-  const isFreePreview = section.freeTopics?.includes(slug);
-  if (isFreePreview && !planId) return 'preview'; // show content but with upgrade CTA at bottom
-
-  // Pro plan gets pro-level access
-  if (planId === 'pro' || planId === 'starter') {
-    if (section.access === 'pro') return 'full';
-    if (section.access === 'elite') {
-      // Pro gets proTopics for elite sections
-      if (section.proTopics?.includes(slug)) return 'full';
-      return 'locked';
-    }
-  }
-
-  // No plan or agent plan — only free previews
-  if (!planId || planId?.startsWith('agent_')) {
-    if (isFreePreview) return 'preview';
-    return 'locked';
-  }
-
-  return 'locked';
+  // Free for all logged-in users, locked for anonymous visitors
+  if (!user) return 'locked';
+  return 'full';
 };
 
 export const getNextTopic = (slug) => {

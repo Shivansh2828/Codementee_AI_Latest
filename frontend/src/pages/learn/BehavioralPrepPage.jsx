@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight, BookOpen, Clock, Zap, ArrowRight, ArrowLeft,
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { BEHAVIORAL_CATEGORIES, BEHAVIORAL_META, STAR_FRAMEWORK } from '../../data/behavioralQuestions';
 
 const colorMap = {
@@ -99,6 +100,7 @@ const CategoryCard = ({ category, theme, forceOpen = false }) => {
 
 const BehavioralPrepPage = () => {
   const { theme } = useTheme();
+  const { user } = useAuth();
   const [expandAll, setExpandAll] = useState(false);
 
   return (
@@ -121,7 +123,7 @@ const BehavioralPrepPage = () => {
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--green-bg)] border border-[var(--green-border)] mb-6">
               <Zap className="w-4 h-4 text-[var(--green)]" />
-              <span className="text-sm font-semibold text-[var(--green)]">100% Free — No Login Required</span>
+              <span className="text-sm font-semibold text-[var(--green)]">Free for all logged-in users</span>
             </div>
             <h1 className={`text-4xl md:text-5xl font-bold ${theme.text.primary} mb-4`}>{BEHAVIORAL_META.title}</h1>
             <p className={`text-lg ${theme.text.secondary} max-w-2xl mx-auto mb-6`}>{BEHAVIORAL_META.subtitle}</p>
@@ -140,6 +142,24 @@ const BehavioralPrepPage = () => {
               </div>
             </div>
           </div>
+
+          {/* Login gate — content only for authenticated users */}
+          {!user ? (
+          <div className={`mt-10 p-8 rounded-2xl ${theme.bg.card} border-2 border-[#06b6d4]/20 text-center`}>
+            <Zap className="w-8 h-8 text-[#06b6d4] mx-auto mb-3" />
+            <h3 className={`text-xl font-bold ${theme.text.primary} mb-2`}>Sign in to access behavioral prep</h3>
+            <p className={`${theme.text.secondary} mb-6 text-sm max-w-lg mx-auto`}>All behavioral interview content is free for logged-in users. Create an account or sign in to get full access.</p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link to="/login" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-semibold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all duration-200">
+                Sign In <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link to="/register" className={`inline-flex items-center gap-2 px-6 py-3 ${theme.button.secondary} rounded-xl transition-all duration-200`}>
+                Create Account <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+          ) : (
+          <>
 
           {/* STAR Framework */}
           <div className={`${theme.bg.card} ${theme.border.primary} border rounded-2xl p-6 md:p-8 mb-10`}>
@@ -196,6 +216,8 @@ const BehavioralPrepPage = () => {
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
+          </>
+          )}
 
         </div>
       </main>

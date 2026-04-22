@@ -16,6 +16,7 @@ export const topNavConfig = [
       { label: 'System Design', href: '/learn/system-design', icon: 'Server' },
       { label: 'DSA Patterns', href: '/learn/dsa-patterns', icon: 'Code' },
       { label: 'Behavioral', href: '/learn/behavioral', icon: 'MessageSquare' },
+      { label: 'DevOps', href: '/learn/devops', icon: 'Terminal' },
     ],
   },
   {
@@ -54,6 +55,7 @@ export const sidebarConfig = {
         { path: '/learn/system-design', label: 'System Design', icon: 'Server' },
         { path: '/learn/dsa-patterns', label: 'DSA Patterns', icon: 'Code' },
         { path: '/learn/behavioral', label: 'Behavioral', icon: 'MessageSquare' },
+        { path: '/learn/devops', label: 'DevOps', icon: 'Terminal' },
       ],
     },
     {
