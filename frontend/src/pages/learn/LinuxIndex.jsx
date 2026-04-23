@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, ChevronRight, BookOpen, Zap, Users, ArrowRight, ArrowLeft, MapPin } from 'lucide-react';
+import { Clock, ChevronRight, BookOpen, Zap, Users, ArrowRight, ArrowLeft, MapPin, Terminal } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -93,6 +93,13 @@ const LinuxIndex = () => {
             >
               Start Learning
               <ArrowRight className="w-5 h-5" />
+            </Link>
+            <Link
+              to="/learn/linux/playground"
+              className={`inline-flex items-center gap-2 px-6 py-4 ${theme.bg.card} border-2 border-[#06b6d4]/30 ${theme.text.primary} font-bold rounded-xl hover:border-[#06b6d4] transition-all duration-300 text-lg ml-3`}
+            >
+              <Terminal className="w-5 h-5 text-[#06b6d4]" />
+              Playground
             </Link>
           </div>
 

@@ -41,6 +41,7 @@ const DevOpsIndex = lazy(() => import("./pages/learn/DevOpsIndex"));
 const DevOpsLesson = lazy(() => import("./pages/learn/DevOpsLesson"));
 const LinuxIndex = lazy(() => import("./pages/learn/LinuxIndex"));
 const LinuxLesson = lazy(() => import("./pages/learn/LinuxLesson"));
+const LinuxPlayground = lazy(() => import("./pages/learn/LinuxPlayground"));
 const DSAPatternsPage = lazy(() => import("./pages/learn/DSAPatternsPage"));
 const CoursesLandingPage = lazy(() => import("./pages/learn/CoursesLandingPage"));
 const BehavioralPrepPage = lazy(() => import("./pages/learn/BehavioralPrepPage"));
@@ -142,6 +143,7 @@ function App() {
             <Route path="/learn/devops" element={<DevOpsIndex />} />
             <Route path="/learn/devops/:slug" element={<DevOpsLesson />} />
             <Route path="/learn/linux" element={<LinuxIndex />} />
+            <Route path="/learn/linux/playground" element={<LinuxPlayground />} />
             <Route path="/learn/linux/:slug" element={<LinuxLesson />} />
             <Route path="/confirmation" element={<ConfirmationPage />} />
             <Route path="/login" element={<LoginPage />} />
