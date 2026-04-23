@@ -10,9 +10,16 @@ import { INTERVIEW_FAQ } from '../../data/courses/interviewFAQ';
 
 const difficultyColor = {
   Beginner: 'text-[var(--green)]',
+  Easy: 'text-[var(--green)]',
   Intermediate: 'text-[var(--yellow)]',
+  Medium: 'text-[var(--yellow)]',
   Advanced: 'text-[var(--red)]',
+  Hard: 'text-[var(--red)]',
 };
+
+const difficultyOrder = { Beginner: 0, Easy: 0, Intermediate: 1, Medium: 1, Advanced: 2, Hard: 2 };
+const sortByDifficulty = (slugs, topics) =>
+  [...slugs].sort((a, b) => (difficultyOrder[topics[a]?.difficulty] ?? 1) - (difficultyOrder[topics[b]?.difficulty] ?? 1));
 
 const sectionBorderColor = {
   cyan: 'border-cyan-500/30 hover:border-cyan-500/60',
@@ -122,7 +129,7 @@ const SystemDesignIndex = () => {
 
                 {/* Topics grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {section.topics.map((slug) => {
+                  {sortByDifficulty(section.topics, TOPICS).map((slug) => {
                     const topic = TOPICS[slug];
                     if (!topic) return null;
                     return (

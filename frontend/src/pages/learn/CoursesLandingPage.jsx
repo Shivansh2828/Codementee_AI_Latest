@@ -14,7 +14,7 @@ const COURSES = [
     path: '/learn/system-design',
     topics: '50+',
     duration: '~20 hours',
-    difficulty: 'Intermediate — Advanced',
+    difficulty: 'Beginner — Advanced',
     access: 'Free with login',
     tags: ['Distributed Systems', 'Databases', 'Caching', 'Load Balancing', 'Interview Questions'],
     color: 'cyan',

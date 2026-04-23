@@ -397,8 +397,8 @@ const DevOpsLesson = () => {
               <div className="flex items-center gap-3 mb-3">
                 <div className="flex items-center gap-2">
                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                    topic.difficulty === 'Beginner' ? 'bg-green-500/20 text-green-400' :
-                    topic.difficulty === 'Intermediate' ? 'bg-yellow-500/20 text-yellow-400' :
+                    (topic.difficulty === 'Beginner' || topic.difficulty === 'Easy') ? 'bg-green-500/20 text-green-400' :
+                    (topic.difficulty === 'Intermediate' || topic.difficulty === 'Medium') ? 'bg-yellow-500/20 text-yellow-400' :
                     'bg-red-500/20 text-red-400'
                   }`}>{topic.difficulty}</span>
                   <span className={`flex items-center gap-1 text-xs ${theme.text.muted}`}>
