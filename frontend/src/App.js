@@ -39,6 +39,8 @@ const SystemDesignIndex = lazy(() => import("./pages/learn/SystemDesignIndex"));
 const SystemDesignLesson = lazy(() => import("./pages/learn/SystemDesignLesson"));
 const DevOpsIndex = lazy(() => import("./pages/learn/DevOpsIndex"));
 const DevOpsLesson = lazy(() => import("./pages/learn/DevOpsLesson"));
+const LinuxIndex = lazy(() => import("./pages/learn/LinuxIndex"));
+const LinuxLesson = lazy(() => import("./pages/learn/LinuxLesson"));
 const DSAPatternsPage = lazy(() => import("./pages/learn/DSAPatternsPage"));
 const CoursesLandingPage = lazy(() => import("./pages/learn/CoursesLandingPage"));
 const BehavioralPrepPage = lazy(() => import("./pages/learn/BehavioralPrepPage"));
@@ -139,6 +141,8 @@ function App() {
             <Route path="/learn/behavioral" element={<BehavioralPrepPage />} />
             <Route path="/learn/devops" element={<DevOpsIndex />} />
             <Route path="/learn/devops/:slug" element={<DevOpsLesson />} />
+            <Route path="/learn/linux" element={<LinuxIndex />} />
+            <Route path="/learn/linux/:slug" element={<LinuxLesson />} />
             <Route path="/confirmation" element={<ConfirmationPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
