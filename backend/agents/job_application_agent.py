@@ -42,23 +42,35 @@ class JobApplicationAgent:
     def _ask_llm(self, system: str, user: str, json_mode: bool = False) -> str:
         if not self.llm:
             return ""
-        try:
-            kwargs = {
-                "model": GROQ_MODEL,
-                "messages": [
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user}
-                ],
-                "temperature": 0.4,
-                "max_tokens": 3000,
-            }
-            if json_mode:
-                kwargs["response_format"] = {"type": "json_object"}
-            resp = self.llm.chat.completions.create(**kwargs)
-            return resp.choices[0].message.content.strip()
-        except Exception as e:
-            logger.error(f"Groq LLM error: {e}")
-            return ""
+        import time
+        for attempt in range(3):
+            try:
+                kwargs = {
+                    "model": GROQ_MODEL,
+                    "messages": [
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": user}
+                    ],
+                    "temperature": 0.4,
+                    "max_tokens": 3000,
+                }
+                if json_mode:
+                    kwargs["response_format"] = {"type": "json_object"}
+                resp = self.llm.chat.completions.create(**kwargs)
+                return resp.choices[0].message.content.strip()
+            except Exception as e:
+                err_str = str(e).lower()
+                if "rate" in err_str or "429" in err_str or "too many" in err_str:
+                    wait = 10 * (attempt + 1)  # 10s, 20s, 30s
+                    logger.warning(f"Groq rate limit hit (attempt {attempt+1}/3), waiting {wait}s...")
+                    time.sleep(wait)
+                    if attempt == 2:
+                        logger.error("Groq rate limit: all retries exhausted")
+                        return ""
+                else:
+                    logger.error(f"Groq LLM error: {e}")
+                    return ""
+        return ""
 
     async def _ask_llm_async(self, system: str, user: str, json_mode: bool = False) -> str:
         loop = asyncio.get_running_loop()
@@ -104,36 +116,51 @@ Return JSON: {"skills":["list"],"total_years":number,"current_role":"string",
         """
         Strategy:
         1) SerpAPI (Google Jobs) — real live postings with direct apply links
-        2) RemoteOK / Jobicy — real remote job APIs as supplement
-        3) AI-generated jobs as fallback if real APIs return too few
+        2) For freshers: run multiple targeted searches (fresher, campus, trainee, graduate)
+        3) RemoteOK / Jobicy — real remote job APIs as supplement
+        4) AI-generated jobs as fallback if real APIs return too few (non-freshers only)
         """
         all_jobs = []
         loop = asyncio.get_running_loop()
 
-        # Build experience-aware search query
         exp_years = user_profile.get("total_years", 0) or 0
-        exp_suffix = ""
-        if exp_years > 0:
-            if exp_years <= 1:
-                exp_suffix = "entry level junior fresher"
-            elif exp_years <= 3:
-                exp_suffix = ""  # default mid-level, no modifier needed
+        is_fresher = exp_years <= 1
+
+        if is_fresher:
+            # For freshers: run multiple targeted searches to maximize results
+            fresher_queries = [
+                f"{job_title} fresher",
+                f"{job_title} entry level",
+                f"{job_title} campus hiring",
+                f"{job_title} trainee",
+                f"{job_title} graduate",
+            ]
+            for query in fresher_queries[:3]:  # Run top 3 queries
+                serp_jobs = await loop.run_in_executor(
+                    None, self._search_serpapi, query, location, 15
+                )
+                all_jobs.extend(serp_jobs)
+                logger.info(f"Fresher SerpAPI: {len(serp_jobs)} jobs for '{query}'")
+                if len(all_jobs) >= 20:
+                    break  # Enough jobs, stop searching
+        else:
+            # Build experience-aware search query for experienced candidates
+            exp_suffix = ""
+            if exp_years <= 3:
+                exp_suffix = ""
             elif exp_years <= 6:
                 exp_suffix = "senior"
             else:
                 exp_suffix = "senior lead staff"
-        # If exp_years is 0 or not set, don't add any level modifier — show all levels
+            search_title = f"{job_title} {exp_suffix}".strip() if exp_suffix else job_title
 
-        search_title = f"{job_title} {exp_suffix}".strip() if exp_suffix else job_title
+            serp_jobs = await loop.run_in_executor(
+                None, self._search_serpapi, search_title, location, min(max_results, 30)
+            )
+            all_jobs.extend(serp_jobs)
+            logger.info(f"SerpAPI returned {len(serp_jobs)} real jobs for '{search_title}'")
 
-        # 1) SerpAPI — real Google Jobs results (primary source), paginated
-        serp_jobs = await loop.run_in_executor(
-            None, self._search_serpapi, search_title, location, min(max_results, 30)
-        )
-        all_jobs.extend(serp_jobs)
-        logger.info(f"SerpAPI returned {len(serp_jobs)} real jobs for '{search_title}'")
-
-        # 2) Supplement with free APIs
+        # Supplement with free APIs (RemoteOK, Jobicy)
         scraped = await asyncio.gather(
             loop.run_in_executor(None, self._scrape_remoteok, job_title, 10),
             loop.run_in_executor(None, self._scrape_jobicy, job_title, 10),
@@ -149,8 +176,8 @@ Return JSON: {"skills":["list"],"total_years":number,"current_role":"string",
                     ):
                         all_jobs.append(job)
 
-        # 3) If we got fewer than 5 real jobs, supplement with AI-generated ones
-        if len(all_jobs) < 5:
+        # AI fallback — only for non-freshers to avoid rate limits
+        if len(all_jobs) < 5 and not is_fresher:
             ai_jobs = await self._ai_generate_jobs(
                 job_title, location, user_profile, count=max(10, 15 - len(all_jobs))
             )
@@ -504,6 +531,7 @@ Expected salary: {user_profile.get('expected_salary', '?')}"""
         system = """You are a career advisor. Score how well each job matches the candidate.
 Return JSON: {"scores": [{"index":0,"score":0-100,"reasoning":["r1","r2"],"recommendation":"one line"}, ...]}
 Criteria: Skills overlap (40pts), Experience fit (25pts), Location (15pts), Salary (10pts), Company (10pts).
+IMPORTANT: For freshers (0-1 years experience), entry-level and junior roles should score 70+. Do NOT penalize freshers for lack of experience if the job is entry-level.
 Score EVERY job in the list. Be specific and honest."""
 
         user_msg = f"""Candidate: Skills: {', '.join(user_profile.get('skills', [])[:15])}
@@ -559,9 +587,13 @@ Jobs to score:
             reasoning.append(f"Skills: {overlap}/{len(j_skills)} match ({int(pct*100)}%)")
         u_yrs = profile.get("total_years", 0)
         r_yrs = job.get("required_experience", 0) or 0
-        if r_yrs > 0 and u_yrs >= r_yrs:
+        if r_yrs == 0 or u_yrs >= r_yrs:
+            # Entry-level job or candidate meets requirement
             score += 25
-            reasoning.append(f"Experience: {u_yrs}y meets {r_yrs}y requirement")
+            if r_yrs == 0:
+                reasoning.append("Entry-level role — no experience required")
+            else:
+                reasoning.append(f"Experience: {u_yrs}y meets {r_yrs}y requirement")
         elif r_yrs > 0:
             score += max(int((u_yrs / r_yrs) * 25), 5)
             reasoning.append(f"Experience: {u_yrs}y vs {r_yrs}y needed")

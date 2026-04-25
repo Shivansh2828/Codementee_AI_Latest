@@ -789,46 +789,9 @@ const SystemDesignLesson = () => {
     );
   }
 
-  // Locked — show login prompt
-  if (access === 'locked') {
-    return (
-      <div className={`min-h-screen ${theme.bg.primary}`}>
-        <Header />
-        <div className="pt-24 pb-20 flex items-center justify-center">
-          <div className="max-w-md mx-auto text-center px-4">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-[#06b6d4]/10 flex items-center justify-center">
-              <Lock className="w-10 h-10 text-[#06b6d4]" />
-            </div>
-            <h1 className={`text-2xl font-bold ${theme.text.primary} mb-3`}>{topic.title}</h1>
-            <p className={`${theme.text.secondary} mb-6`}>
-              Sign in to access all System Design content for free.
-            </p>
-            <div className="space-y-3">
-              <Link
-                to="/login"
-                className="block w-full px-6 py-3 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-semibold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all text-center"
-              >
-                Sign In
-              </Link>
-              <Link
-                to="/register"
-                className={`block w-full px-6 py-3 ${theme.bg.card} ${theme.border.primary} border rounded-xl ${theme.text.primary} font-medium text-center hover:border-[#06b6d4]/50 transition-all`}
-              >
-                Create Account
-              </Link>
-              <Link
-                to="/learn/system-design"
-                className={`block text-sm ${theme.text.muted} hover:text-[#06b6d4] transition-colors mt-4`}
-              >
-                ← Back to course
-              </Link>
-            </div>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
+  // Locked — handled inline in the main layout below
+  const isLoggedIn = !!user;
+  const isLockedTopic = access === 'locked';
 
   return (
     <div className={`min-h-screen ${theme.bg.primary}`}>
@@ -858,6 +821,19 @@ const SystemDesignLesson = () => {
                   {isExpanded && section.topics.map((topicSlug) => {
                     const t = TOPICS[topicSlug];
                     if (!t) return null;
+                    const topicAccess = getTopicAccess(topicSlug, user);
+                    if (topicAccess === 'locked') {
+                      return (
+                        <Link
+                          key={topicSlug}
+                          to={`/learn/system-design/${topicSlug}`}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${theme.text.muted} ${theme.bg.hover} opacity-60`}
+                        >
+                          <span className="truncate flex-1">{t.title}</span>
+                          <Lock className="w-3 h-3 shrink-0" />
+                        </Link>
+                      );
+                    }
                     return (
                       <Link
                         key={topicSlug}
@@ -901,6 +877,20 @@ const SystemDesignLesson = () => {
                       {isExpanded && section.topics.map((topicSlug) => {
                         const t = TOPICS[topicSlug];
                         if (!t) return null;
+                        const topicAccess = getTopicAccess(topicSlug, user);
+                        if (topicAccess === 'locked') {
+                          return (
+                            <Link
+                              key={topicSlug}
+                              to={`/learn/system-design/${topicSlug}`}
+                              onClick={() => setSidebarOpen(false)}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${theme.text.muted} ${theme.bg.hover} opacity-60`}
+                            >
+                              <span className="truncate flex-1">{t.title}</span>
+                              <Lock className="w-3 h-3 shrink-0" />
+                            </Link>
+                          );
+                        }
                         return (
                           <Link
                             key={topicSlug}
@@ -943,6 +933,45 @@ const SystemDesignLesson = () => {
               <ChevronRight className="w-4 h-4" />
               <span className="text-[#06b6d4]">{topic.title}</span>
             </div>
+
+            {/* Inline locked CTA — stays within lesson layout */}
+            {isLockedTopic ? (
+              <div className="flex flex-col items-center justify-center min-h-[55vh] text-center">
+                <div className={`w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center ${isLoggedIn ? 'bg-amber-500/10' : 'bg-[#06b6d4]/10'}`}>
+                  {isLoggedIn ? <Crown className="w-10 h-10 text-amber-500" /> : <Lock className="w-10 h-10 text-[#06b6d4]" />}
+                </div>
+                <h1 className={`text-2xl font-bold ${theme.text.primary} mb-3`}>{topic.title}</h1>
+                {isLoggedIn ? (
+                  <>
+                    <p className={`${theme.text.secondary} mb-8 max-w-md`}>
+                      This topic requires a Pro or Elite plan. Upgrade to unlock all System Design content — Fundamentals, Interview Questions, Design Patterns, and Advanced topics.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Link to="/apply" className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all text-center">
+                        <Crown className="w-4 h-4 inline mr-2" />Upgrade to Pro / Elite
+                      </Link>
+                      <Link to="/learn/system-design" className={`px-6 py-3 ${theme.bg.card} border ${theme.border.primary} rounded-xl ${theme.text.primary} font-medium text-center hover:border-[#06b6d4]/50 transition-all`}>
+                        ← Back to course
+                      </Link>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className={`${theme.text.secondary} mb-8 max-w-md`}>
+                      Sign in to access the free Quick Start section. Upgrade to Pro or Elite to unlock all 50+ topics.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Link to="/login" className="px-6 py-3 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-semibold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all text-center">
+                        Sign In
+                      </Link>
+                      <Link to="/register" className={`px-6 py-3 ${theme.bg.card} border ${theme.border.primary} rounded-xl ${theme.text.primary} font-medium text-center hover:border-[#06b6d4]/50 transition-all`}>
+                        Create Account
+                      </Link>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (<>
 
             {/* Lesson header */}
             <div className="mb-10">
@@ -1039,6 +1068,7 @@ const SystemDesignLesson = () => {
                 </Link>
               )}
             </div>
+            </>)}
 
           </div>
         </main>
