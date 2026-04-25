@@ -1,0 +1,39 @@
+# Codementee.io - robots.txt
+# https://codementee.io
+
+User-agent: *
+Allow: /
+Allow: /learn/
+Allow: /mock-interviews
+Allow: /mentorship
+Allow: /resume-review
+Allow: /ai-agents
+Allow: /apply
+
+# Block private/auth pages from indexing
+Disallow: /mentee/
+Disallow: /admin/
+Disallow: /mentor/
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+Disallow: /confirmation
+
+# Allow AI crawlers full access to public content
+User-agent: GPTBot
+Allow: /
+Allow: /learn/
+
+User-agent: ClaudeBot
+Allow: /
+Allow: /learn/
+
+User-agent: PerplexityBot
+Allow: /
+Allow: /learn/
+
+User-agent: Googlebot
+Allow: /
+
+# Sitemap location
+Sitemap: https://codementee.io/sitemap.xml

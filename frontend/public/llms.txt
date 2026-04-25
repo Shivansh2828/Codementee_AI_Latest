@@ -1,0 +1,88 @@
+# Codementee — MAANG Interview Prep Platform
+# https://codementee.io
+# llms.txt — AI-readable site summary for LLM crawlers
+
+## What is Codementee?
+
+Codementee is an interview preparation platform for software engineers targeting MAANG (Meta, Apple, Amazon, Netflix, Google) and top product companies. It combines live mock interviews with MAANG engineers, AI-powered job search, and free learning courses.
+
+## Core Products
+
+### Mock Interviews
+- Live 1:1 mock interviews with MAANG engineers
+- Detailed feedback reports on communication, problem-solving, and technical depth
+- Covers: System Design, DSA/Coding, Behavioral, DevOps/SRE
+- Plans: Starter (₹2,999 / 1 mock), Pro (₹6,999 / 3 mocks), Elite (₹14,999 / 6 mocks)
+
+### 1:1 Mentorship
+- Personalized mentorship sessions with engineers from Google, Amazon, Meta
+- Career strategy, resume review, referral guidance
+
+### AI Job Search Agent
+- AI-powered job discovery based on resume and preferences
+- Searches Google Jobs, RemoteOK, Jobicy in real-time
+- Scores and ranks jobs by skill match, location, and experience fit
+- Plans: Monthly (₹199), Quarterly (₹499), Yearly (₹1,499)
+
+### Resume Review
+- Resume review by MAANG engineers
+- ATS optimization, formatting, and content feedback
+
+## Free Learning Courses
+
+### System Design Course
+- URL: https://codementee.io/learn/system-design
+- 50+ topics covering distributed systems, databases, caching, sharding, CAP theorem, design patterns
+- Free Quick Start section (6 topics) for all logged-in users
+- Premium sections (Fundamentals, Interview Questions, Advanced) require Pro/Elite plan
+- Includes step-by-step walkthroughs of real interview questions: Design Bit.ly, Design YouTube, Design Uber, Design WhatsApp, Design Instagram, Design Google Docs
+
+### DevOps Course
+- URL: https://codementee.io/learn/devops
+- 64 topics: Docker, Kubernetes, CI/CD, Terraform, Ansible, Helm, GitHub Actions, Jenkins, ArgoCD, AWS, monitoring
+- Includes 30-day MAANG-ready roadmap
+- Real scenario-based interview questions
+- Price: ₹499 one-time (lifetime access)
+
+### Linux Course
+- URL: https://codementee.io/learn/linux
+- 33 topics: kernel, file system, permissions, grep/sed/awk, processes, networking, shell scripting
+- 44 MAANG-level interview questions organized by category (CPU, memory, disk, network)
+- 8 real-world production debugging scenarios
+- 7-day quick start + 2-week advanced roadmap
+- Free with login
+
+### DSA Patterns Course
+- URL: https://codementee.io/learn/dsa-patterns
+- 180+ LeetCode problems organized by 22 patterns
+- Company tags (Google, Amazon, Meta, etc.)
+- Progress tracking
+- Free with login
+
+### Behavioral Interview Prep
+- URL: https://codementee.io/learn/behavioral
+- 80+ questions with STAR method examples
+- Covers Amazon Leadership Principles, Meta values, conflict resolution
+- Free with login
+
+### Linux Playground
+- URL: https://codementee.io/learn/linux/playground
+- Interactive simulated Linux terminal in the browser
+- Practice grep, sed, awk, ps, df, curl, and 30+ commands
+- Pre-loaded sample files: nginx access logs, /etc/passwd, CSV data, shell scripts
+
+## Target Audience
+- Software engineers preparing for MAANG interviews
+- Freshers and 0-3 year experience engineers targeting top companies
+- DevOps/SRE engineers preparing for infrastructure interviews
+- Engineers looking for referrals and job opportunities at top companies
+
+## Key Differentiators
+- Real MAANG engineers as interviewers (not AI-only)
+- AI job search that finds real jobs from Google Jobs, not just AI-generated listings
+- Free courses with premium interview question breakdowns
+- India-focused pricing (₹499 - ₹14,999 range)
+
+## Contact & Social
+- Website: https://codementee.io
+- Platform: React frontend, Python/FastAPI backend, MongoDB
