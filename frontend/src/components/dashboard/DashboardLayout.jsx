@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useCurrency } from '../../contexts/CurrencyContext';
-import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus, DollarSign, FileText, MessageCircle, BarChart3, TrendingUp, ChevronDown, ChevronRight, Bug, Briefcase, Target, Crown, Headphones, Search, Lock, GraduationCap, Server, Code, Layers, Receipt, Bot, CreditCard } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus, DollarSign, FileText, MessageCircle, BarChart3, TrendingUp, ChevronDown, ChevronRight, Bug, Briefcase, Target, Crown, Headphones, Search, Lock, GraduationCap, Server, Code, Layers, Receipt, Bot, CreditCard, Terminal, Cpu } from 'lucide-react';
 import ThemeToggle from '../ui/ThemeToggle';
 import { Badge } from '../ui/badge';
 import BugReportModal from '../BugReportModal';
@@ -29,6 +29,7 @@ const DashboardLayout = ({ children, title }) => {
     LayoutDashboard, GraduationCap, Server, Code, MessageSquare, Layers,
     Target, FileText, Search, Headphones, CalendarPlus, Calendar,
     Users, MessageCircle, Receipt, Bot, Briefcase, CreditCard,
+    Terminal, Cpu,
   };
 
   const getIcon = (iconName) => iconMap[iconName] || LayoutDashboard;
@@ -135,9 +136,11 @@ const DashboardLayout = ({ children, title }) => {
           icon: GraduationCap, 
           isSection: true,
           items: [
-            { path: '/learn/system-design', label: 'System Design', icon: GraduationCap },
-            { path: '/learn/dsa-patterns', label: 'DSA Patterns', icon: GraduationCap },
-            { path: '/learn/behavioral', label: 'Behavioral', icon: GraduationCap },
+            { path: '/learn/system-design', label: 'System Design', icon: Server },
+            { path: '/learn/dsa-patterns', label: 'DSA Patterns', icon: Code },
+            { path: '/learn/behavioral', label: 'Behavioral', icon: MessageSquare },
+            { path: '/learn/devops', label: 'DevOps', icon: Terminal },
+            { path: '/learn/linux', label: 'Linux', icon: Cpu },
           ]
         },
       ];

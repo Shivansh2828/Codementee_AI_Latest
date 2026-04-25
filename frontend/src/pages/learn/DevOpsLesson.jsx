@@ -237,6 +237,15 @@ const DevOpsLesson = () => {
     );
   }
 
+  // Access check — DevOps is a paid course
+  const hasDevOpsAccess = user && (
+    user.plan_id === 'devops_course' ||
+    user.plan_id === 'pro' ||
+    user.plan_id === 'elite' ||
+    user.role === 'admin' ||
+    user.role === 'mentor'
+  );
+
   // Not logged in — show login prompt
   if (!user) {
     return (
@@ -249,27 +258,36 @@ const DevOpsLesson = () => {
             </div>
             <h1 className={`text-2xl font-bold ${theme.text.primary} mb-3`}>{topic.title}</h1>
             <p className={`${theme.text.secondary} mb-6`}>
-              Sign in to access all DevOps content for free.
+              Sign in to purchase the DevOps course for ₹499 — lifetime access.
             </p>
             <div className="space-y-3">
-              <Link
-                to="/login"
-                className="block w-full px-6 py-3 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-semibold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all text-center"
-              >
-                Sign In
-              </Link>
-              <Link
-                to="/register"
-                className={`block w-full px-6 py-3 ${theme.bg.card} ${theme.border.primary} border rounded-xl ${theme.text.primary} font-medium text-center hover:border-[#06b6d4]/50 transition-all`}
-              >
-                Create Account
-              </Link>
-              <Link
-                to="/learn/devops"
-                className={`block text-sm ${theme.text.muted} hover:text-[#06b6d4] transition-colors mt-4`}
-              >
-                ← Back to course
-              </Link>
+              <Link to="/login" className="block w-full px-6 py-3 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-semibold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all text-center">Sign In</Link>
+              <Link to="/register" className={`block w-full px-6 py-3 ${theme.bg.card} ${theme.border.primary} border rounded-xl ${theme.text.primary} font-medium text-center hover:border-[#06b6d4]/50 transition-all`}>Create Account</Link>
+              <Link to="/learn/devops" className={`block text-sm ${theme.text.muted} hover:text-[#06b6d4] transition-colors mt-4`}>← Back to course</Link>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Logged in but no DevOps plan — show purchase CTA
+  if (!hasDevOpsAccess) {
+    return (
+      <div className={`min-h-screen ${theme.bg.primary}`}>
+        <Header />
+        <div className="pt-24 pb-20 flex items-center justify-center">
+          <div className="max-w-md mx-auto text-center px-4">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-orange-500/10 flex items-center justify-center">
+              <Zap className="w-10 h-10 text-orange-500" />
+            </div>
+            <h1 className={`text-2xl font-bold ${theme.text.primary} mb-3`}>{topic.title}</h1>
+            <p className={`${theme.text.secondary} mb-2`}>Unlock the full DevOps course — 64 topics, 30-day roadmap, and real MAANG scenario questions.</p>
+            <p className="text-3xl font-bold text-orange-500 mb-6">₹499 <span className={`text-sm font-normal ${theme.text.muted}`}>one-time · lifetime access</span></p>
+            <div className="space-y-3">
+              <Link to="/apply?course=devops" className="block w-full px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all text-center">Buy Now — ₹499</Link>
+              <Link to="/learn/devops" className={`block text-sm ${theme.text.muted} hover:text-[#06b6d4] transition-colors mt-4`}>← Back to course</Link>
             </div>
           </div>
         </div>

@@ -147,7 +147,6 @@ const LinuxIndex = () => {
                         to={`/learn/linux/${slug}`}
                         className={`flex items-start gap-3 p-4 rounded-xl ${theme.bg.card} border ${sectionBorderColor[section.color]} transition-all duration-200 group`}
                       >
-                        <span className="text-xl shrink-0 mt-0.5">📘</span>
                         <div className="flex-1 min-w-0">
                           <p className={`font-medium text-sm ${theme.text.primary} group-hover:text-[#06b6d4] transition-colors truncate`}>
                             {topic.title}

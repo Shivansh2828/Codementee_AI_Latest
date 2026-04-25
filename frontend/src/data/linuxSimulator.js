@@ -441,12 +441,23 @@ export class LinuxSimulator {
   cmdCut(args, pipeInput) {
     let delim = '\t';
     let fields = [];
-    const dIdx = args.indexOf('-d');
-    if (dIdx !== -1 && args[dIdx + 1]) delim = args[dIdx + 1];
-    const fIdx = args.indexOf('-f');
-    if (fIdx !== -1 && args[fIdx + 1]) fields = args[fIdx + 1].split(',').map(Number);
-    const text = pipeInput !== null ? pipeInput : this.getFileContent(args.find(a => !a.startsWith('-') && !fields.includes(Number(a))));
+    let chars = [];
+
+    for (let i = 0; i < args.length; i++) {
+      const a = args[i];
+      if (a === '-d' && args[i + 1]) { delim = args[++i]; }
+      else if (a.startsWith('-d')) { delim = a.slice(2); }
+      else if (a === '-f' && args[i + 1]) { fields = args[++i].split(',').map(Number); }
+      else if (a.startsWith('-f')) { fields = a.slice(2).split(',').map(Number); }
+      else if (a === '-c' && args[i + 1]) { chars = args[++i].split(',').map(Number); }
+      else if (a.startsWith('-c')) { chars = a.slice(2).split(',').map(Number); }
+    }
+
+    const fileArg = args.find(a => !a.startsWith('-') && a !== delim);
+    const text = pipeInput !== null ? pipeInput : this.getFileContent(fileArg);
+
     return text.split('\n').filter(l => l).map(line => {
+      if (chars.length) return chars.map(c => line[c - 1] || '').join('');
       const parts = line.split(delim);
       return fields.map(f => parts[f - 1] || '').join(delim);
     }).join('\n');

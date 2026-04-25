@@ -15,7 +15,7 @@ const COURSES = [
     topics: '50+',
     duration: '~20 hours',
     difficulty: 'Beginner — Advanced',
-    access: 'Free with login',
+    access: 'Free + Premium',
     tags: ['Distributed Systems', 'Databases', 'Caching', 'Load Balancing', 'Interview Questions'],
     color: 'cyan',
     featured: true,
@@ -43,7 +43,7 @@ const COURSES = [
     topics: '64',
     duration: 'Self-paced',
     difficulty: 'Beginner — Advanced',
-    access: 'Free with login',
+    access: '₹499 one-time',
     tags: ['30-Day Roadmap', 'Docker', 'Kubernetes', 'CI/CD', 'Terraform', 'AWS', 'Monitoring', 'Scenario Questions'],
     color: 'orange',
   },
@@ -171,7 +171,7 @@ const CoursesLandingPage = () => {
             <div className="max-w-3xl mx-auto text-center">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#06b6d4]/10 border border-[#06b6d4]/30 mb-6">
                 <Zap className="w-4 h-4 text-[#06b6d4]" />
-                <span className="text-sm font-semibold text-[#06b6d4]">Free Courses for Interview Prep</span>
+                <span className="text-sm font-semibold text-[#06b6d4]">Courses for Interview Prep</span>
               </div>
 
               <h1 className={`text-4xl md:text-5xl font-bold ${theme.text.primary} mb-4 leading-tight`}>

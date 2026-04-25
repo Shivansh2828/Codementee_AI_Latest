@@ -1169,9 +1169,39 @@ export const getSectionForTopic = (slug) =>
  * Returns: 'full' | 'locked' | 'preview'
  */
 export const getTopicAccess = (slug, user) => {
-  // Free for all logged-in users, locked for anonymous visitors
+  const section = getSectionForTopic(slug);
+  if (!section) return 'full';
+
+  // Not logged in — nothing is accessible, show locked for all
   if (!user) return 'locked';
-  return 'full';
+
+  const planId = user?.plan_id || null;
+  const role = user?.role || null;
+
+  // Admins and mentors always get full access
+  if (role === 'admin' || role === 'mentor') return 'full';
+
+  // Free section — accessible to all logged-in users
+  if (section.access === 'free') return 'full';
+
+  // Check if this specific topic is in the free preview list
+  const isFreePreview = section.freeTopics?.includes(slug);
+
+  // Elite plan — full access to everything
+  if (planId === 'elite') return 'full';
+
+  // Pro plan
+  if (planId === 'pro' || planId === 'starter') {
+    if (section.access === 'pro') return 'full';
+    if (section.access === 'elite') {
+      if (section.proTopics?.includes(slug)) return 'full';
+      return isFreePreview ? 'preview' : 'locked';
+    }
+  }
+
+  // Logged-in free user — gets free previews only for non-free sections
+  if (isFreePreview) return 'preview';
+  return 'locked';
 };
 
 export const getNextTopic = (slug) => {

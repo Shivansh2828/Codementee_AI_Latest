@@ -153,6 +153,7 @@ export default function MenteeJobSearch() {
       else if (yrs <= 5) setExpFilter('4-5');
       else setExpFilter('6+');
     } else {
+      // For freshers (0 years) or unset, show all jobs — don't auto-filter
       setExpFilter('all');
     }
   }, [preferences]);
@@ -264,7 +265,13 @@ export default function MenteeJobSearch() {
       await loadJobMatches();
       setActiveTab('jobs');
     } catch (error) {
-      toast.error('Job search failed. Please try again.');
+      const status = error.response?.status;
+      const msg = error.response?.data?.detail || '';
+      if (status === 429 || msg.toLowerCase().includes('rate') || msg.toLowerCase().includes('too many') || msg.toLowerCase().includes('busy')) {
+        toast.error('AI is busy right now. Please wait 30 seconds and try again.', { duration: 6000 });
+      } else {
+        toast.error('Job search failed. Please try again.');
+      }
       console.error(error);
     } finally {
       setSearching(false);
@@ -464,14 +471,10 @@ export default function MenteeJobSearch() {
   const filterByExp = (jobs) => {
     if (expFilter === 'all') return jobs;
     return jobs.filter(job => {
-      // Use stored required_experience, or guess from title
-      let req = job.required_experience || 0;
-      if (!req && job.title) {
-        const t = job.title.toLowerCase();
-        if (/\b(senior|sr\.?|lead|staff|principal)\b/.test(t)) req = 5;
-        else if (/\b(sde.?2|sde.?ii|mid|engineer ii)\b/.test(t)) req = 3;
-        else if (/\b(junior|jr\.?|intern|entry|fresher|new grad|sde.?1|sde.?i)\b/.test(t)) req = 0;
-        else req = 2; // default mid-level
+      const req = job.required_experience;
+      // If no experience data — include in fresher and 2-3 yr filters (could be any level)
+      if (req === null || req === undefined || req === 0) {
+        return expFilter === '0-1' || expFilter === '2-3';
       }
       if (expFilter === '0-1') return req <= 1;
       if (expFilter === '2-3') return req >= 1 && req <= 3;

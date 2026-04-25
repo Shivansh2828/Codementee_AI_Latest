@@ -338,9 +338,9 @@ async def search_jobs(
 
         _logger.info(f"Found {len(jobs)} jobs, now scoring...")
 
-        # Filter out jobs requiring significantly more experience than the user has
-        # Only apply if user explicitly set their experience (not 0/null)
-        if exp_years and exp_years > 0:
+        # For freshers: keep ALL jobs — don't filter by experience
+        # They need to see everything and decide themselves
+        if exp_years > 0:
             filtered = []
             for job in jobs:
                 req_exp = job.get("required_experience", 0) or 0
@@ -349,45 +349,72 @@ async def search_jobs(
                     filtered.append(job)
             _logger.info(f"Experience filter: {len(jobs)} → {len(filtered)} jobs (user has {exp_years}y)")
             jobs = filtered
+        else:
+            _logger.info(f"Fresher: keeping all {len(jobs)} jobs (no experience filter)")
 
-        # Batch score all jobs in a single AI call (much faster)
-        scored_jobs = await job_agent.score_jobs_batch(jobs, user_profile)
+        # Batch score all jobs
+        # For freshers: use fast algorithmic scoring to avoid Groq rate limits
+        if exp_years <= 1:
+            _logger.info(f"Fresher: using algorithmic scoring for {len(jobs)} jobs (no LLM call)")
+            scored_jobs = []
+            for job in jobs:
+                fb = job_agent._algorithmic_score(job, user_profile)
+                job["score"] = fb["score"]
+                job["reasoning"] = fb["reasoning"]
+                job["recommendation"] = fb["recommendation"]
+                scored_jobs.append(job)
+        else:
+            scored_jobs = await job_agent.score_jobs_batch(jobs, user_profile)
         scored_jobs.sort(key=lambda x: x.get("score", 0), reverse=True)
 
         _logger.info(f"Returning {len(scored_jobs)} scored jobs")
 
-        # Save results to job_matches (skip duplicates)
+        # Save results to job_matches (upsert — update if exists, insert if new)
         from datetime import datetime, timezone
         import uuid as _uuid
         for job in scored_jobs:
-            existing = await _db.job_matches.find_one({
+            job_doc = {
                 "user_id": user["id"],
+                "job_id": job.get("id"),
+                "company": job.get("company"),
                 "title": job.get("title"),
-                "company": job.get("company")
-            })
-            if not existing:
-                await _db.job_matches.insert_one({
-                    "id": str(_uuid.uuid4()),
+                "location": job.get("location"),
+                "salary": job.get("salary"),
+                "url": job.get("url"),
+                "score": job.get("score"),
+                "reasoning": job.get("reasoning"),
+                "recommendation": job.get("recommendation"),
+                "source": job.get("source", ""),
+                "required_experience": job.get("required_experience", 0),
+                "status": "found",
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            await _db.job_matches.update_one(
+                {
                     "user_id": user["id"],
-                    "job_id": job.get("id"),
-                    "company": job.get("company"),
                     "title": job.get("title"),
-                    "location": job.get("location"),
-                    "salary": job.get("salary"),
-                    "url": job.get("url"),
-                    "score": job.get("score"),
-                    "reasoning": job.get("reasoning"),
-                    "recommendation": job.get("recommendation"),
-                    "source": job.get("source", ""),
-                    "required_experience": job.get("required_experience", 0),
-                    "status": "found",
-                    "created_at": datetime.now(timezone.utc).isoformat()
-                })
+                    "company": job.get("company")
+                },
+                {
+                    "$set": job_doc,
+                    "$setOnInsert": {
+                        "id": str(_uuid.uuid4()),
+                        "created_at": datetime.now(timezone.utc).isoformat()
+                    }
+                },
+                upsert=True
+            )
 
         return {"total_found": len(scored_jobs), "jobs": scored_jobs}
 
     except Exception as e:
         _logger.error(f"Search jobs error: {e}", exc_info=True)
+        err_str = str(e).lower()
+        if "rate" in err_str or "429" in err_str or "too many" in err_str:
+            raise HTTPException(
+                status_code=429,
+                detail="AI service is busy due to high demand. Please wait 30 seconds and try again."
+            )
         raise HTTPException(status_code=500, detail=f"Job search failed: {str(e)}")
 
 
@@ -395,7 +422,7 @@ async def search_jobs(
 async def get_job_matches(
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
     limit: int = 20,
-    min_score: int = 60,
+    min_score: int = 0,
     max_experience: Optional[int] = None
 ):
     """Get user's saved job matches"""
