@@ -146,6 +146,7 @@ export const DEVOPS_TOPICS = {
         { label: 'Week 4', desc: 'Cloud + Project + Interview Prep', color: 'purple' },
       ] },
       { type: 'text', heading: 'What You Will Have After 30 Days', body: `- Strong Linux troubleshooting skills\n- Docker and Kubernetes mastery\n- CI/CD experience (GitHub Actions + Jenkins)\n- Helm (a big plus in interviews)\n- One real, production-style project on your resume\n- Confidence to explain tradeoffs and debug failures in interviews\n\n**Reality check:** Most candidates watch tutorials and do not build anything. Top candidates build pipelines, break things, debug failures, and can explain their decisions. The project in Week 4 is what separates you from the crowd.` },
+      { type: 'callout', variant: 'info', heading: 'Start Week 1 with Our Linux Course', body: `The roadmap starts with Linux because it is the foundation of everything in DevOps. We have a [dedicated Linux course](/learn/linux) with 32 in-depth topics covering commands, text processing (grep/sed/awk), process management, networking, shell scripting, 44 interview questions, and 8 production debugging scenarios. Start there for Week 1, then come back here for Docker and Kubernetes.` },
     ],
   },
 
@@ -172,6 +173,7 @@ export const DEVOPS_TOPICS = {
           { q: 'What is swap space?', a: 'Swap is disk space used as virtual memory when RAM is full. The OS moves inactive memory pages to swap to free up RAM. Swap is much slower than RAM (disk vs memory speed). If a server is heavily swapping, it needs more RAM. Check with free -h (shows swap usage) or swapon --show. In production, some swap is good as a safety net, but heavy swap usage indicates under-provisioned memory.' },
         ],
       },
+      { type: 'callout', variant: 'tip', heading: 'Go Deeper with Our Dedicated Linux Course', body: `Linux is the foundation of everything in DevOps. This section covers the essentials, but if you want to master Linux for MAANG interviews, check out our [dedicated Linux course](/learn/linux) — it covers 32 topics in depth including:\n\n- Deep dives into grep, sed, and awk with regex patterns\n- Process states, zombies, and D-state debugging\n- 44 MAANG-level interview questions organized by category (CPU, memory, disk, network)\n- 8 real-world production debugging scenarios\n- Shell scripting with deployment scripts and interview one-liners\n- DNS debugging, firewall hardening, and security best practices\n\nLinux proficiency is what separates average candidates from top DevOps/SRE engineers. The dedicated course takes you from basics to production-ready.` },
     ],
   },
 

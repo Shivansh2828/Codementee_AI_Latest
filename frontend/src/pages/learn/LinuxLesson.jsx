@@ -5,7 +5,7 @@ import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { getTopicBySlug, getNextTopic, getPrevTopic, DEVOPS_TOPICS, DEVOPS_SECTIONS } from '../../data/devopsCourse';
+import { getTopicBySlug, getNextTopic, getPrevTopic, LINUX_TOPICS, LINUX_SECTIONS } from '../../data/linuxCourse';
 import ArchitectureDiagram from '../../components/learn/ArchitectureDiagram';
 
 // ── Rich text renderer (matches SystemDesignLesson) ──────────────────────────
@@ -195,7 +195,7 @@ const Section = ({ section, theme }) => {
 };
 
 // ── Main Lesson Component (layout matches SystemDesignLesson) ────────────────
-const DevOpsLesson = () => {
+const LinuxLesson = () => {
   const { slug } = useParams();
   const { theme } = useTheme();
   const { user } = useAuth();
@@ -204,11 +204,11 @@ const DevOpsLesson = () => {
   const topic = getTopicBySlug(slug);
   const next = getNextTopic(slug);
   const prev = getPrevTopic(slug);
-  const allSlugs = DEVOPS_SECTIONS.flatMap(s => s.topics);
+  const allSlugs = LINUX_SECTIONS.flatMap(s => s.topics);
   const currentIndex = allSlugs.indexOf(slug);
 
   // Track which sidebar sections are expanded — auto-expand the section containing the current topic
-  const currentSectionId = DEVOPS_SECTIONS.find(s => s.topics.includes(slug))?.id;
+  const currentSectionId = LINUX_SECTIONS.find(s => s.topics.includes(slug))?.id;
   const [expandedSections, setExpandedSections] = useState(() => {
     return currentSectionId ? { [currentSectionId]: true } : {};
   });
@@ -231,7 +231,7 @@ const DevOpsLesson = () => {
       <div className={`min-h-screen ${theme.bg.primary} flex items-center justify-center`}>
         <div className="text-center">
           <p className={`${theme.text.primary} text-xl mb-4`}>Lesson not found</p>
-          <Link to="/learn/devops" className="text-[#06b6d4] hover:underline">← Back to course</Link>
+          <Link to="/learn/linux" className="text-[#06b6d4] hover:underline">← Back to course</Link>
         </div>
       </div>
     );
@@ -249,7 +249,7 @@ const DevOpsLesson = () => {
             </div>
             <h1 className={`text-2xl font-bold ${theme.text.primary} mb-3`}>{topic.title}</h1>
             <p className={`${theme.text.secondary} mb-6`}>
-              Sign in to access all DevOps content for free.
+              Sign in to access all Linux content for free.
             </p>
             <div className="space-y-3">
               <Link
@@ -265,7 +265,7 @@ const DevOpsLesson = () => {
                 Create Account
               </Link>
               <Link
-                to="/learn/devops"
+                to="/learn/linux"
                 className={`block text-sm ${theme.text.muted} hover:text-[#06b6d4] transition-colors mt-4`}
               >
                 ← Back to course
@@ -286,13 +286,13 @@ const DevOpsLesson = () => {
         {/* Sidebar — desktop */}
         <aside className={`hidden lg:flex flex-col w-64 shrink-0 sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto border-r ${theme.border.primary} ${theme.bg.card}`}>
           <div className={`p-4 border-b ${theme.border.primary}`}>
-            <Link to="/learn/devops" className={`flex items-center gap-2 text-sm ${theme.text.muted} hover:text-[#06b6d4] transition-colors`}>
+            <Link to="/learn/linux" className={`flex items-center gap-2 text-sm ${theme.text.muted} hover:text-[#06b6d4] transition-colors`}>
               <ArrowLeft className="w-4 h-4" />
-              DevOps
+              Linux
             </Link>
           </div>
           <nav className="p-3 space-y-1">
-            {DEVOPS_SECTIONS.map((section) => {
+            {LINUX_SECTIONS.map((section) => {
               const isExpanded = expandedSections[section.id];
               return (
                 <div key={section.id}>
@@ -304,12 +304,12 @@ const DevOpsLesson = () => {
                     <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`} />
                   </button>
                   {isExpanded && section.topics.map((topicSlug) => {
-                    const t = DEVOPS_TOPICS[topicSlug];
+                    const t = LINUX_TOPICS[topicSlug];
                     if (!t) return null;
                     return (
                       <Link
                         key={topicSlug}
-                        to={`/learn/devops/${topicSlug}`}
+                        to={`/learn/linux/${topicSlug}`}
                         className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
                           topicSlug === slug
                             ? 'bg-[#06b6d4]/20 text-[#06b6d4] font-medium'
@@ -331,11 +331,11 @@ const DevOpsLesson = () => {
           <div className="lg:hidden fixed inset-0 z-50 flex">
             <div className={`w-72 ${theme.bg.card} border-r ${theme.border.primary} flex flex-col overflow-y-auto`}>
               <div className={`p-4 border-b ${theme.border.primary} flex items-center justify-between`}>
-                <Link to="/learn/devops" className={`text-sm ${theme.text.muted}`}>DevOps</Link>
+                <Link to="/learn/linux" className={`text-sm ${theme.text.muted}`}>Linux</Link>
                 <button onClick={() => setSidebarOpen(false)}><X className={`w-5 h-5 ${theme.text.secondary}`} /></button>
               </div>
               <nav className="p-3 space-y-1">
-                {DEVOPS_SECTIONS.map((section) => {
+                {LINUX_SECTIONS.map((section) => {
                   const isExpanded = expandedSections[section.id];
                   return (
                     <div key={section.id}>
@@ -347,12 +347,12 @@ const DevOpsLesson = () => {
                         <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`} />
                       </button>
                       {isExpanded && section.topics.map((topicSlug) => {
-                        const t = DEVOPS_TOPICS[topicSlug];
+                        const t = LINUX_TOPICS[topicSlug];
                         if (!t) return null;
                         return (
                           <Link
                             key={topicSlug}
-                            to={`/learn/devops/${topicSlug}`}
+                            to={`/learn/linux/${topicSlug}`}
                             onClick={() => setSidebarOpen(false)}
                             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
                               topicSlug === slug ? 'bg-[#06b6d4]/20 text-[#06b6d4] font-medium' : `${theme.text.secondary} ${theme.bg.hover}`
@@ -387,7 +387,7 @@ const DevOpsLesson = () => {
 
             {/* Breadcrumb */}
             <div className={`flex items-center gap-2 text-sm ${theme.text.muted} mb-6`}>
-              <Link to="/learn/devops" className="hover:text-[#06b6d4] transition-colors">DevOps</Link>
+              <Link to="/learn/linux" className="hover:text-[#06b6d4] transition-colors">Linux</Link>
               <ChevronRight className="w-4 h-4" />
               <span className="text-[#06b6d4]">{topic.title}</span>
             </div>
@@ -418,8 +418,8 @@ const DevOpsLesson = () => {
               <Section key={i} section={section} theme={theme} />
             ))}
 
-            {/* Mock Interview CTA — show after scenarios, troubleshooting, and roadmap */}
-            {(slug.startsWith('scenario-') || slug.startsWith('troubleshoot-') || slug === 'devops-roadmap') && (
+            {/* Mock Interview CTA — show after scenarios and interview questions */}
+            {(slug.startsWith('linux-scenario-') || slug.startsWith('linux-interview-')) && (
               <div className={`mt-10 mb-4 p-6 md:p-8 rounded-2xl bg-gradient-to-r from-[#06b6d4]/10 to-[#8b5cf6]/10 border border-[#06b6d4]/30 text-center`}>
                 <div className="flex items-center justify-center gap-2 mb-3">
                   <Calendar className="w-6 h-6 text-[#06b6d4]" />
@@ -454,7 +454,7 @@ const DevOpsLesson = () => {
             <div className={`flex items-center justify-between mt-14 pt-8 border-t ${theme.border.primary}`}>
               {prev ? (
                 <Link
-                  to={`/learn/devops/${prev.slug}`}
+                  to={`/learn/linux/${prev.slug}`}
                   className={`flex items-center gap-2 px-5 py-3 rounded-xl ${theme.bg.card} border ${theme.border.primary} hover:border-[#06b6d4]/50 transition-all group`}
                 >
                   <ArrowLeft className="w-4 h-4 text-[#06b6d4]" />
@@ -467,7 +467,7 @@ const DevOpsLesson = () => {
 
               {next ? (
                 <Link
-                  to={`/learn/devops/${next.slug}`}
+                  to={`/learn/linux/${next.slug}`}
                   className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white hover:from-[#0891b2] hover:to-[#0e7490] transition-all group"
                 >
                   <div className="text-right">
@@ -478,7 +478,7 @@ const DevOpsLesson = () => {
                 </Link>
               ) : (
                 <Link
-                  to="/learn/devops"
+                  to="/learn/linux"
                   className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white hover:from-[#0891b2] hover:to-[#0e7490] transition-all"
                 >
                   <BookOpen className="w-4 h-4" />
@@ -495,4 +495,4 @@ const DevOpsLesson = () => {
   );
 };
 
-export default DevOpsLesson;
+export default LinuxLesson;

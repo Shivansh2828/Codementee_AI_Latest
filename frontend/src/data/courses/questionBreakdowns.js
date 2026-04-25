@@ -3,7 +3,7 @@ export const QUESTION_BREAKDOWN_TOPICS = {
 // ── BIT.LY ─────────────────────────────────────────────────────────────────
 'design-bitly': {
   slug: 'design-bitly', title: 'Design Bit.ly', subtitle: 'URL shortening service at scale',
-  duration: '40 min', difficulty: 'Easy',
+  duration: '40 min', difficulty: 'Beginner',
   sections: [
     {
       type: 'text', heading: 'Understanding the Problem',
@@ -244,7 +244,7 @@ export const QUESTION_BREAKDOWN_TOPICS = {
 // ── TICKETMASTER ───────────────────────────────────────────────────────────
 'design-ticketmaster': {
   slug: 'design-ticketmaster', title: 'Design Ticketmaster', subtitle: 'Event ticketing with high-concurrency seat selection',
-  duration: '45 min', difficulty: 'Hard',
+  duration: '45 min', difficulty: 'Advanced',
   sections: [
     {
       type: 'text', heading: 'Understanding the Problem',
@@ -431,7 +431,7 @@ export const QUESTION_BREAKDOWN_TOPICS = {
 // ── FB NEWS FEED ───────────────────────────────────────────────────────────
 'design-fb-news-feed': {
   slug: 'design-fb-news-feed', title: 'Design FB News Feed', subtitle: 'Personalized social media feed at scale',
-  duration: '40 min', difficulty: 'Hard',
+  duration: '40 min', difficulty: 'Intermediate',
   sections: [
     {
       type: 'text', heading: 'Understanding the Problem',
@@ -593,7 +593,7 @@ export const QUESTION_BREAKDOWN_TOPICS = {
 // ── RATE LIMITER ───────────────────────────────────────────────────────────
 'design-rate-limiter': {
   slug: 'design-rate-limiter', title: 'Design a Rate Limiter', subtitle: 'Protect APIs from abuse and ensure fair usage',
-  duration: '30 min', difficulty: 'Medium',
+  duration: '30 min', difficulty: 'Intermediate',
   sections: [
     {
       type: 'text', heading: 'Understanding the Problem',
@@ -716,7 +716,7 @@ export const QUESTION_BREAKDOWN_TOPICS = {
 // ── DROPBOX ────────────────────────────────────────────────────────────────
 'design-dropbox': {
   slug: 'design-dropbox', title: 'Design Dropbox', subtitle: 'Cloud file storage and sync',
-  duration: '45 min', difficulty: 'Hard',
+  duration: '45 min', difficulty: 'Advanced',
   sections: [
     {
       type: 'text', heading: 'Understanding the Problem',
@@ -878,7 +878,7 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
 
   'design-tinder': {
     slug: 'design-tinder', title: 'Design Tinder', subtitle: 'Location-based matching with swipe mechanics',
-    duration: '40 min', difficulty: 'Hard',
+    duration: '40 min', difficulty: 'Intermediate',
     sections: [
       
     {
@@ -954,7 +954,7 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
 
   'design-whatsapp': {
     slug: 'design-whatsapp', title: 'Design WhatsApp', subtitle: 'Real-time messaging at scale',
-    duration: '40 min', difficulty: 'Hard',
+    duration: '40 min', difficulty: 'Intermediate',
     sections: [
       
     {
@@ -1066,7 +1066,7 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
 
   'design-youtube': {
     slug: 'design-youtube', title: 'Design YouTube', subtitle: 'Video upload, processing, and streaming at scale',
-    duration: '45 min', difficulty: 'Hard',
+    duration: '45 min', difficulty: 'Advanced',
     sections: [
       
     {
@@ -1124,7 +1124,7 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
 
   'design-uber': {
     slug: 'design-uber', title: 'Design Uber', subtitle: 'Real-time ride matching and location tracking',
-    duration: '50 min', difficulty: 'Hard',
+    duration: '50 min', difficulty: 'Advanced',
     sections: [
       {
         type: 'text', heading: 'Understanding the Problem',
@@ -1257,7 +1257,7 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
 
   'design-web-crawler': {
     slug: 'design-web-crawler', title: 'Design a Web Crawler', subtitle: 'Systematically browse and index the web',
-    duration: '35 min', difficulty: 'Hard',
+    duration: '35 min', difficulty: 'Intermediate',
     sections: [
       
     {
@@ -1312,7 +1312,7 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
 
   'design-instagram': {
     slug: 'design-instagram', title: 'Design Instagram', subtitle: 'Photo sharing with feed, stories, and explore',
-    duration: '40 min', difficulty: 'Medium',
+    duration: '40 min', difficulty: 'Intermediate',
     sections: [
       
     {
@@ -1361,7 +1361,7 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
 
   'design-google-docs': {
     slug: 'design-google-docs', title: 'Design Google Docs', subtitle: 'Real-time collaborative document editing',
-    duration: '45 min', difficulty: 'Hard',
+    duration: '45 min', difficulty: 'Advanced',
     sections: [
       
     {
@@ -1415,7 +1415,7 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
 
   'design-distributed-cache': {
     slug: 'design-distributed-cache', title: 'Design a Distributed Cache', subtitle: 'Build a Redis-like distributed caching system',
-    duration: '40 min', difficulty: 'Hard',
+    duration: '40 min', difficulty: 'Advanced',
     sections: [
       
     {
@@ -1503,7 +1503,7 @@ Object.assign(QUESTION_BREAKDOWN_TOPICS, {
 
   'design-payment-system': {
     slug: 'design-payment-system', title: 'Design a Payment System', subtitle: 'Reliable, consistent payment processing',
-    duration: '40 min', difficulty: 'Hard',
+    duration: '40 min', difficulty: 'Advanced',
     sections: [
       
     {
