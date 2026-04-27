@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Server, Code, MessageSquare, Layers, BookOpen } from 'lucide-react';
+import { Server, Code, MessageSquare, Layers, BookOpen, Terminal, Cpu, Cloud } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
 // Map icon name strings from learningContent.js to Lucide components
@@ -10,6 +10,9 @@ const iconMap = {
   MessageSquare,
   Layers,
   BookOpen,
+  Terminal,
+  Cpu,
+  Cloud,
 };
 
 const ContentCard = ({
@@ -19,11 +22,16 @@ const ContentCard = ({
   topicCount,
   href,
   isFree,
+  access,
   gradient = 'from-blue-500 to-cyan-500',
   className = '',
 }) => {
   const { theme } = useTheme();
   const IconComponent = typeof icon === 'string' ? iconMap[icon] : icon;
+
+  // Determine badge: use access string if provided, else fall back to isFree
+  const accessLabel = access || (isFree ? 'Free' : 'Pro');
+  const isFreeAccess = accessLabel === 'Free' || accessLabel === 'Free + Premium';
 
   return (
     <Link
@@ -56,14 +64,14 @@ const ContentCard = ({
           {topicCount} topics
         </span>
 
-        {/* Free / Paid indicator */}
-        {isFree ? (
+        {/* Access indicator */}
+        {isFreeAccess ? (
           <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
-            Free
+            {accessLabel}
           </span>
         ) : (
-          <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-400">
-            Pro
+          <span className="inline-flex items-center rounded-full bg-orange-500/10 px-2.5 py-0.5 text-xs font-medium text-orange-400">
+            {accessLabel}
           </span>
         )}
       </div>

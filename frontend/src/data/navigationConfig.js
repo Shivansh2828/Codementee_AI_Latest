@@ -18,6 +18,7 @@ export const topNavConfig = [
       { label: 'Behavioral', href: '/learn/behavioral', icon: 'MessageSquare' },
       { label: 'DevOps', href: '/learn/devops', icon: 'Terminal' },
       { label: 'Linux', href: '/learn/linux', icon: 'Cpu' },
+      { label: 'AWS', href: '/learn/aws', icon: 'Cloud' },
     ],
   },
   {
@@ -58,6 +59,7 @@ export const sidebarConfig = {
         { path: '/learn/behavioral', label: 'Behavioral', icon: 'MessageSquare' },
         { path: '/learn/devops', label: 'DevOps', icon: 'Terminal' },
         { path: '/learn/linux', label: 'Linux', icon: 'Cpu' },
+        { path: '/learn/aws', label: 'AWS', icon: 'Cloud' },
       ],
     },
     {

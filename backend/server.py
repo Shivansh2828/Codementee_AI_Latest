@@ -4177,9 +4177,9 @@ async def get_public_pricing_plans(response: Response, currency: str = "INR", se
     response.headers["Expires"] = "0"
     
     # Validate service_type if provided
-    allowed_service_types = ["mock_interview", "mentorship", "resume_review", "ai_agent"]
+    allowed_service_types = ["mock_interview", "mentorship", "resume_review", "ai_agent", "course"]
     if service_type is not None and service_type not in allowed_service_types:
-        raise HTTPException(status_code=400, detail="Invalid service type. Allowed: mock_interview, mentorship, resume_review, ai_agent")
+        raise HTTPException(status_code=400, detail="Invalid service type. Allowed: mock_interview, mentorship, resume_review, ai_agent, course")
     
     # Build query filter
     query = {"is_active": True}
@@ -7157,6 +7157,51 @@ async def verify_payment(data: VerifyPaymentRequest):
                     "referral_guidance": False
                 }
             },
+            "devops_course": {
+                "interview_quota_total": 0,
+                "plan_features": {
+                    "mock_interviews": 0,
+                    "resume_reviews": 0,
+                    "resume_review_type": "none",
+                    "offline_profile_creation": 0,
+                    "ai_tools_access": "limited",
+                    "community_access": False,
+                    "priority_support": False,
+                    "strategy_calls": 0,
+                    "referral_guidance": False,
+                    "course_access": ["devops_course"]
+                }
+            },
+            "aws_course": {
+                "interview_quota_total": 0,
+                "plan_features": {
+                    "mock_interviews": 0,
+                    "resume_reviews": 0,
+                    "resume_review_type": "none",
+                    "offline_profile_creation": 0,
+                    "ai_tools_access": "limited",
+                    "community_access": False,
+                    "priority_support": False,
+                    "strategy_calls": 0,
+                    "referral_guidance": False,
+                    "course_access": ["aws_course"]
+                }
+            },
+            "devops_aws_bundle": {
+                "interview_quota_total": 0,
+                "plan_features": {
+                    "mock_interviews": 0,
+                    "resume_reviews": 0,
+                    "resume_review_type": "none",
+                    "offline_profile_creation": 0,
+                    "ai_tools_access": "limited",
+                    "community_access": False,
+                    "priority_support": False,
+                    "strategy_calls": 0,
+                    "referral_guidance": False,
+                    "course_access": ["devops_course", "aws_course"]
+                }
+            },
         }
         
         plan_config = plan_configs.get(order["plan_id"], plan_configs["starter"])
@@ -7164,6 +7209,7 @@ async def verify_payment(data: VerifyPaymentRequest):
         # This is an upgrade - update existing user
         # Determine role: agent plans create agent_user role
         is_agent_plan = order["plan_id"].startswith("agent_")
+        is_course_plan = order["plan_id"].endswith("_course") or order["plan_id"] == "devops_aws_bundle"
         new_role = "agent_user" if is_agent_plan else existing_user.get("role", "mentee")
         
         update_fields = {
@@ -7177,6 +7223,20 @@ async def verify_payment(data: VerifyPaymentRequest):
             "plan_features": plan_config["plan_features"],
             "upgraded_at": datetime.now(timezone.utc).isoformat()
         }
+        
+        # For course plans, merge course_access into existing user's course_access list
+        if is_course_plan:
+            new_courses = plan_config["plan_features"].get("course_access", [])
+            existing_courses = existing_user.get("course_access", [])
+            merged = list(set(existing_courses + new_courses))
+            update_fields["course_access"] = merged
+            # Keep existing plan_id if user already has a mock interview plan
+            if existing_user.get("plan_id") in ("starter", "pro", "elite"):
+                update_fields["plan_id"] = existing_user["plan_id"]
+                update_fields["plan_name"] = existing_user.get("plan_name", existing_user["plan_id"])
+                update_fields["interview_quota_total"] = existing_user.get("interview_quota_total", 0)
+                update_fields["interview_quota_remaining"] = existing_user.get("interview_quota_remaining", 0)
+                update_fields["plan_features"] = existing_user.get("plan_features", plan_config["plan_features"])
         
         # Only change role to agent_user for brand new users (not existing mentees)
         # For existing mentees, agent plan is an add-on — role stays mentee
@@ -7316,12 +7376,58 @@ async def verify_payment(data: VerifyPaymentRequest):
                     "referral_guidance": False
                 }
             },
+            "devops_course": {
+                "interview_quota_total": 0,
+                "plan_features": {
+                    "mock_interviews": 0,
+                    "resume_reviews": 0,
+                    "resume_review_type": "none",
+                    "offline_profile_creation": 0,
+                    "ai_tools_access": "limited",
+                    "community_access": False,
+                    "priority_support": False,
+                    "strategy_calls": 0,
+                    "referral_guidance": False,
+                    "course_access": ["devops_course"]
+                }
+            },
+            "aws_course": {
+                "interview_quota_total": 0,
+                "plan_features": {
+                    "mock_interviews": 0,
+                    "resume_reviews": 0,
+                    "resume_review_type": "none",
+                    "offline_profile_creation": 0,
+                    "ai_tools_access": "limited",
+                    "community_access": False,
+                    "priority_support": False,
+                    "strategy_calls": 0,
+                    "referral_guidance": False,
+                    "course_access": ["aws_course"]
+                }
+            },
+            "devops_aws_bundle": {
+                "interview_quota_total": 0,
+                "plan_features": {
+                    "mock_interviews": 0,
+                    "resume_reviews": 0,
+                    "resume_review_type": "none",
+                    "offline_profile_creation": 0,
+                    "ai_tools_access": "limited",
+                    "community_access": False,
+                    "priority_support": False,
+                    "strategy_calls": 0,
+                    "referral_guidance": False,
+                    "course_access": ["devops_course", "aws_course"]
+                }
+            },
         }
         
         plan_config = plan_configs.get(order["plan_id"], plan_configs["starter"])
         
         # Determine role based on plan type
         is_agent_plan = order["plan_id"].startswith("agent_")
+        is_course_plan = order["plan_id"].endswith("_course") or order["plan_id"] == "devops_aws_bundle"
         user_role = "agent_user" if is_agent_plan else "mentee"
         
         # This is a new user - create account
@@ -7342,6 +7448,11 @@ async def verify_payment(data: VerifyPaymentRequest):
             "plan_features": plan_config["plan_features"],
             "created_at": datetime.now(timezone.utc).isoformat()
         }
+        # For course plans, set course_access list and use 'free' as base plan_id
+        if is_course_plan:
+            user_doc["course_access"] = plan_config["plan_features"].get("course_access", [])
+            user_doc["plan_id"] = "free"
+            user_doc["plan_name"] = "Free"
         await db.users.insert_one(user_doc)
         
         # Generate token for auto-login

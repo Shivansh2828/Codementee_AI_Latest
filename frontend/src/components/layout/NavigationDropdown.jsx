@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown, Calendar, Users, Server, Code, MessageSquare, Layers, FileText, Briefcase, Target, Bot, Terminal, Cpu } from 'lucide-react';
+import { ChevronDown, Calendar, Users, Server, Code, MessageSquare, Layers, FileText, Briefcase, Target, Bot, Terminal, Cpu, Cloud } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
 // Map icon name strings to Lucide components (same pattern as ContentCard)
@@ -17,6 +17,7 @@ const iconMap = {
   Bot,
   Terminal,
   Cpu,
+  Cloud,
 };
 
 const NavigationDropdown = ({ label, items, isOpen, onOpen, onClose }) => {

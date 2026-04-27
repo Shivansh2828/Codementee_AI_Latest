@@ -29,6 +29,11 @@ const MenteePricing = () => {
   const [loading, setLoading] = useState(true);
   const [processingPlan, setProcessingPlan] = useState(null);
   const [plans, setPlans] = useState([]);
+  const [coursePlans, setCoursePlans] = useState([]);
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('tab') === 'courses' ? 'courses' : 'mock';
+  });
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponPlanId, setCouponPlanId] = useState(null);
 
@@ -100,6 +105,7 @@ const MenteePricing = () => {
 
   useEffect(() => {
     fetchPricingPlans();
+    fetchCoursePlans();
   }, [currency]);
 
   const fetchPricingPlans = async () => {
@@ -139,6 +145,26 @@ const MenteePricing = () => {
       toast.error('Failed to load pricing plans');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCoursePlans = async () => {
+    try {
+      const response = await api.get('/pricing-plans', {
+        params: { currency, service_type: 'course' }
+      });
+      const courseConfig = {
+        devops_course:     { icon: '⚙️', color: 'text-orange-400', bg: 'bg-orange-400/20', border: 'border-orange-500', badge: null },
+        aws_course:        { icon: '☁️', color: 'text-orange-400', bg: 'bg-orange-400/20', border: 'border-orange-500', badge: null },
+        devops_aws_bundle: { icon: '🚀', color: 'text-amber-400',  bg: 'bg-amber-400/20',  border: 'border-amber-500',  badge: 'Best Value' },
+      };
+      const mapped = response.data
+        .filter(p => p.is_active !== false)
+        .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+        .map(p => ({ ...p, plan_id: p.plan_id || p.id, config: courseConfig[p.plan_id] || courseConfig.devops_course }));
+      setCoursePlans(mapped);
+    } catch (error) {
+      console.error('Failed to fetch course plans:', error);
     }
   };
 
@@ -251,6 +277,32 @@ const MenteePricing = () => {
   return (
     <DashboardLayout title="Pricing Plans">
       <div className="space-y-8">
+        {/* Tab switcher */}
+        <div className="flex justify-center">
+          <div className={`inline-flex rounded-xl p-1 ${theme.bg.secondary} border ${theme.border.primary}`}>
+            <button
+              onClick={() => setActiveTab('mock')}
+              className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                activeTab === 'mock'
+                  ? 'bg-[#06b6d4] text-white shadow-lg'
+                  : `${theme.text.secondary} hover:${theme.text.primary}`
+              }`}
+            >
+              🎯 Mock Interviews
+            </button>
+            <button
+              onClick={() => setActiveTab('courses')}
+              className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                activeTab === 'courses'
+                  ? 'bg-orange-500 text-white shadow-lg'
+                  : `${theme.text.secondary} hover:${theme.text.primary}`
+              }`}
+            >
+              📚 Courses
+            </button>
+          </div>
+        </div>
+
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto">
           {/* Founding Slots Badge */}
@@ -283,7 +335,8 @@ const MenteePricing = () => {
           </div>
         )}
 
-        {/* Pricing Cards - Modern Design */}
+        {/* Pricing Cards - Mock Interviews */}
+        {activeTab === 'mock' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto">
           {plans.map((plan) => {
             const Icon = plan.config.icon;
@@ -445,8 +498,91 @@ const MenteePricing = () => {
             );
           })}
         </div>
+        )} {/* end activeTab === 'mock' */}
+
+        {/* Course Cards */}
+        {activeTab === 'courses' && (
+        <div className="max-w-4xl mx-auto">
+          {coursePlans.length === 0 ? (
+            <div className={`text-center py-12 ${theme.text.muted}`}>
+              <p className="text-lg mb-2">Course plans coming soon</p>
+              <p className="text-sm">Check back shortly or contact support.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {coursePlans.map((plan) => {
+                const isProcessing = processingPlan === plan.plan_id;
+                const userCourses = Array.isArray(user?.course_access) ? user.course_access : [];
+                const planCourses = plan.limits?.course_access || [];
+                const alreadyOwned = planCourses.length > 0 && planCourses.every(c => userCourses.includes(c));
+                return (
+                  <div key={plan.plan_id} className={`relative rounded-2xl overflow-hidden border-2 transition-all duration-300 ${theme.bg.card} ${
+                    plan.config.badge ? 'border-amber-500 shadow-xl shadow-amber-500/20' : 'border-orange-500/50 hover:border-orange-500'
+                  }`}>
+                    {plan.config.badge && (
+                      <div className="absolute top-0 right-0 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-4 py-1.5 rounded-bl-lg">
+                        {plan.config.badge}
+                      </div>
+                    )}
+                    {alreadyOwned && (
+                      <div className="absolute top-0 left-0 right-0 bg-emerald-500 text-white text-xs font-bold px-4 py-1.5 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                          Already Owned
+                        </div>
+                      </div>
+                    )}
+                    <div className={`p-7 ${alreadyOwned ? 'pt-12' : ''}`}>
+                      <div className="text-4xl mb-3">{plan.config.icon}</div>
+                      <h3 className={`text-xl font-bold ${theme.text.primary} mb-2`}>{plan.name}</h3>
+                      <div className="flex items-baseline gap-1 mb-5">
+                        <span className={`text-lg ${theme.text.secondary}`}>{currencySymbol}</span>
+                        <span className={`text-4xl font-bold ${theme.text.primary}`}>
+                          {Math.floor(plan.price / 100).toLocaleString('en-IN')}
+                        </span>
+                        <span className={`text-sm ${theme.text.muted} ml-1`}>one-time</span>
+                      </div>
+                      <ul className="space-y-2.5 mb-6">
+                        {(plan.features || []).map((f, i) => (
+                          <li key={i} className="flex items-start gap-2.5">
+                            <div className="w-4 h-4 rounded-full bg-orange-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                              <Check size={10} className="text-orange-400" strokeWidth={3} />
+                            </div>
+                            <span className={`text-sm ${theme.text.secondary}`}>{f}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <Button
+                        onClick={() => handleUpgrade(plan)}
+                        disabled={alreadyOwned || isProcessing}
+                        className={`w-full py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+                          alreadyOwned
+                            ? 'bg-emerald-600/80 cursor-not-allowed text-white'
+                            : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg shadow-orange-500/30'
+                        }`}
+                      >
+                        {isProcessing ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
+                        ) : alreadyOwned ? (
+                          <><Check className="w-4 h-4" /> Owned</>
+                        ) : (
+                          `Buy Now — ${currencySymbol}${Math.floor(plan.price / 100)}`
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <p className={`text-center text-sm ${theme.text.muted} mt-6`}>
+            One-time payment · Lifetime access · Also included in Pro and Elite plans
+          </p>
+        </div>
+        )} {/* end activeTab === 'courses' */}
 
         {/* Feature Comparison Matrix */}
+        {activeTab === 'mock' && (
         <div className="max-w-4xl mx-auto">
           <h2 className={`text-2xl font-bold ${theme.text.primary} text-center mb-6`}>
             Compare Plans
@@ -479,6 +615,7 @@ const MenteePricing = () => {
             </table>
           </div>
         </div>
+        )} {/* end activeTab === 'mock' feature matrix */}
 
         {/* Trust Indicators */}
         <div className={`${theme.glass} rounded-xl p-8 ${theme.border.primary} border max-w-4xl mx-auto`}>
