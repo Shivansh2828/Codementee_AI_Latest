@@ -32,8 +32,8 @@ const LearningShowcaseSection = () => {
           </p>
         </div>
 
-        {/* Responsive grid: 1 col mobile, 2 col tablet, 4 col desktop */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+        {/* Responsive grid: 1 col mobile, 2 col tablet, 3 col desktop */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {learningCategories.map((category) => (
             <ContentCard
               key={category.id}
@@ -43,6 +43,7 @@ const LearningShowcaseSection = () => {
               topicCount={category.topicCount}
               href={category.href}
               isFree={category.isFree}
+              access={category.access}
               gradient={category.gradient}
             />
           ))}

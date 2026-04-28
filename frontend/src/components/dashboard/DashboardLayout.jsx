@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useCurrency } from '../../contexts/CurrencyContext';
-import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus, DollarSign, FileText, MessageCircle, BarChart3, TrendingUp, ChevronDown, ChevronRight, Bug, Briefcase, Target, Crown, Headphones, Search, Lock, GraduationCap, Server, Code, Layers, Receipt, Bot, CreditCard, Terminal, Cpu } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, MessageSquare, LogOut, Menu, X, ShoppingCart, Building2, Clock, ClipboardList, CalendarPlus, DollarSign, FileText, MessageCircle, BarChart3, TrendingUp, ChevronDown, ChevronRight, Bug, Briefcase, Target, Crown, Headphones, Search, Lock, GraduationCap, Server, Code, Layers, Receipt, Bot, CreditCard, Terminal, Cpu, Cloud } from 'lucide-react';
 import ThemeToggle from '../ui/ThemeToggle';
 import { Badge } from '../ui/badge';
 import BugReportModal from '../BugReportModal';
@@ -29,7 +29,7 @@ const DashboardLayout = ({ children, title }) => {
     LayoutDashboard, GraduationCap, Server, Code, MessageSquare, Layers,
     Target, FileText, Search, Headphones, CalendarPlus, Calendar,
     Users, MessageCircle, Receipt, Bot, Briefcase, CreditCard,
-    Terminal, Cpu,
+    Terminal, Cpu, Cloud,
   };
 
   const getIcon = (iconName) => iconMap[iconName] || LayoutDashboard;

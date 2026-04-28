@@ -65,6 +65,13 @@ Codementee is an interview preparation platform for software engineers targeting
 - Covers Amazon Leadership Principles, Meta values, conflict resolution
 - Free with login
 
+### AWS Course
+- URL: https://codementee.io/learn/aws
+- Comprehensive AWS services and architecture training
+- Topics: EC2, S3, RDS, Lambda, VPC, IAM, CloudFront, DynamoDB, and more
+- Real-world scenarios and MAANG interview questions
+- Price: ₹499 one-time (lifetime access)
+
 ### Linux Playground
 - URL: https://codementee.io/learn/linux/playground
 - Interactive simulated Linux terminal in the browser

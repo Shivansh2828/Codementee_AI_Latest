@@ -50,6 +50,7 @@ const DevOpsIndex = () => {
     user.plan_id === 'devops_course' ||
     user.plan_id === 'pro' ||
     user.plan_id === 'elite' ||
+    (Array.isArray(user.course_access) && user.course_access.includes('devops_course')) ||
     user.role === 'admin' ||
     user.role === 'mentor'
   );
@@ -131,10 +132,10 @@ const DevOpsIndex = () => {
             </p>
             <p className="text-3xl font-bold text-orange-500 mb-6">₹499 <span className={`text-sm font-normal ${theme.text.muted}`}>one-time · lifetime access</span></p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link to="/apply?course=devops" className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all duration-200 shadow-lg">
+              <Link to="/mentee/book?tab=courses" className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all duration-200 shadow-lg">
                 Buy Now — ₹499
               </Link>
-              <Link to="/apply" className={`inline-flex items-center gap-2 px-6 py-3 ${theme.button.secondary} rounded-xl transition-all duration-200`}>
+              <Link to="/mentee/book?tab=courses" className={`inline-flex items-center gap-2 px-6 py-3 ${theme.button.secondary} rounded-xl transition-all duration-200`}>
                 View All Plans
               </Link>
             </div>

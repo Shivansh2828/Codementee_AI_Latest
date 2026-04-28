@@ -1,14 +1,57 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Clock, ChevronRight, ChevronDown, BookOpen, Menu, X, Lock, Zap, Calendar } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { getTopicBySlug, getNextTopic, getPrevTopic, DEVOPS_TOPICS, DEVOPS_SECTIONS } from '../../data/devopsCourse';
+import { AWS_TOPICS, AWS_SECTIONS } from '../../data/awsCourse';
 import ArchitectureDiagram from '../../components/learn/ArchitectureDiagram';
+import {
+  LoadBalancerAnimation,
+  AutoScalingAnimation,
+  Route53Animation,
+  RDSAnimation,
+  S3Animation,
+  APIGatewayAnimation,
+  CDNAnimation,
+  SQSAnimation,
+  SNSAnimation,
+  DLQAnimation,
+  CICDAnimation,
+} from '../../components/learn/AWSAnimations';
 
-// ── Rich text renderer (matches SystemDesignLesson) ──────────────────────────
+// ── Scroll-triggered animation hook ──────────────────────────────────────────
+const useInView = (threshold = 0.12) => {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect(); } },
+      { threshold }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return [ref, visible];
+};
+
+const AnimatedSection = ({ children, delay = 0 }) => {
+  const [ref, visible] = useInView();
+  return (
+    <div
+      ref={ref}
+      style={{ transitionDelay: `${delay}ms` }}
+      className={`transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
+    >
+      {children}
+    </div>
+  );
+};
+
+// ── Rich text renderer ────────────────────────────────────────────────────────
 const RichText = ({ text, theme }) => {
   if (!text) return null;
   const fenceParts = text.split(/(```[\s\S]*?```)/g);
@@ -52,7 +95,7 @@ const RichText = ({ text, theme }) => {
   );
 };
 
-// ── Color helper ─────────────────────────────────────────────────────────────
+// ── Color helper ──────────────────────────────────────────────────────────────
 const COLOR_MAP = {
   blue:   { text: 'text-[var(--blue)]',   bg: 'bg-[var(--blue-bg)]',   border: 'border-[var(--blue-border)]' },
   green:  { text: 'text-[var(--green)]',  bg: 'bg-[var(--green-bg)]',  border: 'border-[var(--green-border)]' },
@@ -63,7 +106,7 @@ const COLOR_MAP = {
   orange: { text: 'text-[var(--orange)]', bg: 'bg-[var(--orange-bg)]', border: 'border-[var(--orange-border)]' },
   pink:   { text: 'text-[var(--pink)]',   bg: 'bg-[var(--pink-bg)]',   border: 'border-[var(--pink-border)]' },
 };
-const c = (color) => COLOR_MAP[color] || COLOR_MAP.blue;
+const c = (color) => COLOR_MAP[color] || COLOR_MAP.orange;
 
 const calloutStyles = {
   tip:     { bg: 'bg-[var(--success-bg)] border-[var(--success-border)]', label: '💡 Tip',       labelColor: 'text-[var(--success)]' },
@@ -72,16 +115,15 @@ const calloutStyles = {
   example: { bg: 'bg-[var(--purple-bg)] border-[var(--purple-border)]',   label: '📌 Example',   labelColor: 'text-[var(--purple)]' },
 };
 
-// ── Data-driven diagram: flow (step-by-step process) ─────────────────────────
 const FlowDiagram = ({ steps, theme }) => (
   <div className="flex flex-col gap-3 max-w-lg mx-auto">
     {steps.map((s, i) => (
       <div key={i} className="flex items-center gap-3">
-        <div className={`w-8 h-8 rounded-full ${c(s.color || 'blue').bg} border ${c(s.color || 'blue').border} flex items-center justify-center shrink-0`}>
-          <span className={`text-xs font-bold ${c(s.color || 'blue').text}`}>{i + 1}</span>
+        <div className={`w-8 h-8 rounded-full ${c(s.color || 'orange').bg} border ${c(s.color || 'orange').border} flex items-center justify-center shrink-0`}>
+          <span className={`text-xs font-bold ${c(s.color || 'orange').text}`}>{i + 1}</span>
         </div>
         <div className="flex-1">
-          <span className={`text-sm font-semibold ${c(s.color || 'blue').text}`}>{s.label}</span>
+          <span className={`text-sm font-semibold ${c(s.color || 'orange').text}`}>{s.label}</span>
           <span className={`text-sm ${theme.text.secondary} ml-2`}>{s.desc}</span>
         </div>
         {i < steps.length - 1 && <div className={`text-xs ${theme.text.muted}`}>↓</div>}
@@ -90,41 +132,76 @@ const FlowDiagram = ({ steps, theme }) => (
   </div>
 );
 
-// ── Data-driven diagram: comparison (side-by-side boxes) ─────────────────────
-const ComparisonDiagram = ({ items, theme }) => (
-  <div className={`grid grid-cols-1 ${items.length <= 3 ? 'md:grid-cols-' + items.length : 'md:grid-cols-3'} gap-4 max-w-3xl mx-auto`}>
-    {items.map((item, i) => (
-      <div key={i} className={`${theme.bg.secondary} rounded-xl p-5 border ${theme.border.primary}`}>
-        <h4 className={`font-bold ${c(item.color || 'blue').text} text-center mb-3`}>{item.title}</h4>
-        <div className={`space-y-2 text-xs ${theme.text.secondary}`}>
-          {item.points.map((p, j) => <p key={j}>{p}</p>)}
+// Animated comparison — cards slide in with stagger
+const ComparisonDiagramAnimated = ({ items, theme }) => {
+  const [ref, visible] = useInView(0.05);
+  return (
+    <div ref={ref} className={`grid grid-cols-1 ${items.length <= 3 ? 'md:grid-cols-' + items.length : 'md:grid-cols-2'} gap-4 max-w-3xl mx-auto`}>
+      {items.map((item, i) => (
+        <div
+          key={i}
+          style={{ transitionDelay: `${i * 100}ms` }}
+          className={`${theme.bg.secondary} rounded-xl p-5 border-2 ${c(item.color || 'orange').border} transition-all duration-500 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+        >
+          <h4 className={`font-bold ${c(item.color || 'orange').text} text-center mb-3 text-base`}>{item.title}</h4>
+          <div className={`space-y-1.5 text-xs ${theme.text.secondary}`}>
+            {item.points.map((p, j) => <p key={j} className="leading-relaxed">{p}</p>)}
+          </div>
         </div>
-      </div>
-    ))}
-  </div>
-);
+      ))}
+    </div>
+  );
+};
 
-// ── Data-driven diagram: layers (stacked boxes) ──────────────────────────────
-const LayersDiagram = ({ layers, theme }) => (
-  <div className="flex flex-col items-center gap-1.5 max-w-md mx-auto">
-    {layers.map((l, i) => (
-      <div key={i} className={`w-full border rounded-lg px-4 py-2.5 flex items-center justify-between ${
-        l.color
-          ? `${c(l.color).bg} ${c(l.color).border} ${c(l.color).text} ${l.highlight ? 'ring-1 ring-offset-1 ring-offset-transparent' : ''}`
-          : `${theme.bg.secondary} ${theme.border.primary} ${theme.text.muted}`
-      }`} style={l.width ? { maxWidth: l.width } : {}}>
-        <span className="text-sm font-bold">{l.label}</span>
-        {l.detail && <span className="text-xs opacity-70">{l.detail}</span>}
-      </div>
-    ))}
-  </div>
-);
+// Animated layers — each layer slides in sequentially
+const LayersDiagramAnimated = ({ layers, theme }) => {
+  const [ref, visible] = useInView(0.05);
+  return (
+    <div ref={ref} className="flex flex-col items-center gap-1.5 max-w-md mx-auto">
+      {layers.map((l, i) => (
+        <div
+          key={i}
+          style={{ transitionDelay: `${i * 90}ms`, maxWidth: l.width }}
+          className={`w-full border rounded-lg px-4 py-2.5 flex items-center justify-between transition-all duration-500 ${
+            visible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-6'
+          } ${
+            l.color
+              ? `${c(l.color).bg} ${c(l.color).border} ${c(l.color).text}`
+              : `${theme.bg.secondary} ${theme.border.primary} ${theme.text.muted}`
+          }`}
+        >
+          <span className="text-sm font-bold">{l.label}</span>
+          {l.detail && <span className="text-xs opacity-70 ml-3 text-right">{l.detail}</span>}
+        </div>
+      ))}
+    </div>
+  );
+};
 
-// ── Section renderer (matches SystemDesignLesson styles) ─────────────────────
-const Section = ({ section, theme }) => {
+const ComparisonDiagram = ComparisonDiagramAnimated;
+const LayersDiagram = LayersDiagramAnimated;
+
+const ANIMATION_MAP = {
+  'load-balancer': LoadBalancerAnimation,
+  'auto-scaling':  AutoScalingAnimation,
+  'route53':       Route53Animation,
+  'rds':           RDSAnimation,
+  's3':            S3Animation,
+  'api-gateway':   APIGatewayAnimation,
+  'cdn':           CDNAnimation,
+  'sqs':           SQSAnimation,
+  'sns':           SNSAnimation,
+  'dlq':           DLQAnimation,
+  'cicd':          CICDAnimation,
+};
+
+// ── Section renderer ──────────────────────────────────────────────────────────
+const Section = ({ section, theme, index = 0 }) => {
+  const delay = index * 80;
   switch (section.type) {
     case 'faq':
       return (
+        <AnimatedSection delay={delay}>
         <div className={`mb-8 ${theme.bg.card} ${theme.border.primary} border rounded-2xl overflow-hidden`}>
           <div className="px-6 py-4 border-b border-[var(--border-primary)]">
             <h2 className={`text-lg font-bold ${theme.text.primary}`}>❓ {section.heading || 'Frequently Asked Questions'}</h2>
@@ -143,52 +220,26 @@ const Section = ({ section, theme }) => {
             ))}
           </div>
         </div>
+        </AnimatedSection>
       );
 
     case 'callout': {
-      // Special funnel variant — renders as a prominent full-width CTA
-      if (section.variant === 'funnel' || (section.variant === 'tip' && section.heading?.includes('Linux'))) {
-        return (
-          <div className="mb-8 rounded-2xl overflow-hidden border border-[#06b6d4]/30 bg-gradient-to-br from-[#06b6d4]/10 via-[#0891b2]/5 to-[#8b5cf6]/10">
-            <div className="px-6 py-5 border-b border-[#06b6d4]/20 flex items-center gap-3">
-              <span className="text-2xl">🐧</span>
-              <h3 className={`text-lg font-bold ${theme.text.primary}`}>{section.heading}</h3>
-            </div>
-            <div className="p-6">
-              <div className={`${theme.text.secondary} text-sm leading-relaxed mb-5`}>
-                <RichText text={section.body} theme={theme} />
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 mt-4">
-                <a
-                  href="/learn/linux"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-bold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all duration-200 shadow-lg text-sm"
-                >
-                  🐧 Start the Linux Course — Free
-                </a>
-                <a
-                  href="/learn/linux/linux-roadmap"
-                  className={`inline-flex items-center justify-center gap-2 px-6 py-3 ${theme.bg.card} border border-[#06b6d4]/30 ${theme.text.primary} font-medium rounded-xl hover:border-[#06b6d4] transition-all duration-200 text-sm`}
-                >
-                  View 7-Day Roadmap →
-                </a>
-              </div>
-            </div>
-          </div>
-        );
-      }
       const style = calloutStyles[section.variant] || calloutStyles.info;
       return (
+        <AnimatedSection delay={delay}>
         <div className={`mb-8 p-5 rounded-xl border ${style.bg}`}>
           <p className={`font-semibold mb-2 ${style.labelColor}`}>{style.label}: {section.heading}</p>
           <div className={`${theme.text.secondary} text-sm leading-relaxed`}>
             <RichText text={section.body} theme={theme} />
           </div>
         </div>
+        </AnimatedSection>
       );
     }
 
     case 'diagram':
       return (
+        <AnimatedSection delay={delay}>
         <div className={`mb-8 ${theme.bg.card} ${theme.border.primary} border rounded-2xl overflow-hidden`}>
           {section.heading && (
             <div className={`px-6 py-3 border-b ${theme.border.primary}`}>
@@ -198,18 +249,43 @@ const Section = ({ section, theme }) => {
           )}
           <div className="p-6">
             {section.variant === 'flow' && section.steps && <FlowDiagram steps={section.steps} theme={theme} />}
-            {section.variant === 'comparison' && section.items && <ComparisonDiagram items={section.items} theme={theme} />}
-            {section.variant === 'layers' && section.layers && <LayersDiagram layers={section.layers} theme={theme} />}
+            {section.variant === 'comparison' && section.items && <ComparisonDiagramAnimated items={section.items} theme={theme} />}
+            {section.variant === 'layers' && section.layers && <LayersDiagramAnimated layers={section.layers} theme={theme} />}
           </div>
         </div>
+        </AnimatedSection>
       );
 
     case 'architecture':
-      return <ArchitectureDiagram {...section.config} title={section.heading} caption={section.caption} />;
+      return (
+        <AnimatedSection delay={delay}>
+          <ArchitectureDiagram {...section.config} title={section.heading} caption={section.caption} />
+        </AnimatedSection>
+      );
+
+    case 'animation': {
+      const AnimComp = ANIMATION_MAP[section.id];
+      if (!AnimComp) return null;
+      return (
+        <AnimatedSection delay={delay}>
+          <div className={`mb-8 border rounded-2xl overflow-hidden`} style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-card)' }}>
+            {section.heading && (
+              <div className="px-6 py-3 border-b" style={{ borderColor: 'var(--border-primary)' }}>
+                <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>{section.heading}</h3>
+                {section.caption && <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{section.caption}</p>}
+              </div>
+            )}
+            <div className="px-6 py-4">
+              <AnimComp />
+            </div>
+          </div>
+        </AnimatedSection>
+      );
+    }
 
     default:
-      // text section
       return (
+        <AnimatedSection delay={delay}>
         <div className="mb-8">
           {section.heading && (
             <h2 className={`text-xl md:text-2xl font-bold ${theme.text.primary} mb-4`}>{section.heading}</h2>
@@ -220,12 +296,26 @@ const Section = ({ section, theme }) => {
             </div>
           )}
         </div>
+        </AnimatedSection>
       );
   }
 };
 
-// ── Main Lesson Component (layout matches SystemDesignLesson) ────────────────
-const DevOpsLesson = () => {
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const allSlugs = AWS_SECTIONS.flatMap(s => s.topics);
+
+const getTopicBySlug = (slug) => AWS_TOPICS[slug] || null;
+const getNextTopic = (slug) => {
+  const idx = allSlugs.indexOf(slug);
+  return idx >= 0 && idx < allSlugs.length - 1 ? AWS_TOPICS[allSlugs[idx + 1]] : null;
+};
+const getPrevTopic = (slug) => {
+  const idx = allSlugs.indexOf(slug);
+  return idx > 0 ? AWS_TOPICS[allSlugs[idx - 1]] : null;
+};
+
+// ── Main Component ────────────────────────────────────────────────────────────
+const AWSLesson = () => {
   const { slug } = useParams();
   const { theme } = useTheme();
   const { user } = useAuth();
@@ -234,20 +324,17 @@ const DevOpsLesson = () => {
   const topic = getTopicBySlug(slug);
   const next = getNextTopic(slug);
   const prev = getPrevTopic(slug);
-  const allSlugs = DEVOPS_SECTIONS.flatMap(s => s.topics);
   const currentIndex = allSlugs.indexOf(slug);
 
-  // Track which sidebar sections are expanded — auto-expand the section containing the current topic
-  const currentSectionId = DEVOPS_SECTIONS.find(s => s.topics.includes(slug))?.id;
-  const [expandedSections, setExpandedSections] = useState(() => {
-    return currentSectionId ? { [currentSectionId]: true } : {};
-  });
+  const currentSectionId = AWS_SECTIONS.find(s => s.topics.includes(slug))?.id;
+  const [expandedSections, setExpandedSections] = useState(() =>
+    currentSectionId ? { [currentSectionId]: true } : {}
+  );
 
   const toggleSection = (sectionId) => {
     setExpandedSections(prev => ({ ...prev, [sectionId]: !prev[sectionId] }));
   };
 
-  // Auto-expand the section when navigating to a new topic
   useEffect(() => {
     if (currentSectionId) {
       setExpandedSections(prev => ({ ...prev, [currentSectionId]: true }));
@@ -261,40 +348,43 @@ const DevOpsLesson = () => {
       <div className={`min-h-screen ${theme.bg.primary} flex items-center justify-center`}>
         <div className="text-center">
           <p className={`${theme.text.primary} text-xl mb-4`}>Lesson not found</p>
-          <Link to="/learn/devops" className="text-[#06b6d4] hover:underline">← Back to course</Link>
+          <Link to="/learn/aws" className="text-[#f97316] hover:underline">← Back to course</Link>
         </div>
       </div>
     );
   }
 
-  // Access check — DevOps is a paid course
-  const hasDevOpsAccess = user && (
-    user.plan_id === 'devops_course' ||
+  // Access check — AWS is a paid course
+  const hasAWSAccess = user && (
+    user.plan_id === 'aws_course' ||
     user.plan_id === 'pro' ||
     user.plan_id === 'elite' ||
-    (Array.isArray(user.course_access) && user.course_access.includes('devops_course')) ||
+    (Array.isArray(user.course_access) && user.course_access.includes('aws_course')) ||
     user.role === 'admin' ||
     user.role === 'mentor'
   );
 
-  // Not logged in — show login prompt
   if (!user) {
     return (
       <div className={`min-h-screen ${theme.bg.primary}`}>
         <Header />
         <div className="pt-24 pb-20 flex items-center justify-center">
           <div className="max-w-md mx-auto text-center px-4">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-[#06b6d4]/10 flex items-center justify-center">
-              <Lock className="w-10 h-10 text-[#06b6d4]" />
+            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-[#f97316]/10 flex items-center justify-center">
+              <Lock className="w-10 h-10 text-[#f97316]" />
             </div>
             <h1 className={`text-2xl font-bold ${theme.text.primary} mb-3`}>{topic.title}</h1>
-            <p className={`${theme.text.secondary} mb-6`}>
-              Sign in to purchase the DevOps course for ₹499 — lifetime access.
-            </p>
+            <p className={`${theme.text.secondary} mb-6`}>Sign in to purchase the AWS course for ₹499 — lifetime access.</p>
             <div className="space-y-3">
-              <Link to="/login" className="block w-full px-6 py-3 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-semibold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all text-center">Sign In</Link>
-              <Link to="/register" className={`block w-full px-6 py-3 ${theme.bg.card} ${theme.border.primary} border rounded-xl ${theme.text.primary} font-medium text-center hover:border-[#06b6d4]/50 transition-all`}>Create Account</Link>
-              <Link to="/learn/devops" className={`block text-sm ${theme.text.muted} hover:text-[#06b6d4] transition-colors mt-4`}>← Back to course</Link>
+              <Link to="/login" className="block w-full px-6 py-3 bg-gradient-to-r from-[#f97316] to-[#ea580c] text-white font-semibold rounded-xl hover:from-[#ea580c] hover:to-[#c2410c] transition-all text-center">
+                Sign In
+              </Link>
+              <Link to="/register" className={`block w-full px-6 py-3 ${theme.bg.card} ${theme.border.primary} border rounded-xl ${theme.text.primary} font-medium text-center hover:border-[#f97316]/50 transition-all`}>
+                Create Account
+              </Link>
+              <Link to="/learn/aws" className={`block text-sm ${theme.text.muted} hover:text-[#f97316] transition-colors mt-4`}>
+                ← Back to course
+              </Link>
             </div>
           </div>
         </div>
@@ -303,8 +393,8 @@ const DevOpsLesson = () => {
     );
   }
 
-  // Logged in but no DevOps plan — show purchase CTA
-  if (!hasDevOpsAccess) {
+  // Logged in but no AWS plan — show purchase CTA
+  if (!hasAWSAccess) {
     return (
       <div className={`min-h-screen ${theme.bg.primary}`}>
         <Header />
@@ -314,12 +404,17 @@ const DevOpsLesson = () => {
               <Zap className="w-10 h-10 text-orange-500" />
             </div>
             <h1 className={`text-2xl font-bold ${theme.text.primary} mb-3`}>{topic.title}</h1>
-            <p className={`${theme.text.secondary} mb-2`}>Unlock the full DevOps course — 64 topics, 30-day roadmap, and real MAANG scenario questions.</p>
+            <p className={`${theme.text.secondary} mb-2`}>Unlock the full AWS course — {allSlugs.length} topics, 30-day roadmap, system design on AWS, and real production scenarios.</p>
             <p className="text-3xl font-bold text-orange-500 mb-6">₹499 <span className={`text-sm font-normal ${theme.text.muted}`}>one-time · lifetime access</span></p>
             <div className="space-y-3">
-              <Link to="/mentee/book?tab=courses" className="block w-full px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all text-center">Buy Now — ₹499</Link>
-              <Link to="/learn/devops" className={`block text-sm ${theme.text.muted} hover:text-[#06b6d4] transition-colors mt-4`}>← Back to course</Link>
+              <Link to="/mentee/book?tab=courses" className="block w-full px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all text-center">
+                Buy Now — ₹499
+              </Link>
+              <Link to="/learn/aws" className={`block text-sm ${theme.text.muted} hover:text-[#f97316] transition-colors mt-4`}>
+                ← Back to course
+              </Link>
             </div>
+            <p className={`text-xs ${theme.text.muted} mt-3`}>Also included in Pro and Elite plans</p>
           </div>
         </div>
         <Footer />
@@ -335,33 +430,33 @@ const DevOpsLesson = () => {
         {/* Sidebar — desktop */}
         <aside className={`hidden lg:flex flex-col w-64 shrink-0 sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto border-r ${theme.border.primary} ${theme.bg.card}`}>
           <div className={`p-4 border-b ${theme.border.primary}`}>
-            <Link to="/learn/devops" className={`flex items-center gap-2 text-sm ${theme.text.muted} hover:text-[#06b6d4] transition-colors`}>
+            <Link to="/learn/aws" className={`flex items-center gap-2 text-sm ${theme.text.muted} hover:text-[#f97316] transition-colors`}>
               <ArrowLeft className="w-4 h-4" />
-              DevOps
+              AWS
             </Link>
           </div>
           <nav className="p-3 space-y-1">
-            {DEVOPS_SECTIONS.map((section) => {
+            {AWS_SECTIONS.map((section) => {
               const isExpanded = expandedSections[section.id];
               return (
                 <div key={section.id}>
                   <button
                     onClick={() => toggleSection(section.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider ${theme.text.muted} hover:text-[#06b6d4] transition-colors rounded-lg ${theme.bg.hover}`}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider ${theme.text.muted} hover:text-[#f97316] transition-colors rounded-lg ${theme.bg.hover}`}
                   >
                     <span className="truncate">{section.title}</span>
                     <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`} />
                   </button>
                   {isExpanded && section.topics.map((topicSlug) => {
-                    const t = DEVOPS_TOPICS[topicSlug];
+                    const t = AWS_TOPICS[topicSlug];
                     if (!t) return null;
                     return (
                       <Link
                         key={topicSlug}
-                        to={`/learn/devops/${topicSlug}`}
+                        to={`/learn/aws/${topicSlug}`}
                         className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
                           topicSlug === slug
-                            ? 'bg-[#06b6d4]/20 text-[#06b6d4] font-medium'
+                            ? 'bg-[#f97316]/20 text-[#f97316] font-medium'
                             : `${theme.text.secondary} ${theme.bg.hover}`
                         }`}
                       >
@@ -380,31 +475,31 @@ const DevOpsLesson = () => {
           <div className="lg:hidden fixed inset-0 z-50 flex">
             <div className={`w-72 ${theme.bg.card} border-r ${theme.border.primary} flex flex-col overflow-y-auto`}>
               <div className={`p-4 border-b ${theme.border.primary} flex items-center justify-between`}>
-                <Link to="/learn/devops" className={`text-sm ${theme.text.muted}`}>DevOps</Link>
+                <Link to="/learn/aws" className={`text-sm ${theme.text.muted}`}>AWS</Link>
                 <button onClick={() => setSidebarOpen(false)}><X className={`w-5 h-5 ${theme.text.secondary}`} /></button>
               </div>
               <nav className="p-3 space-y-1">
-                {DEVOPS_SECTIONS.map((section) => {
+                {AWS_SECTIONS.map((section) => {
                   const isExpanded = expandedSections[section.id];
                   return (
                     <div key={section.id}>
                       <button
                         onClick={() => toggleSection(section.id)}
-                        className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider ${theme.text.muted} hover:text-[#06b6d4] transition-colors rounded-lg ${theme.bg.hover}`}
+                        className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider ${theme.text.muted} hover:text-[#f97316] transition-colors rounded-lg ${theme.bg.hover}`}
                       >
                         <span className="truncate">{section.title}</span>
                         <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`} />
                       </button>
                       {isExpanded && section.topics.map((topicSlug) => {
-                        const t = DEVOPS_TOPICS[topicSlug];
+                        const t = AWS_TOPICS[topicSlug];
                         if (!t) return null;
                         return (
                           <Link
                             key={topicSlug}
-                            to={`/learn/devops/${topicSlug}`}
+                            to={`/learn/aws/${topicSlug}`}
                             onClick={() => setSidebarOpen(false)}
                             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
-                              topicSlug === slug ? 'bg-[#06b6d4]/20 text-[#06b6d4] font-medium' : `${theme.text.secondary} ${theme.bg.hover}`
+                              topicSlug === slug ? 'bg-[#f97316]/20 text-[#f97316] font-medium' : `${theme.text.secondary} ${theme.bg.hover}`
                             }`}
                           >
                             <span className="truncate">{t.title}</span>
@@ -436,61 +531,76 @@ const DevOpsLesson = () => {
 
             {/* Breadcrumb */}
             <div className={`flex items-center gap-2 text-sm ${theme.text.muted} mb-6`}>
-              <Link to="/learn/devops" className="hover:text-[#06b6d4] transition-colors">DevOps</Link>
+              <Link to="/learn/aws" className="hover:text-[#f97316] transition-colors">AWS</Link>
               <ChevronRight className="w-4 h-4" />
-              <span className="text-[#06b6d4]">{topic.title}</span>
+              <span className="text-[#f97316]">{topic.title}</span>
             </div>
 
             {/* Lesson header */}
             <div className="mb-10">
               <div className="flex items-center gap-3 mb-3">
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                    (topic.difficulty === 'Beginner' || topic.difficulty === 'Easy') ? 'bg-green-500/20 text-green-400' :
-                    (topic.difficulty === 'Intermediate' || topic.difficulty === 'Medium') ? 'bg-yellow-500/20 text-yellow-400' :
-                    'bg-red-500/20 text-red-400'
-                  }`}>{topic.difficulty}</span>
-                  <span className={`flex items-center gap-1 text-xs ${theme.text.muted}`}>
-                    <Clock className="w-3.5 h-3.5" />{topic.duration}
-                  </span>
-                </div>
+                <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                  (topic.difficulty === 'Beginner' || topic.difficulty === 'Easy') ? 'bg-green-500/20 text-green-400' :
+                  (topic.difficulty === 'Intermediate' || topic.difficulty === 'Medium') ? 'bg-yellow-500/20 text-yellow-400' :
+                  'bg-red-500/20 text-red-400'
+                }`}>{topic.difficulty}</span>
+                <span className={`flex items-center gap-1 text-xs ${theme.text.muted}`}>
+                  <Clock className="w-3.5 h-3.5" />{topic.duration}
+                </span>
               </div>
               <h1 className={`text-3xl md:text-4xl font-bold ${theme.text.primary} mb-2`}>{topic.title}</h1>
               <p className={`text-lg ${theme.text.secondary}`}>{topic.subtitle}</p>
             </div>
 
             {/* Divider */}
-            <div className="w-full h-px bg-gradient-to-r from-[#06b6d4]/50 to-transparent mb-10" />
+            <div className="w-full h-px bg-gradient-to-r from-[#f97316]/50 to-transparent mb-10" />
+
+            {/* Mock Interview CTA — top banner for scenario/design topics */}
+            {(slug.startsWith('aws-scenario-') || slug.startsWith('aws-design-')) && (
+              <div className={`mb-8 p-5 rounded-xl bg-gradient-to-r from-[#f97316]/10 to-[#ea580c]/10 border border-[#f97316]/30 flex flex-col sm:flex-row items-center gap-4`}>
+                <div className="flex-1">
+                  <p className={`font-semibold ${theme.text.primary} text-sm`}>Practice this in a real interview setting</p>
+                  <p className={`text-xs ${theme.text.muted} mt-0.5`}>Book a mock with a MAANG engineer and get live feedback on your AWS design skills.</p>
+                </div>
+                <Link
+                  to="/mock-interviews"
+                  className="shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#f97316] to-[#ea580c] text-white font-semibold rounded-lg text-sm hover:from-[#ea580c] hover:to-[#c2410c] transition-all"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Book Mock
+                </Link>
+              </div>
+            )}
 
             {/* Sections */}
             {topic.sections?.map((section, i) => (
-              <Section key={i} section={section} theme={theme} />
+              <Section key={i} section={section} theme={theme} index={i} />
             ))}
 
-            {/* Mock Interview CTA — show after scenarios, troubleshooting, and roadmap */}
-            {(slug.startsWith('scenario-') || slug.startsWith('troubleshoot-') || slug === 'devops-roadmap') && (
-              <div className={`mt-10 mb-4 p-6 md:p-8 rounded-2xl bg-gradient-to-r from-[#06b6d4]/10 to-[#8b5cf6]/10 border border-[#06b6d4]/30 text-center`}>
+            {/* Mock Interview CTA — bottom banner */}
+            {(slug.startsWith('aws-scenario-') || slug.startsWith('aws-design-') || slug === 'aws-roadmap') && (
+              <div className={`mt-10 mb-4 p-6 md:p-8 rounded-2xl bg-gradient-to-r from-[#f97316]/10 to-[#8b5cf6]/10 border border-[#f97316]/30 text-center`}>
                 <div className="flex items-center justify-center gap-2 mb-3">
-                  <Calendar className="w-6 h-6 text-[#06b6d4]" />
+                  <Calendar className="w-6 h-6 text-[#f97316]" />
                   <Zap className="w-5 h-5 text-[#8b5cf6]" />
                 </div>
                 <h3 className={`text-lg md:text-xl font-bold ${theme.text.primary} mb-2`}>
-                  Ready to experience a real interview?
+                  Ready to experience a real AWS interview?
                 </h3>
                 <p className={`${theme.text.secondary} text-sm mb-5 max-w-md mx-auto`}>
-                  Practice with a MAANG engineer in a live mock interview. Get detailed feedback on your answers, communication, and areas to improve.
+                  Practice with a MAANG engineer in a live mock interview. Get detailed feedback on your AWS architecture decisions and communication.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                   <Link
                     to="/mock-interviews"
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-semibold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all duration-200 shadow-lg"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#f97316] to-[#ea580c] text-white font-semibold rounded-xl hover:from-[#ea580c] hover:to-[#c2410c] transition-all duration-200 shadow-lg"
                   >
                     <Calendar className="w-4 h-4" />
                     Book a Mock Interview
                   </Link>
                   <Link
                     to="/mentorship"
-                    className={`inline-flex items-center gap-2 px-6 py-3 ${theme.bg.card} border ${theme.border.primary} rounded-xl ${theme.text.primary} font-medium hover:border-[#06b6d4]/50 transition-all duration-200`}
+                    className={`inline-flex items-center gap-2 px-6 py-3 ${theme.bg.card} border ${theme.border.primary} rounded-xl ${theme.text.primary} font-medium hover:border-[#f97316]/50 transition-all duration-200`}
                   >
                     Explore 1:1 Mentorship
                     <ArrowRight className="w-4 h-4" />
@@ -503,21 +613,21 @@ const DevOpsLesson = () => {
             <div className={`flex items-center justify-between mt-14 pt-8 border-t ${theme.border.primary}`}>
               {prev ? (
                 <Link
-                  to={`/learn/devops/${prev.slug}`}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl ${theme.bg.card} border ${theme.border.primary} hover:border-[#06b6d4]/50 transition-all group`}
+                  to={`/learn/aws/${prev.slug}`}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl ${theme.bg.card} border ${theme.border.primary} hover:border-[#f97316]/50 transition-all group`}
                 >
-                  <ArrowLeft className="w-4 h-4 text-[#06b6d4]" />
+                  <ArrowLeft className="w-4 h-4 text-[#f97316]" />
                   <div className="text-left">
                     <p className={`text-xs ${theme.text.muted}`}>Previous</p>
-                    <p className={`text-sm font-medium ${theme.text.primary} group-hover:text-[#06b6d4] transition-colors`}>{prev.title}</p>
+                    <p className={`text-sm font-medium ${theme.text.primary} group-hover:text-[#f97316] transition-colors`}>{prev.title}</p>
                   </div>
                 </Link>
               ) : <div />}
 
               {next ? (
                 <Link
-                  to={`/learn/devops/${next.slug}`}
-                  className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white hover:from-[#0891b2] hover:to-[#0e7490] transition-all group"
+                  to={`/learn/aws/${next.slug}`}
+                  className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-[#f97316] to-[#ea580c] text-white hover:from-[#ea580c] hover:to-[#c2410c] transition-all group"
                 >
                   <div className="text-right">
                     <p className="text-xs opacity-80">Next</p>
@@ -527,8 +637,8 @@ const DevOpsLesson = () => {
                 </Link>
               ) : (
                 <Link
-                  to="/learn/devops"
-                  className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white hover:from-[#0891b2] hover:to-[#0e7490] transition-all"
+                  to="/learn/aws"
+                  className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-[#f97316] to-[#ea580c] text-white hover:from-[#ea580c] hover:to-[#c2410c] transition-all"
                 >
                   <BookOpen className="w-4 h-4" />
                   <span className="text-sm font-medium">Course Complete!</span>
@@ -544,4 +654,4 @@ const DevOpsLesson = () => {
   );
 };
 
-export default DevOpsLesson;
+export default AWSLesson;
