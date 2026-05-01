@@ -1,15 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Sparkles, TrendingUp, Crown, BookOpen, Code, MessageSquare } from 'lucide-react';
+import { Check, Sparkles, TrendingUp, Crown, BookOpen, Code, MessageSquare, X } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useCurrency } from '../../contexts/CurrencyContext';
+import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 
 const PricingSection = () => {
   const { theme } = useTheme();
   const { currency, loading: currencyLoading } = useCurrency();
+  const { user, login } = useAuth();
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState('');
 
   // Free tier features
   const freeFeatures = [
@@ -199,6 +206,30 @@ const PricingSection = () => {
     }
   };
 
+  const handleLoginSubmit = async (e) => {
+    e.preventDefault();
+    setLoginError('');
+    setLoginLoading(true);
+
+    try {
+      await login(loginEmail, loginPassword);
+      setShowLoginModal(false);
+      setLoginEmail('');
+      setLoginPassword('');
+    } catch (error) {
+      setLoginError(error.message || 'Login failed. Please try again.');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handlePricingButtonClick = (e) => {
+    if (!user) {
+      e.preventDefault();
+      setShowLoginModal(true);
+    }
+  };
+
   if (loading) {
     return (
       <section id="pricing" className={`py-20 md:py-28 ${theme.bg.secondary}`}>
@@ -326,8 +357,15 @@ const PricingSection = () => {
                   </ul>
 
                   {/* CTA Button */}
-                  <Link
-                    to="/register"
+                  <button
+                    onClick={(e) => {
+                      if (!user) {
+                        e.preventDefault();
+                        setShowLoginModal(true);
+                      } else {
+                        window.location.href = '/mentee/book';
+                      }
+                    }}
                     className={`w-full py-3.5 px-6 rounded-xl font-semibold text-center transition-all duration-200 flex items-center justify-center gap-2 ${
                       plan.popular
                         ? 'bg-[#06b6d4] hover:bg-[#0891b2] text-white shadow-lg shadow-[#06b6d4]/30'
@@ -335,7 +373,7 @@ const PricingSection = () => {
                     }`}
                   >
                     {plan.cta}
-                  </Link>
+                  </button>
                 </div>
               </div>
             );
@@ -353,6 +391,77 @@ const PricingSection = () => {
             One-time payment • No subscriptions • No hidden fees
           </p>
         </div>
+
+        {/* Login Modal */}
+        {showLoginModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className={`${theme.bg.card} rounded-2xl p-8 max-w-md w-full border ${theme.border.primary}`}>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className={`text-2xl font-bold ${theme.text.primary}`}>Sign In</h3>
+                <button
+                  onClick={() => {
+                    setShowLoginModal(false);
+                    setLoginError('');
+                  }}
+                  className={`p-1 hover:${theme.bg.secondary} rounded-lg transition-colors`}
+                >
+                  <X className={`w-6 h-6 ${theme.text.secondary}`} />
+                </button>
+              </div>
+
+              <form onSubmit={handleLoginSubmit} className="space-y-4">
+                {loginError && (
+                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                    {loginError}
+                  </div>
+                )}
+
+                <div>
+                  <label className={`block text-sm font-medium ${theme.text.primary} mb-2`}>
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    required
+                    className={`w-full px-4 py-2.5 rounded-lg ${theme.bg.secondary} ${theme.border.primary} border ${theme.text.primary} placeholder-${theme.text.muted} focus:outline-none focus:border-[#06b6d4] transition-colors`}
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium ${theme.text.primary} mb-2`}>
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    className={`w-full px-4 py-2.5 rounded-lg ${theme.bg.secondary} ${theme.border.primary} border ${theme.text.primary} placeholder-${theme.text.muted} focus:outline-none focus:border-[#06b6d4] transition-colors`}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loginLoading}
+                  className="w-full py-2.5 px-4 bg-[#06b6d4] hover:bg-[#0891b2] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
+                >
+                  {loginLoading ? 'Signing in...' : 'Sign In'}
+                </button>
+
+                <p className={`text-sm ${theme.text.muted} text-center`}>
+                  Don't have an account?{' '}
+                  <Link to="/register" className="text-[#06b6d4] hover:underline font-medium">
+                    Create one
+                  </Link>
+                </p>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

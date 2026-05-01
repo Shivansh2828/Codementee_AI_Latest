@@ -1,5 +1,6 @@
 // Learning content categories for the "What You'll Learn" showcase section
 // Each category maps to a ContentCard on the landing page
+// Prices for paid courses are fetched dynamically from the API
 
 export const learningCategories = [
   {
@@ -32,7 +33,8 @@ export const learningCategories = [
     topicCount: 64,
     href: '/learn/devops',
     isFree: false,
-    access: '₹499',
+    access: null, // Fetched dynamically from API
+    planId: 'devops_course',
     gradient: 'from-orange-500 to-amber-500',
   },
   {
@@ -43,7 +45,8 @@ export const learningCategories = [
     topicCount: 36,
     href: '/learn/aws',
     isFree: false,
-    access: '₹499',
+    access: null, // Fetched dynamically from API
+    planId: 'aws_course',
     gradient: 'from-orange-400 to-yellow-500',
   },
   {

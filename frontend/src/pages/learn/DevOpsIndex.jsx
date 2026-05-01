@@ -6,6 +6,7 @@ import Footer from '../../components/layout/Footer';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { DEVOPS_SECTIONS, DEVOPS_TOPICS, DEVOPS_META } from '../../data/devopsCourse';
+import api from '../../utils/api';
 
 const difficultyColor = {
   Beginner: 'text-[var(--green)]',
@@ -44,6 +45,29 @@ const DevOpsIndex = () => {
   const { theme } = useTheme();
   const { user } = useAuth();
   const firstSlug = DEVOPS_SECTIONS[0]?.topics[0];
+  const [pricingPlan, setPricingPlan] = React.useState(null);
+  const [loadingPrice, setLoadingPrice] = React.useState(true);
+
+  // Fetch pricing dynamically from API
+  React.useEffect(() => {
+    const fetchPricing = async () => {
+      try {
+        const response = await api.get('/pricing-plans?service_type=course');
+        const plans = response.data;
+        // Find the devops_course plan
+        const devopsPlan = plans.find(p => p.plan_id === 'devops_course');
+        if (devopsPlan) {
+          setPricingPlan(devopsPlan);
+          console.log('✅ DevOps pricing loaded:', devopsPlan.price);
+        }
+      } catch (error) {
+        console.error('❌ Failed to fetch pricing:', error);
+      } finally {
+        setLoadingPrice(false);
+      }
+    };
+    fetchPricing();
+  }, []);
 
   // DevOps is a paid course — accessible to users with devops_course, pro, or elite plan
   const hasDevOpsAccess = user && (
@@ -76,7 +100,7 @@ const DevOpsIndex = () => {
           <div className="text-center mb-14">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#06b6d4]/10 border border-[#06b6d4]/30 mb-6">
               <Zap className="w-4 h-4 text-[#06b6d4]" />
-              <span className="text-sm font-semibold text-[#06b6d4]">₹499 one-time — Lifetime access</span>
+              <span className="text-sm font-semibold text-[#06b6d4]">One-time payment · Lifetime access</span>
             </div>
             <h1 className={`text-4xl md:text-5xl font-bold ${theme.text.primary} mb-4 leading-tight`}>
               {DEVOPS_META.title}
@@ -89,7 +113,7 @@ const DevOpsIndex = () => {
                 { icon: BookOpen, text: `${DEVOPS_META.totalTopics} topics` },
                 { icon: MapPin, text: '30-Day Roadmap included' },
                 { icon: Clock, text: 'Self-paced' },
-                { icon: Users, text: '₹499 one-time' },
+                { icon: Users, text: loadingPrice ? 'Loading price...' : (pricingPlan ? `₹${(pricingPlan.price / 100).toLocaleString()} one-time` : '₹499 one-time') },
               ].map((item, i) => (
                 <div key={i} className={`flex items-center gap-2 ${theme.text.muted}`}>
                   <item.icon className="w-4 h-4 text-[#06b6d4]" />
@@ -111,7 +135,7 @@ const DevOpsIndex = () => {
           <div className={`p-8 rounded-2xl ${theme.bg.card} border-2 border-[#06b6d4]/20 text-center`}>
             <Zap className="w-8 h-8 text-[#06b6d4] mx-auto mb-3" />
             <h3 className={`text-xl font-bold ${theme.text.primary} mb-2`}>Sign in to purchase DevOps course</h3>
-            <p className={`${theme.text.secondary} mb-6 text-sm max-w-lg mx-auto`}>Create an account or sign in, then unlock the full DevOps course for just ₹499 — lifetime access.</p>
+            <p className={`${theme.text.secondary} mb-6 text-sm max-w-lg mx-auto`}>Create an account or sign in, then unlock the full DevOps course — lifetime access.</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link to="/login" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#06b6d4] to-[#0891b2] text-white font-semibold rounded-xl hover:from-[#0891b2] hover:to-[#0e7490] transition-all duration-200">
                 Sign In <ArrowRight className="w-4 h-4" />
@@ -130,10 +154,10 @@ const DevOpsIndex = () => {
             <p className={`${theme.text.secondary} mb-2 text-sm max-w-lg mx-auto`}>
               Get lifetime access to all 64 topics — Docker, Kubernetes, CI/CD, Terraform, AWS, monitoring, 30-day roadmap, and real MAANG scenario questions.
             </p>
-            <p className="text-3xl font-bold text-orange-500 mb-6">₹499 <span className={`text-sm font-normal ${theme.text.muted}`}>one-time · lifetime access</span></p>
+            <p className="text-3xl font-bold text-orange-500 mb-6">Pricing set in Admin <span className={`text-sm font-normal ${theme.text.muted}`}>one-time · lifetime access</span></p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link to="/mentee/book?tab=courses" className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all duration-200 shadow-lg">
-                Buy Now — ₹499
+                View Pricing & Buy
               </Link>
               <Link to="/mentee/book?tab=courses" className={`inline-flex items-center gap-2 px-6 py-3 ${theme.button.secondary} rounded-xl transition-all duration-200`}>
                 View All Plans

@@ -4,6 +4,7 @@ import { ArrowRight, ArrowLeft, BookOpen, Clock, Users, Zap, ChevronRight, Crown
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useTheme } from '../../contexts/ThemeContext';
+import api from '../../utils/api';
 
 const COURSES = [
   {
@@ -66,10 +67,10 @@ const COURSES = [
     subtitle: 'Amazon Web Services — from basics to MAANG-level architecture',
     description: 'A complete AWS course for DevOps, SRE, and Cloud Engineering interviews. Covers IAM, EC2, S3, VPC, RDS, DynamoDB, Lambda, ECS/EKS, CloudWatch, and real-world system design on AWS.',
     path: '/learn/aws',
-    topics: '35',
+    topics: '36',
     duration: 'Self-paced',
     difficulty: 'Beginner — Advanced',
-    access: '₹499 one-time',
+    access: 'One-time payment',
     tags: ['IAM', 'EC2', 'S3', 'VPC', 'Lambda', 'ECS/EKS', 'System Design', 'Scenarios'],
     color: 'orange',
   },
@@ -95,10 +96,21 @@ const colorMap = {
   orange: { border: 'border-[var(--orange-border)] hover:border-[var(--orange)]', badge: 'bg-[var(--orange-bg)] text-[var(--orange)]', tag: 'bg-[var(--orange-bg)] text-[var(--orange)]' },
 };
 
-const CourseCard = ({ course, theme }) => {
+const CourseCard = ({ course, theme, coursePrices, loadingPrices }) => {
   const colors = colorMap[course.color];
   const Wrapper = course.path ? Link : 'div';
   const wrapperProps = course.path ? { to: course.path } : {};
+  
+  // Get dynamic price for this course
+  const getAccessText = () => {
+    if (course.id === 'devops' && coursePrices['devops_course']) {
+      return `₹${(coursePrices['devops_course'].price / 100).toLocaleString()} one-time`;
+    }
+    if (course.id === 'aws' && coursePrices['aws_course']) {
+      return `₹${(coursePrices['aws_course'].price / 100).toLocaleString()} one-time`;
+    }
+    return course.access;
+  };
 
   return (
     <Wrapper
@@ -146,7 +158,7 @@ const CourseCard = ({ course, theme }) => {
         <div className="flex items-center gap-2 mb-5">
           <CheckCircle className={`w-4 h-4 ${course.access.includes('Free') ? 'text-[var(--green)]' : 'text-[var(--accent)]'}`} />
           <span className={`text-sm font-medium ${course.access.includes('Free') ? 'text-[var(--green)]' : 'text-[var(--accent)]'}`}>
-            {course.access}
+            {getAccessText()}
           </span>
         </div>
 
@@ -165,6 +177,29 @@ const CourseCard = ({ course, theme }) => {
 
 const CoursesLandingPage = () => {
   const { theme, isDark } = useTheme();
+  const [coursePrices, setCoursePrices] = React.useState({});
+  const [loadingPrices, setLoadingPrices] = React.useState(true);
+
+  // Fetch all course pricing
+  React.useEffect(() => {
+    const fetchPricing = async () => {
+      try {
+        const response = await api.get('/pricing-plans?service_type=course');
+        const plans = response.data;
+        const priceMap = {};
+        plans.forEach(plan => {
+          priceMap[plan.plan_id] = plan;
+        });
+        setCoursePrices(priceMap);
+        console.log('✅ Course pricing loaded:', priceMap);
+      } catch (error) {
+        console.error('❌ Failed to fetch pricing:', error);
+      } finally {
+        setLoadingPrices(false);
+      }
+    };
+    fetchPricing();
+  }, []);
 
   return (
     <div className={`min-h-screen ${theme.bg.primary}`}>
@@ -218,7 +253,7 @@ const CoursesLandingPage = () => {
           <div className="container max-w-5xl mx-auto px-4">
             <div className="space-y-6">
               {COURSES.map((course) => (
-                <CourseCard key={course.id} course={course} theme={theme} />
+                <CourseCard key={course.id} course={course} theme={theme} coursePrices={coursePrices} loadingPrices={loadingPrices} />
               ))}
             </div>
           </div>
