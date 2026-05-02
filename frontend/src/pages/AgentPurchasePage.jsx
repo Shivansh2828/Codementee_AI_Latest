@@ -151,48 +151,86 @@ const AgentPurchasePage = () => {
 
     setIsLoading(true);
     try {
-      const orderRes = await api.post('/payment/create-order', {
-        name: formData.name,
-        email: formData.email,
-        password: isAuthenticated ? undefined : formData.password,
-        plan_id: formData.selectedPlan,
-        current_role: '',
-        target_role: '',
-        is_upgrade: isAuthenticated,
-        coupon_code: appliedCoupon?.code || undefined,
-      });
+      // For India (Razorpay), use subscriptions directly
+      // For international (Cashfree), use one-time order
+      const isIndia = currency === 'INR';
 
-      const orderData = orderRes.data;
-      const payment_gateway = orderData.payment_gateway;
+      let orderData;
+      let payment_gateway;
+
+      if (isIndia) {
+        // Razorpay subscription flow
+        payment_gateway = 'razorpay';
+        orderData = { payment_gateway: 'razorpay' }; // signal to use subscription path below
+      } else {
+        // Cashfree one-time order for international
+        const orderRes = await api.post('/payment/create-order', {
+          name: formData.name,
+          email: formData.email,
+          password: isAuthenticated ? undefined : formData.password,
+          plan_id: formData.selectedPlan,
+          current_role: '',
+          target_role: '',
+          is_upgrade: isAuthenticated,
+          coupon_code: appliedCoupon?.code || undefined,
+        });
+        orderData = orderRes.data;
+        payment_gateway = orderData.payment_gateway;
+      }
 
       if (payment_gateway === 'razorpay') {
-        // Handle Razorpay payment (India)
-        const { order_id, razorpay_order_id, razorpay_key_id, amount } = orderData;
+        // Handle Razorpay SUBSCRIPTION (India) — recurring monthly billing
+        const subRes = await api.post('/payment/create-subscription', {
+          name: formData.name,
+          email: formData.email,
+          password: isAuthenticated ? undefined : formData.password,
+          plan_id: formData.selectedPlan,
+          is_upgrade: isAuthenticated,
+          coupon_code: appliedCoupon?.code || undefined,
+        });
+
+        const { subscription_id, razorpay_key_id, order_id, amount } = subRes.data;
 
         const options = {
           key: razorpay_key_id,
-          amount,
-          currency: 'INR',
+          subscription_id,
           name: 'Codementee',
-          description: currentPlan.name,
-          order_id: razorpay_order_id,
+          description: `${currentPlan.name} — Auto-renews monthly`,
           prefill: { name: formData.name, email: formData.email },
           theme: { color: '#06b6d4' },
           handler: async function (response) {
             try {
-              const verifyRes = await api.post('/payment/verify', {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                order_id,
-              });
-              if (verifyRes.data.success) {
-                localStorage.setItem('token', verifyRes.data.access_token);
-                toast.success('Payment successful! Welcome to AI Agents.');
+              // Verify subscription is active
+              const statusRes = await api.get(`/payment/subscription-status/${order_id}`);
+              if (statusRes.data.status === 'active' || statusRes.data.access_token) {
+                if (statusRes.data.access_token) {
+                  localStorage.setItem('token', statusRes.data.access_token);
+                }
+                toast.success('Subscription activated! Welcome to AI Agents.');
                 setTimeout(() => { window.location.href = '/mentee/job-search'; }, 1000);
+              } else {
+                // Poll for a few seconds
+                let attempts = 0;
+                const poll = setInterval(async () => {
+                  attempts++;
+                  try {
+                    const res = await api.get(`/payment/subscription-status/${order_id}`);
+                    if (res.data.status === 'active') {
+                      clearInterval(poll);
+                      if (res.data.access_token) localStorage.setItem('token', res.data.access_token);
+                      toast.success('Subscription activated! Welcome to AI Agents.');
+                      setTimeout(() => { window.location.href = '/mentee/job-search'; }, 1000);
+                    } else if (attempts >= 5) {
+                      clearInterval(poll);
+                      toast.success('Subscription created! You will receive a confirmation email shortly.');
+                      setTimeout(() => { window.location.href = '/login'; }, 2000);
+                    }
+                  } catch { clearInterval(poll); }
+                }, 2000);
               }
             } catch (err) {
-              toast.error(err.response?.data?.detail || 'Payment verification failed');
+              toast.error(err.response?.data?.detail || 'Subscription verification failed');
+              setIsLoading(false);
             }
           },
           modal: { ondismiss: () => { setIsLoading(false); toast.error('Payment cancelled'); } },
@@ -346,6 +384,7 @@ const AgentPurchasePage = () => {
                 <div className="flex items-center gap-2"><Shield size={16} /><span>Secure Payment</span></div>
                 <span>•</span>
                 <span>Powered by {currency === 'USD' ? 'Cashfree' : 'Razorpay'}</span>
+                {currency === 'INR' && <><span>•</span><span>Auto-renews monthly</span></>}
               </div>
 
               <p className="text-center text-xs text-gray-600">
