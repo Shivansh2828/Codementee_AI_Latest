@@ -7669,6 +7669,313 @@ async def cashfree_order_status(order_id: str):
     
     return {"status": "pending", "message": "Payment is being processed"}
 
+# ============ RAZORPAY SUBSCRIPTIONS (AI AGENTS) ============
+
+class CreateSubscriptionRequest(BaseModel):
+    plan_id: str  # agent_monthly or agent_quarterly
+    name: str
+    email: str
+    password: Optional[str] = None
+    is_upgrade: bool = False
+    coupon_code: Optional[str] = None
+
+@api_router.post("/payment/create-subscription")
+async def create_razorpay_subscription(data: CreateSubscriptionRequest, request: Request):
+    """Create a Razorpay subscription for AI Agent plans (India only)."""
+    # Only agent plans support subscriptions
+    if not data.plan_id.startswith("agent_"):
+        raise HTTPException(status_code=400, detail="Subscriptions only available for AI Agent plans")
+
+    # Look up the Razorpay plan ID from DB
+    rzp_plan = await db.razorpay_plans.find_one({"internal_id": data.plan_id})
+    if not rzp_plan or not rzp_plan.get("razorpay_plan_id"):
+        raise HTTPException(status_code=400, detail=f"Razorpay plan not found for {data.plan_id}. Run create_razorpay_plans.py first.")
+
+    razorpay_plan_id = rzp_plan["razorpay_plan_id"]
+
+    # Check if email already exists
+    existing = await db.users.find_one({"email": data.email})
+    if existing and not data.is_upgrade:
+        if existing.get("status") == "Active" or existing.get("plan_id"):
+            raise HTTPException(status_code=400, detail="Email already registered. Please login instead.")
+
+    if not existing and not data.password:
+        raise HTTPException(status_code=400, detail="Password is required for new registration")
+
+    # Get plan info for amount
+    plan_info = await get_pricing_plan(data.plan_id)
+    if not plan_info:
+        raise HTTPException(status_code=400, detail="Invalid plan")
+
+    amount = plan_info.get("price_inr", plan_info.get("price", 0))
+
+    # Apply coupon if provided
+    coupon_code_applied = None
+    if data.coupon_code:
+        code_upper = data.coupon_code.strip().upper()
+        coupon = await db.coupon_codes.find_one({"code": code_upper, "is_active": True})
+        if coupon:
+            discount_type = coupon.get("discount_type")
+            discount_value = coupon.get("discount_value", 0)
+            if discount_type == "percentage":
+                amount = int(amount * (1 - discount_value / 100))
+            else:
+                amount = max(0, amount - int(discount_value))
+            coupon_code_applied = code_upper
+
+    # Create Razorpay subscription
+    internal_order_id = str(uuid.uuid4())
+    try:
+        subscription = razorpay_client.subscription.create({
+            "plan_id": razorpay_plan_id,
+            "total_count": 120,  # Max 10 years of billing cycles
+            "quantity": 1,
+            "customer_notify": 1,
+            "notes": {
+                "internal_order_id": internal_order_id,
+                "email": data.email,
+                "plan_id": data.plan_id,
+            }
+        })
+    except Exception as e:
+        logger.error(f"Failed to create Razorpay subscription: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create subscription. Please try again.")
+
+    # Store subscription record in DB
+    sub_doc = {
+        "id": internal_order_id,
+        "razorpay_subscription_id": subscription["id"],
+        "payment_gateway": "razorpay",
+        "payment_type": "subscription",
+        "name": data.name,
+        "email": data.email,
+        "password": hash_password(data.password) if data.password else (existing["password"] if existing else None),
+        "plan_id": data.plan_id,
+        "plan_name": plan_info.get("name", data.plan_id),
+        "amount": amount,
+        "currency": "INR",
+        "coupon_code": coupon_code_applied,
+        "status": "pending",
+        "is_upgrade": data.is_upgrade,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.orders.insert_one(sub_doc)
+
+    return {
+        "subscription_id": subscription["id"],
+        "razorpay_key_id": RAZORPAY_KEY_ID,
+        "order_id": internal_order_id,
+        "plan_name": plan_info.get("name", data.plan_id),
+        "amount": amount,
+    }
+
+
+@api_router.post("/payment/subscription-webhook")
+async def razorpay_subscription_webhook(request: Request):
+    """Handle Razorpay subscription webhooks."""
+    try:
+        payload = await request.body()
+        signature = request.headers.get("x-razorpay-signature", "")
+
+        # Verify webhook signature
+        try:
+            razorpay_client.utility.verify_webhook_signature(
+                payload.decode(), signature, RAZORPAY_KEY_SECRET
+            )
+        except Exception:
+            logger.error("Invalid Razorpay webhook signature")
+            raise HTTPException(status_code=400, detail="Invalid signature")
+
+        data = await request.json()
+        event = data.get("event")
+        entity = data.get("payload", {}).get("subscription", {}).get("entity", {})
+        payment_entity = data.get("payload", {}).get("payment", {}).get("entity", {})
+
+        razorpay_subscription_id = entity.get("id")
+        if not razorpay_subscription_id:
+            return {"status": "ignored"}
+
+        # Find the order/subscription record
+        order = await db.orders.find_one({"razorpay_subscription_id": razorpay_subscription_id})
+
+        if event == "subscription.charged":
+            # Payment successful — activate/renew user
+            if not order:
+                logger.error(f"Order not found for subscription: {razorpay_subscription_id}")
+                return {"status": "error"}
+
+            # Update order status
+            await db.orders.update_one(
+                {"razorpay_subscription_id": razorpay_subscription_id},
+                {"$set": {
+                    "status": "paid",
+                    "razorpay_payment_id": payment_entity.get("id"),
+                    "paid_at": datetime.now(timezone.utc).isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+
+            # Activate or renew user
+            plan_id = order.get("plan_id", "agent_monthly")
+            plan_features = {
+                "mock_interviews": 0, "resume_reviews": 0, "resume_review_type": "none",
+                "offline_profile_creation": 0, "ai_tools_access": "full",
+                "community_access": True, "priority_support": False,
+                "strategy_calls": 0, "referral_guidance": False,
+                "ai_agents": True
+            }
+
+            # Calculate subscription expiry (1 month or 3 months from now)
+            duration_months = 3 if plan_id == "agent_quarterly" else 1
+            from dateutil.relativedelta import relativedelta
+            expires_at = (datetime.now(timezone.utc) + relativedelta(months=duration_months)).isoformat()
+
+            existing_user = await db.users.find_one({"email": order["email"]})
+            if existing_user:
+                await db.users.update_one(
+                    {"email": order["email"]},
+                    {"$set": {
+                        "status": "Active",
+                        "plan_id": plan_id,
+                        "plan_name": order.get("plan_name", "AI Agent"),
+                        "plan_features": plan_features,
+                        "razorpay_subscription_id": razorpay_subscription_id,
+                        "subscription_expires_at": expires_at,
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }}
+                )
+            else:
+                user_doc = {
+                    "id": str(uuid.uuid4()),
+                    "name": order["name"],
+                    "email": order["email"],
+                    "password": order.get("password"),
+                    "role": "agent_user",
+                    "status": "Active",
+                    "plan_id": plan_id,
+                    "plan_name": order.get("plan_name", "AI Agent"),
+                    "interview_quota_total": 0,
+                    "interview_quota_remaining": 0,
+                    "plan_features": plan_features,
+                    "razorpay_subscription_id": razorpay_subscription_id,
+                    "subscription_expires_at": expires_at,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                await db.users.insert_one(user_doc)
+
+            # Send welcome/renewal email
+            is_renewal = existing_user and existing_user.get("status") == "Active"
+            if not is_renewal:
+                asyncio.create_task(send_welcome_email(
+                    name=order["name"], email=order["email"],
+                    plan_name=order.get("plan_name", "AI Agent"),
+                    amount=int(order["amount"] / 100), currency="INR"
+                ))
+                asyncio.create_task(send_purchase_notification_email(
+                    name=order["name"], email=order["email"],
+                    plan_name=order.get("plan_name", "AI Agent"),
+                    amount=int(order["amount"] / 100), currency="INR",
+                    payment_gateway="razorpay_subscription"
+                ))
+
+            logger.info(f"Subscription charged: {razorpay_subscription_id} for {order['email']}")
+
+        elif event in ("subscription.cancelled", "subscription.halted", "subscription.completed"):
+            # Subscription ended — deactivate user
+            if order:
+                await db.users.update_one(
+                    {"email": order["email"]},
+                    {"$set": {
+                        "status": "Free",
+                        "plan_id": None,
+                        "subscription_expires_at": None,
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }}
+                )
+                logger.info(f"Subscription {event}: deactivated {order.get('email')}")
+
+        return {"status": "ok"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Subscription webhook error: {e}", exc_info=True)
+        return {"status": "error", "message": str(e)}
+
+
+@api_router.get("/payment/subscription-status/{subscription_id}")
+async def get_subscription_status(subscription_id: str):
+    """Check subscription status after Razorpay checkout completes."""
+    order = await db.orders.find_one({"razorpay_subscription_id": subscription_id})
+    if not order:
+        # Try by internal order ID
+        order = await db.orders.find_one({"id": subscription_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+
+    if order.get("status") == "paid":
+        user = await db.users.find_one({"email": order["email"]})
+        token = create_token(user["id"], user["role"]) if user else None
+        return {"status": "active", "access_token": token, "message": "Subscription active"}
+
+    # Check with Razorpay directly
+    rzp_sub_id = order.get("razorpay_subscription_id")
+    if rzp_sub_id:
+        try:
+            sub = razorpay_client.subscription.fetch(rzp_sub_id)
+            rzp_status = sub.get("status")
+            if rzp_status in ("active", "authenticated"):
+                # Mark as paid and activate user
+                await db.orders.update_one(
+                    {"id": order["id"]},
+                    {"$set": {"status": "paid", "updated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+                plan_features = {
+                    "mock_interviews": 0, "resume_reviews": 0, "resume_review_type": "none",
+                    "offline_profile_creation": 0, "ai_tools_access": "full",
+                    "community_access": True, "priority_support": False,
+                    "strategy_calls": 0, "referral_guidance": False, "ai_agents": True
+                }
+                duration_months = 3 if order.get("plan_id") == "agent_quarterly" else 1
+                from dateutil.relativedelta import relativedelta
+                expires_at = (datetime.now(timezone.utc) + relativedelta(months=duration_months)).isoformat()
+
+                existing_user = await db.users.find_one({"email": order["email"]})
+                if existing_user:
+                    await db.users.update_one(
+                        {"email": order["email"]},
+                        {"$set": {
+                            "status": "Active", "plan_id": order["plan_id"],
+                            "plan_name": order.get("plan_name", "AI Agent"),
+                            "plan_features": plan_features,
+                            "razorpay_subscription_id": rzp_sub_id,
+                            "subscription_expires_at": expires_at,
+                            "updated_at": datetime.now(timezone.utc).isoformat()
+                        }}
+                    )
+                else:
+                    user_doc = {
+                        "id": str(uuid.uuid4()), "name": order["name"], "email": order["email"],
+                        "password": order.get("password"), "role": "agent_user", "status": "Active",
+                        "plan_id": order["plan_id"], "plan_name": order.get("plan_name", "AI Agent"),
+                        "interview_quota_total": 0, "interview_quota_remaining": 0,
+                        "plan_features": plan_features, "razorpay_subscription_id": rzp_sub_id,
+                        "subscription_expires_at": expires_at,
+                        "created_at": datetime.now(timezone.utc).isoformat()
+                    }
+                    await db.users.insert_one(user_doc)
+
+                user = await db.users.find_one({"email": order["email"]})
+                token = create_token(user["id"], user["role"]) if user else None
+                return {"status": "active", "access_token": token, "message": "Subscription active"}
+            elif rzp_status == "created":
+                return {"status": "pending", "message": "Awaiting payment authorization"}
+        except Exception as e:
+            logger.error(f"Razorpay subscription status check error: {e}")
+
+    return {"status": "pending", "message": "Subscription is being processed"}
+
+
 # ============ MENTOR PAYOUT TRACKING SYSTEM ============
 
 class PayoutRequest(BaseModel):
