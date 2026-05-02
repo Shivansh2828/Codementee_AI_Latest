@@ -10,6 +10,8 @@ const PaymentSuccess = () => {
   const navigate = useNavigate();
   const [status, setStatus] = useState('verifying'); // verifying | success | failed
   const [message, setMessage] = useState('Verifying your payment...');
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 10; // Stop polling after ~30 seconds
   const orderId = searchParams.get('order_id');
 
   useEffect(() => {
@@ -37,9 +39,17 @@ const PaymentSuccess = () => {
           navigate('/mentee');
         }, 3000);
       } else if (data.status === 'pending') {
-        // Poll again after a delay (webhook may not have arrived yet)
-        setMessage('Payment is being processed...');
-        setTimeout(verifyPayment, 3000);
+        setRetryCount(prev => {
+          const next = prev + 1;
+          if (next >= maxRetries) {
+            setStatus('failed');
+            setMessage('Payment verification is taking longer than expected. If you were charged, your account will be activated shortly. Please check your email or contact support.');
+            return next;
+          }
+          setMessage(`Payment is being processed... (attempt ${next}/${maxRetries})`);
+          setTimeout(verifyPayment, 3000);
+          return next;
+        });
       } else {
         setStatus('failed');
         setMessage(data.message || 'Payment could not be verified. Please contact support.');
