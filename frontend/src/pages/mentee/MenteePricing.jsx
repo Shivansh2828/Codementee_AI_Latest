@@ -30,9 +30,12 @@ const MenteePricing = () => {
   const [processingPlan, setProcessingPlan] = useState(null);
   const [plans, setPlans] = useState([]);
   const [coursePlans, setCoursePlans] = useState([]);
+  const [mentorshipPlans, setMentorshipPlans] = useState([]);
+  const [resumeReviewPlans, setResumeReviewPlans] = useState([]);
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get('tab') === 'courses' ? 'courses' : 'mock';
+    const tab = params.get('tab');
+    return ['mock', 'mentorship', 'resume', 'courses'].includes(tab) ? tab : 'mock';
   });
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponPlanId, setCouponPlanId] = useState(null);
@@ -106,6 +109,8 @@ const MenteePricing = () => {
   useEffect(() => {
     fetchPricingPlans();
     fetchCoursePlans();
+    fetchMentorshipPlans();
+    fetchResumeReviewPlans();
   }, [currency]);
 
   const fetchPricingPlans = async () => {
@@ -154,9 +159,9 @@ const MenteePricing = () => {
         params: { currency, service_type: 'course' }
       });
       const courseConfig = {
-        devops_course:     { icon: '⚙️', color: 'text-orange-400', bg: 'bg-orange-400/20', border: 'border-orange-500', badge: null },
-        aws_course:        { icon: '☁️', color: 'text-orange-400', bg: 'bg-orange-400/20', border: 'border-orange-500', badge: null },
-        devops_aws_bundle: { icon: '🚀', color: 'text-amber-400',  bg: 'bg-amber-400/20',  border: 'border-amber-500',  badge: 'Best Value' },
+        devops_course:     { color: 'text-orange-400', bg: 'bg-orange-400/20', border: 'border-orange-500', badge: null },
+        aws_course:        { color: 'text-orange-400', bg: 'bg-orange-400/20', border: 'border-orange-500', badge: null },
+        devops_aws_bundle: { color: 'text-amber-400',  bg: 'bg-amber-400/20',  border: 'border-amber-500',  badge: 'Best Value' },
       };
       const mapped = response.data
         .filter(p => p.is_active !== false)
@@ -165,6 +170,46 @@ const MenteePricing = () => {
       setCoursePlans(mapped);
     } catch (error) {
       console.error('Failed to fetch course plans:', error);
+    }
+  };
+
+  const fetchMentorshipPlans = async () => {
+    try {
+      const response = await api.get('/pricing-plans', {
+        params: { currency, service_type: 'mentorship' }
+      });
+      const mentorshipConfig = {
+        starter_mentorship: { icon: Sparkles, iconColor: 'text-blue-400', bgColor: 'bg-blue-400/20', cta: 'Get Started' },
+        pro_mentorship:     { icon: TrendingUp, iconColor: 'text-[#06b6d4]', bgColor: 'bg-[#06b6d4]/20', cta: 'Upgrade', popular: true },
+        elite_mentorship:   { icon: Crown, iconColor: 'text-amber-400', bgColor: 'bg-amber-400/20', cta: 'Go Elite' },
+      };
+      const mapped = response.data
+        .filter(p => p.is_active !== false)
+        .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+        .map(p => ({ ...p, plan_id: p.plan_id || p.id, config: mentorshipConfig[p.plan_id] || mentorshipConfig.starter_mentorship }));
+      setMentorshipPlans(mapped);
+    } catch (error) {
+      console.error('Failed to fetch mentorship plans:', error);
+    }
+  };
+
+  const fetchResumeReviewPlans = async () => {
+    try {
+      const response = await api.get('/pricing-plans', {
+        params: { currency, service_type: 'resume_review' }
+      });
+      const resumeConfig = {
+        starter_resume: { color: 'text-green-400', bg: 'bg-green-400/20', border: 'border-green-500', badge: null },
+        pro_resume:     { color: 'text-[#06b6d4]', bg: 'bg-[#06b6d4]/20', border: 'border-[#06b6d4]', badge: 'Live Call' },
+        elite_resume:   { color: 'text-amber-400', bg: 'bg-amber-400/20', border: 'border-amber-500', badge: 'Premium' },
+      };
+      const mapped = response.data
+        .filter(p => p.is_active !== false)
+        .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+        .map(p => ({ ...p, plan_id: p.plan_id || p.id, config: resumeConfig[p.plan_id] || resumeConfig.starter_resume }));
+      setResumeReviewPlans(mapped);
+    } catch (error) {
+      console.error('Failed to fetch resume review plans:', error);
     }
   };
 
@@ -278,27 +323,47 @@ const MenteePricing = () => {
     <DashboardLayout title="Pricing Plans">
       <div className="space-y-8">
         {/* Tab switcher */}
-        <div className="flex justify-center">
+        <div className="flex justify-center overflow-x-auto">
           <div className={`inline-flex rounded-xl p-1 ${theme.bg.secondary} border ${theme.border.primary}`}>
             <button
               onClick={() => setActiveTab('mock')}
-              className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+              className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
                 activeTab === 'mock'
                   ? 'bg-[#06b6d4] text-white shadow-lg'
                   : `${theme.text.secondary} hover:${theme.text.primary}`
               }`}
             >
-              🎯 Mock Interviews
+              Mock Interviews
+            </button>
+            <button
+              onClick={() => setActiveTab('mentorship')}
+              className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
+                activeTab === 'mentorship'
+                  ? 'bg-purple-500 text-white shadow-lg'
+                  : `${theme.text.secondary} hover:${theme.text.primary}`
+              }`}
+            >
+              Mentorship
+            </button>
+            <button
+              onClick={() => setActiveTab('resume')}
+              className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
+                activeTab === 'resume'
+                  ? 'bg-green-500 text-white shadow-lg'
+                  : `${theme.text.secondary} hover:${theme.text.primary}`
+              }`}
+            >
+              Resume Review
             </button>
             <button
               onClick={() => setActiveTab('courses')}
-              className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+              className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
                 activeTab === 'courses'
                   ? 'bg-orange-500 text-white shadow-lg'
                   : `${theme.text.secondary} hover:${theme.text.primary}`
               }`}
             >
-              📚 Courses
+              Courses
             </button>
           </div>
         </div>
@@ -533,7 +598,6 @@ const MenteePricing = () => {
                       </div>
                     )}
                     <div className={`p-7 ${alreadyOwned ? 'pt-12' : ''}`}>
-                      <div className="text-4xl mb-3">{plan.config.icon}</div>
                       <h3 className={`text-xl font-bold ${theme.text.primary} mb-2`}>{plan.name}</h3>
                       <div className="flex items-baseline gap-1 mb-5">
                         <span className={`text-lg ${theme.text.secondary}`}>{currencySymbol}</span>
@@ -580,6 +644,228 @@ const MenteePricing = () => {
           </p>
         </div>
         )} {/* end activeTab === 'courses' */}
+
+        {/* Mentorship Cards */}
+        {activeTab === 'mentorship' && (
+        <div className="max-w-4xl mx-auto">
+          {mentorshipPlans.length === 0 ? (
+            <div className={`text-center py-12 ${theme.text.muted}`}>
+              <p className="text-lg mb-2">Mentorship plans coming soon</p>
+              <p className="text-sm">Check back shortly or contact support.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {mentorshipPlans.map((plan) => {
+                const Icon = plan.config.icon;
+                const isProcessing = processingPlan === plan.plan_id;
+                const isPopular = plan.config.popular;
+                
+                return (
+                  <div key={plan.plan_id} className={`relative rounded-2xl overflow-hidden border-2 transition-all duration-300 ${theme.bg.card} ${
+                    isPopular ? 'border-purple-500 shadow-xl shadow-purple-500/20' : 'border-purple-500/50 hover:border-purple-500'
+                  }`}>
+                    {isPopular && (
+                      <div className="absolute top-0 right-0 bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs font-bold px-4 py-1.5 rounded-bl-lg">
+                        Most Popular
+                      </div>
+                    )}
+                    <div className="p-7">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className={`w-12 h-12 rounded-xl ${plan.config.bgColor} flex items-center justify-center`}>
+                          <Icon className={`w-6 h-6 ${plan.config.iconColor}`} />
+                        </div>
+                        <h3 className={`text-xl font-bold ${theme.text.primary}`}>{plan.name}</h3>
+                      </div>
+                      
+                      <p className={`text-sm ${theme.text.secondary} mb-6`}>{plan.description}</p>
+                      
+                      <div className="flex items-baseline gap-1 mb-5">
+                        <span className={`text-lg ${theme.text.secondary}`}>{currencySymbol}</span>
+                        <span className={`text-4xl font-bold ${theme.text.primary}`}>
+                          {Math.floor(plan.price / 100).toLocaleString('en-IN')}
+                        </span>
+                        <span className={`text-sm ${theme.text.muted} ml-1`}>one-time</span>
+                      </div>
+
+                      {/* Mentorship Details */}
+                      {(plan.sessions_count || plan.session_duration_minutes) && (
+                        <div className={`space-y-2 mb-6 p-3 rounded-lg ${theme.bg.secondary}`}>
+                          {plan.sessions_count && (
+                            <div className={`flex justify-between text-sm ${theme.text.secondary}`}>
+                              <span>Sessions:</span>
+                              <span className="font-semibold text-purple-400">{plan.sessions_count}</span>
+                            </div>
+                          )}
+                          {plan.session_duration_minutes && (
+                            <div className={`flex justify-between text-sm ${theme.text.secondary}`}>
+                              <span>Duration:</span>
+                              <span className="font-semibold text-purple-400">{plan.session_duration_minutes} min</span>
+                            </div>
+                          )}
+                          {plan.discount_percent > 0 && (
+                            <div className={`flex justify-between text-sm ${theme.text.secondary}`}>
+                              <span>Discount:</span>
+                              <span className="font-semibold text-green-400">{plan.discount_percent}%</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <ul className="space-y-2.5 mb-6">
+                        {(plan.features || []).map((f, i) => (
+                          <li key={i} className="flex items-start gap-2.5">
+                            <div className="w-4 h-4 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                              <Check size={10} className="text-purple-400" strokeWidth={3} />
+                            </div>
+                            <span className={`text-sm ${theme.text.secondary}`}>{f}</span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      <div className="mb-4">
+                        <CouponCodeInput
+                          serviceType="mentorship"
+                          orderAmount={plan.price}
+                          currency={currency}
+                          onCouponApplied={(result) => {
+                            setAppliedCoupon(result);
+                            setCouponPlanId(plan.plan_id);
+                          }}
+                          onCouponRemoved={() => {
+                            setAppliedCoupon(null);
+                            setCouponPlanId(null);
+                          }}
+                        />
+                      </div>
+
+                      <Button
+                        onClick={() => handleUpgrade(plan)}
+                        disabled={isProcessing}
+                        className={`w-full py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+                          isPopular
+                            ? 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-lg shadow-purple-500/30'
+                            : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 border border-purple-500/30'
+                        }`}
+                      >
+                        {isProcessing ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
+                        ) : (
+                          <>{plan.config.cta} — {currencySymbol}{Math.floor(plan.price / 100)}</>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <p className={`text-center text-sm ${theme.text.muted} mt-6`}>
+            One-time payment · Book sessions at your convenience · Expert MAANG mentors
+          </p>
+        </div>
+        )} {/* end activeTab === 'mentorship' */}
+
+        {/* Resume Review Cards */}
+        {activeTab === 'resume' && (
+        <div className="max-w-4xl mx-auto">
+          {resumeReviewPlans.length === 0 ? (
+            <div className={`text-center py-12 ${theme.text.muted}`}>
+              <p className="text-lg mb-2">Resume review plans coming soon</p>
+              <p className="text-sm">Check back shortly or contact support.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {resumeReviewPlans.map((plan) => {
+                const isProcessing = processingPlan === plan.plan_id;
+                
+                return (
+                  <div key={plan.plan_id} className={`relative rounded-2xl overflow-hidden border-2 transition-all duration-300 ${theme.bg.card} border-green-500/50 hover:border-green-500`}>
+                    <div className="p-7">
+                      <h3 className={`text-xl font-bold ${theme.text.primary} mb-2`}>{plan.name}</h3>
+                      
+                      <p className={`text-sm ${theme.text.secondary} mb-6`}>{plan.description}</p>
+                      
+                      <div className="flex items-baseline gap-1 mb-5">
+                        <span className={`text-lg ${theme.text.secondary}`}>{currencySymbol}</span>
+                        <span className={`text-4xl font-bold ${theme.text.primary}`}>
+                          {Math.floor(plan.price / 100).toLocaleString('en-IN')}
+                        </span>
+                        <span className={`text-sm ${theme.text.muted} ml-1`}>one-time</span>
+                      </div>
+
+                      {/* Resume Review Details */}
+                      {(plan.review_type || plan.delivery_timeframe) && (
+                        <div className={`space-y-2 mb-6 p-3 rounded-lg ${theme.bg.secondary}`}>
+                          {plan.review_type && (
+                            <div className={`flex justify-between text-sm ${theme.text.secondary}`}>
+                              <span>Type:</span>
+                              <span className="font-semibold text-green-400 capitalize">{plan.review_type}</span>
+                            </div>
+                          )}
+                          {plan.delivery_timeframe && (
+                            <div className={`flex justify-between text-sm ${theme.text.secondary}`}>
+                              <span>Delivery:</span>
+                              <span className="font-semibold text-green-400">{plan.delivery_timeframe}</span>
+                            </div>
+                          )}
+                          {plan.review_type === 'call' && plan.session_duration_minutes && (
+                            <div className={`flex justify-between text-sm ${theme.text.secondary}`}>
+                              <span>Call Duration:</span>
+                              <span className="font-semibold text-green-400">{plan.session_duration_minutes} min</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <ul className="space-y-2.5 mb-6">
+                        {(plan.features || []).map((f, i) => (
+                          <li key={i} className="flex items-start gap-2.5">
+                            <div className="w-4 h-4 rounded-full bg-green-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                              <Check size={10} className="text-green-400" strokeWidth={3} />
+                            </div>
+                            <span className={`text-sm ${theme.text.secondary}`}>{f}</span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      <div className="mb-4">
+                        <CouponCodeInput
+                          serviceType="resume_review"
+                          orderAmount={plan.price}
+                          currency={currency}
+                          onCouponApplied={(result) => {
+                            setAppliedCoupon(result);
+                            setCouponPlanId(plan.plan_id);
+                          }}
+                          onCouponRemoved={() => {
+                            setAppliedCoupon(null);
+                            setCouponPlanId(null);
+                          }}
+                        />
+                      </div>
+
+                      <Button
+                        onClick={() => handleUpgrade(plan)}
+                        disabled={isProcessing}
+                        className={`w-full py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg shadow-green-500/30`}
+                      >
+                        {isProcessing ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
+                        ) : (
+                          <>Get Review — {currencySymbol}{Math.floor(plan.price / 100)}</>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <p className={`text-center text-sm ${theme.text.muted} mt-6`}>
+            One-time payment · Expert feedback · Improve your resume instantly
+          </p>
+        </div>
+        )} {/* end activeTab === 'resume' */}
 
         {/* Feature Comparison Matrix */}
         {activeTab === 'mock' && (
