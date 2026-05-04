@@ -3,9 +3,40 @@ import { BookOpen } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { learningCategories } from '../../data/learningContent';
 import ContentCard from '../shared/ContentCard';
+import api from '../../utils/api';
 
 const LearningShowcaseSection = () => {
   const { theme } = useTheme();
+  const [coursePrices, setCoursePrices] = React.useState({});
+
+  // Fetch course pricing dynamically
+  React.useEffect(() => {
+    const fetchPricing = async () => {
+      try {
+        const response = await api.get('/pricing-plans?service_type=course');
+        const plans = response.data;
+        const priceMap = {};
+        plans.forEach(plan => {
+          priceMap[plan.plan_id] = plan;
+        });
+        setCoursePrices(priceMap);
+        console.log('✅ Homepage course pricing loaded:', priceMap);
+      } catch (error) {
+        console.error('❌ Failed to fetch homepage pricing:', error);
+      }
+    };
+    fetchPricing();
+  }, []);
+
+  // Get display price for a category
+  const getDisplayPrice = (category) => {
+    if (category.isFree) return category.access;
+    if (category.planId && coursePrices[category.planId]) {
+      const price = coursePrices[category.planId].price;
+      return `₹${(price / 100).toLocaleString()}`;
+    }
+    return category.access || 'Loading...';
+  };
 
   return (
     <section className={`py-20 md:py-28 ${theme.bg.secondary}`}>
@@ -43,7 +74,7 @@ const LearningShowcaseSection = () => {
               topicCount={category.topicCount}
               href={category.href}
               isFree={category.isFree}
-              access={category.access}
+              access={getDisplayPrice(category)}
               gradient={category.gradient}
             />
           ))}

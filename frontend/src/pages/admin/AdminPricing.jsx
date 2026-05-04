@@ -21,6 +21,7 @@ const SERVICE_TYPES = [
   { value: 'mentorship', label: 'Mentorship', icon: Users },
   { value: 'resume_review', label: 'Resume Review', icon: FileText },
   { value: 'ai_agent', label: 'AI Agents', icon: Bot },
+  { value: 'course', label: 'Courses', icon: Tag },
 ];
 
 const SERVICE_TYPE_LABELS = {
@@ -28,6 +29,7 @@ const SERVICE_TYPE_LABELS = {
   mentorship: 'Mentorship',
   resume_review: 'Resume Review',
   ai_agent: 'AI Agents',
+  course: 'Courses',
 };
 
 const planIcons = {
@@ -316,12 +318,20 @@ const AdminPricing = () => {
     const Icon = planIcons[plan.plan_id] || DollarSign;
     const iconColor = planColors[plan.plan_id] || 'text-[#06b6d4]';
     const isPopular = plan.plan_id === 'pro' || plan.plan_id === 'agent_monthly';
+    const pricesNotSet = !plan.price || !plan.price_usd;
 
     return (
-      <Card key={plan.id} className={`relative ${theme.bg.card} ${theme.border.primary} border ${isPopular ? 'ring-2 ring-[#06b6d4]' : ''}`}>
+      <Card key={plan.id} className={`relative ${theme.bg.card} ${theme.border.primary} border ${isPopular ? 'ring-2 ring-[#06b6d4]' : ''} ${pricesNotSet ? 'opacity-75' : ''}`}>
         {isPopular && (
           <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
             <Badge className="bg-[#06b6d4] text-white px-3 py-1">Most Popular</Badge>
+          </div>
+        )}
+        {pricesNotSet && (
+          <div className="absolute -top-3 right-4">
+            <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 px-3 py-1">
+              ⚠️ Prices Not Set
+            </Badge>
           </div>
         )}
         <CardHeader>
@@ -354,23 +364,46 @@ const AdminPricing = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className={`text-xs ${theme.text.muted} mb-1`}>India Price</p>
-                <div className="flex items-baseline gap-1">
-                  <span className={`${theme.text.secondary} text-lg`}>₹</span>
-                  <span className={`text-3xl font-bold ${theme.text.primary}`}>
-                    {(plan.price / 100).toLocaleString()}
-                  </span>
-                </div>
+                {plan.price ? (
+                  <div className="flex items-baseline gap-1">
+                    <span className={`${theme.text.secondary} text-lg`}>₹</span>
+                    <span className={`text-3xl font-bold ${theme.text.primary}`}>
+                      {(plan.price / 100).toLocaleString()}
+                    </span>
+                  </div>
+                ) : (
+                  <div className={`text-sm ${theme.text.muted} italic`}>Not set</div>
+                )}
               </div>
               <div>
                 <p className={`text-xs ${theme.text.muted} mb-1`}>International Price</p>
-                <div className="flex items-baseline gap-1">
-                  <span className={`${theme.text.secondary} text-lg`}>$</span>
-                  <span className={`text-3xl font-bold ${theme.text.primary}`}>
-                    {plan.price_usd ? (plan.price_usd / 100).toFixed(0) : 'N/A'}
-                  </span>
-                </div>
+                {plan.price_usd ? (
+                  <div className="flex items-baseline gap-1">
+                    <span className={`${theme.text.secondary} text-lg`}>$</span>
+                    <span className={`text-3xl font-bold ${theme.text.primary}`}>
+                      {(plan.price_usd / 100).toFixed(0)}
+                    </span>
+                  </div>
+                ) : (
+                  <div className={`text-sm ${theme.text.muted} italic`}>Not set</div>
+                )}
               </div>
             </div>
+
+            {/* Course-specific info */}
+            {plan.service_type === 'course' && plan.limits?.course_access && (
+              <div className={`space-y-1 pt-2 border-t ${theme.border.primary}`}>
+                <h4 className={`font-medium ${theme.text.primary} text-sm`}>Course Access:</h4>
+                <div className="text-sm space-y-1">
+                  {plan.limits.course_access.map((course, idx) => (
+                    <div key={idx} className={`flex items-center gap-2 ${theme.text.secondary}`}>
+                      <CheckCircle className="w-3 h-3 text-[#06b6d4]" />
+                      <span className="capitalize">{course.replace(/_/g, ' ')}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Service-specific info */}
             {plan.service_type === 'mentorship' && (plan.sessions_count || plan.session_duration_minutes || plan.discount_percent) && (
