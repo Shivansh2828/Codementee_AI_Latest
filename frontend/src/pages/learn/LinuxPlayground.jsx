@@ -1,112 +1,210 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Terminal, RotateCcw, Lightbulb, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Terminal, RotateCcw, Lightbulb, ChevronDown, Loader2, WifiOff } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { LinuxSimulator } from '../../data/linuxSimulator';
+import api from '../../utils/api';
 
 const CHALLENGES = [
-  { title: 'Find the top 3 IPs in the access log', hint: "awk '{print $1}' /var/log/nginx/access.log | sort | uniq -c | sort -rn | head -3", difficulty: 'Beginner' },
-  { title: 'Count the number of 500 errors', hint: 'grep " 500 " /var/log/nginx/access.log | wc -l', difficulty: 'Beginner' },
-  { title: 'Find failed SSH login attempts', hint: 'grep "Failed" /var/log/auth.log', difficulty: 'Beginner' },
-  { title: 'List all usernames from /etc/passwd', hint: "cut -d: -f1 /etc/passwd", difficulty: 'Beginner' },
-  { title: 'Find the Java process and its CPU usage', hint: 'ps aux | grep java', difficulty: 'Intermediate' },
-  { title: 'Check disk usage in human-readable format', hint: 'df -h', difficulty: 'Intermediate' },
-  { title: 'Find all .py files in the project', hint: 'find /home/ubuntu/projects -name "*.py"', difficulty: 'Intermediate' },
-  { title: 'Extract URLs that returned 500 from access log', hint: "awk '$9 == 500 {print $7}' /var/log/nginx/access.log", difficulty: 'Advanced' },
-  { title: 'Count HTTP status codes from access log', hint: "awk '{print $9}' /var/log/nginx/access.log | sort | uniq -c | sort -rn", difficulty: 'Advanced' },
-  { title: 'Find lines with "error" in syslog (case-insensitive)', hint: 'grep -i "error" /var/log/syslog', difficulty: 'Beginner' },
-  { title: 'Show the max_connections value from config', hint: 'grep "max_connections" /home/ubuntu/projects/app/config.yml', difficulty: 'Beginner' },
-  { title: 'Replace "debug: false" with "debug: true" in config', hint: "sed 's/debug: false/debug: true/' /home/ubuntu/projects/app/config.yml", difficulty: 'Intermediate' },
+  { title: 'List all files including hidden ones', hint: 'ls -la', difficulty: 'Beginner' },
+  { title: 'View the syslog file', hint: 'cat syslog.txt', difficulty: 'Beginner' },
+  { title: 'Find failed SSH login attempts', hint: 'grep "Failed" syslog.txt', difficulty: 'Beginner' },
+  { title: 'Count lines in access.log', hint: 'wc -l access.log', difficulty: 'Beginner' },
+  { title: 'Show top 5 lines of data.csv', hint: 'head -5 data.csv', difficulty: 'Beginner' },
+  { title: 'Find all 500 errors in access log', hint: 'grep " 500 " access.log', difficulty: 'Intermediate' },
+  { title: 'Count HTTP status codes', hint: "awk '{print $9}' access.log | sort | uniq -c | sort -rn", difficulty: 'Intermediate' },
+  { title: 'Extract unique IPs from access log', hint: "awk '{print $1}' access.log | sort -u", difficulty: 'Intermediate' },
+  { title: 'Find top 3 IPs by request count', hint: "awk '{print $1}' access.log | sort | uniq -c | sort -rn | head -3", difficulty: 'Advanced' },
+  { title: 'Show salaries above 90000 from CSV', hint: "awk -F, '$4 > 90000 {print $1, $4}' data.csv", difficulty: 'Advanced' },
+  { title: 'Replace a word in a file using sed', hint: "sed 's/alice/ALICE/g' data.csv", difficulty: 'Intermediate' },
+  { title: 'Run a bash script', hint: 'bash deploy.sh', difficulty: 'Beginner' },
+  { title: 'Check running processes', hint: 'ps aux', difficulty: 'Beginner' },
+  { title: 'Check disk usage', hint: 'df -h', difficulty: 'Beginner' },
+  { title: 'Write a one-liner to count errors', hint: "grep -c 'error\\|Error\\|ERROR' syslog.txt", difficulty: 'Intermediate' },
 ];
 
-const diffColor = { Beginner: 'text-[var(--green)]', Intermediate: 'text-[var(--yellow)]', Advanced: 'text-[var(--red)]' };
+const diffColor = {
+  Beginner: 'text-emerald-400',
+  Intermediate: 'text-yellow-400',
+  Advanced: 'text-red-400',
+};
+
+const WS_BASE = (() => {
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
+  // Convert http(s):// to ws(s)://
+  return backendUrl.replace(/^http/, 'ws');
+})();
 
 const LinuxPlayground = () => {
   const { theme } = useTheme();
   const { user } = useAuth();
-  const [sim] = useState(() => new LinuxSimulator());
-  const [lines, setLines] = useState([{ type: 'system', text: 'Welcome to the Linux Playground! Type commands to practice.\nType "help" for available commands and sample files.\n' }]);
-  const [input, setInput] = useState('');
-  const [historyIdx, setHistoryIdx] = useState(-1);
+  const termRef = useRef(null);
+  const xtermRef = useRef(null);
+  const fitAddonRef = useRef(null);
+  const wsRef = useRef(null);
+  const sessionIdRef = useRef(null);
+  const containerRef = useRef(null);
+
+  const [status, setStatus] = useState('idle'); // idle | loading | connected | error | disconnected
+  const [errorMsg, setErrorMsg] = useState('');
   const [showChallenges, setShowChallenges] = useState(true);
   const [revealedHints, setRevealedHints] = useState({});
-  const termRef = useRef(null);
-  const inputRef = useRef(null);
 
-  const scrollToBottom = useCallback(() => {
-    if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight;
+  const cleanup = useCallback(async () => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    if (xtermRef.current) {
+      xtermRef.current.dispose();
+      xtermRef.current = null;
+    }
+    if (sessionIdRef.current) {
+      try {
+        await api.delete(`/terminal/${sessionIdRef.current}`);
+      } catch (_) {}
+      sessionIdRef.current = null;
+    }
   }, []);
 
-  useEffect(() => { scrollToBottom(); }, [lines, scrollToBottom]);
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  const startSession = useCallback(async () => {
+    await cleanup();
+    setStatus('loading');
+    setErrorMsg('');
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const cmd = input.trim();
-    if (!cmd) return;
-    const prompt = sim.getPrompt();
-    const output = sim.execute(cmd);
+    try {
+      // Create session on backend
+      const res = await api.post('/terminal/create');
+      const { session_id } = res.data;
+      sessionIdRef.current = session_id;
 
-    if (output === '\x1BCLEAR') {
-      setLines([]);
-    } else {
-      setLines(prev => [
-        ...prev,
-        { type: 'input', text: prompt + cmd },
-        ...(output ? [{ type: 'output', text: output }] : []),
-      ]);
-    }
-    setInput('');
-    setHistoryIdx(-1);
-  };
+      // Dynamically import xterm to avoid SSR issues
+      const { Terminal: XTerm } = await import('@xterm/xterm');
+      const { FitAddon } = await import('@xterm/addon-fit');
+      const { WebLinksAddon } = await import('@xterm/addon-web-links');
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      const hist = sim.history;
-      if (hist.length === 0) return;
-      const newIdx = historyIdx < hist.length - 1 ? historyIdx + 1 : historyIdx;
-      setHistoryIdx(newIdx);
-      setInput(hist[hist.length - 1 - newIdx] || '');
-    }
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      if (historyIdx <= 0) { setHistoryIdx(-1); setInput(''); return; }
-      const newIdx = historyIdx - 1;
-      setHistoryIdx(newIdx);
-      setInput(sim.history[sim.history.length - 1 - newIdx] || '');
-    }
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      // Simple tab completion for paths
-      const parts = input.split(' ');
-      const last = parts[parts.length - 1];
-      if (last) {
-        const dir = last.includes('/') ? last.substring(0, last.lastIndexOf('/') + 1) : '';
-        const prefix = last.includes('/') ? last.substring(last.lastIndexOf('/') + 1) : last;
-        const resolved = dir ? (dir.startsWith('/') ? dir : sim.cwd + '/' + dir) : sim.cwd;
-        const node = sim.fs[resolved.replace(/\/$/, '') || '/'];
-        if (node?.children) {
-          const matches = node.children.filter(c => c.startsWith(prefix));
-          if (matches.length === 1) {
-            parts[parts.length - 1] = dir + matches[0];
-            setInput(parts.join(' '));
-          }
-        }
+      // Import xterm CSS
+      await import('@xterm/xterm/css/xterm.css');
+
+      const term = new XTerm({
+        cursorBlink: true,
+        fontSize: 14,
+        fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", monospace',
+        theme: {
+          background: '#0d1117',
+          foreground: '#c9d1d9',
+          cursor: '#58a6ff',
+          cursorAccent: '#0d1117',
+          black: '#484f58',
+          red: '#ff7b72',
+          green: '#3fb950',
+          yellow: '#d29922',
+          blue: '#58a6ff',
+          magenta: '#bc8cff',
+          cyan: '#39c5cf',
+          white: '#b1bac4',
+          brightBlack: '#6e7681',
+          brightRed: '#ffa198',
+          brightGreen: '#56d364',
+          brightYellow: '#e3b341',
+          brightBlue: '#79c0ff',
+          brightMagenta: '#d2a8ff',
+          brightCyan: '#56d4dd',
+          brightWhite: '#f0f6fc',
+        },
+        allowTransparency: false,
+        scrollback: 1000,
+        convertEol: true,
+      });
+
+      const fitAddon = new FitAddon();
+      term.loadAddon(fitAddon);
+      term.loadAddon(new WebLinksAddon());
+
+      xtermRef.current = term;
+      fitAddonRef.current = fitAddon;
+
+      // Mount terminal into DOM
+      if (termRef.current) {
+        term.open(termRef.current);
+        fitAddon.fit();
       }
+
+      // Connect WebSocket
+      const wsUrl = `${WS_BASE}/ws/terminal/${session_id}`;
+      const ws = new WebSocket(wsUrl);
+      ws.binaryType = 'arraybuffer';
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setStatus('connected');
+        // Send initial resize
+        const { cols, rows } = term;
+        ws.send(JSON.stringify({ type: 'resize', cols, rows }));
+      };
+
+      ws.onmessage = (event) => {
+        const data = event.data instanceof ArrayBuffer
+          ? new Uint8Array(event.data)
+          : event.data;
+        term.write(data);
+      };
+
+      ws.onerror = () => {
+        setStatus('error');
+        setErrorMsg('Connection error. Please try again.');
+      };
+
+      ws.onclose = () => {
+        if (status !== 'idle') {
+          setStatus('disconnected');
+          term.write('\r\n\x1b[33mSession ended. Click "New Session" to reconnect.\x1b[0m\r\n');
+        }
+      };
+
+      // Send terminal input to WebSocket
+      term.onData((data) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(new TextEncoder().encode(data));
+        }
+      });
+
+      // Handle resize
+      const resizeObserver = new ResizeObserver(() => {
+        try {
+          fitAddon.fit();
+          const { cols, rows } = term;
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'resize', cols, rows }));
+          }
+        } catch (_) {}
+      });
+      if (termRef.current) resizeObserver.observe(termRef.current);
+
+      term.focus();
+
+    } catch (err) {
+      setStatus('error');
+      setErrorMsg(err.response?.data?.detail || 'Failed to start terminal. Please try again.');
+    }
+  }, [cleanup, status]);
+
+  // Start session on mount
+  useEffect(() => {
+    if (user) startSession();
+    return () => { cleanup(); };
+  }, [user]); // eslint-disable-line
+
+  const handleReset = () => startSession();
+
+  const pasteHint = (hint) => {
+    if (xtermRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(new TextEncoder().encode(hint));
+      xtermRef.current.focus();
     }
   };
-
-  const handleReset = () => {
-    sim.reset();
-    setLines([{ type: 'system', text: 'Terminal reset. File system restored to initial state.\nType "help" for available commands.\n' }]);
-    setInput('');
-  };
-
-  const focusInput = () => inputRef.current?.focus();
 
   // Login gate
   if (!user) {
@@ -147,8 +245,15 @@ const LinuxPlayground = () => {
                 <h1 className={`text-lg font-bold ${theme.text.primary}`}>Linux Playground</h1>
               </div>
             </div>
-            <button onClick={handleReset} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs ${theme.bg.card} border ${theme.border.primary} ${theme.text.muted} hover:text-[#06b6d4] hover:border-[#06b6d4]/50 transition-all`}>
-              <RotateCcw className="w-3.5 h-3.5" /> Reset
+            <button
+              onClick={handleReset}
+              disabled={status === 'loading'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs ${theme.bg.card} border ${theme.border.primary} ${theme.text.muted} hover:text-[#06b6d4] hover:border-[#06b6d4]/50 transition-all disabled:opacity-50`}
+            >
+              {status === 'loading'
+                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                : <RotateCcw className="w-3.5 h-3.5" />}
+              {status === 'loading' ? 'Starting...' : 'New Session'}
             </button>
           </div>
 
@@ -156,52 +261,72 @@ const LinuxPlayground = () => {
 
             {/* Terminal */}
             <div className="flex-1 min-w-0">
-              <div
-                className="bg-[#0d1117] border border-[#30363d] rounded-xl overflow-hidden shadow-2xl cursor-text"
-                onClick={focusInput}
-              >
+              <div className="bg-[#0d1117] border border-[#30363d] rounded-xl overflow-hidden shadow-2xl">
                 {/* Title bar */}
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-[#161b22] border-b border-[#30363d]">
-                  <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-[#ff5f57]" />
-                    <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
-                    <div className="w-3 h-3 rounded-full bg-[#28c840]" />
+                <div className="flex items-center justify-between px-4 py-2.5 bg-[#161b22] border-b border-[#30363d]">
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-1.5">
+                      <div className="w-3 h-3 rounded-full bg-[#ff5f57]" />
+                      <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
+                      <div className="w-3 h-3 rounded-full bg-[#28c840]" />
+                    </div>
+                    <span className="text-xs text-[#8b949e] font-mono">playground@codementee: ~</span>
                   </div>
-                  <span className="text-xs text-[#8b949e] ml-2 font-mono">ubuntu@codementee: ~</span>
+                  <div className="flex items-center gap-2">
+                    {status === 'connected' && (
+                      <span className="flex items-center gap-1 text-[10px] text-emerald-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        Live
+                      </span>
+                    )}
+                    {status === 'loading' && (
+                      <span className="flex items-center gap-1 text-[10px] text-yellow-400">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Starting container...
+                      </span>
+                    )}
+                    {(status === 'error' || status === 'disconnected') && (
+                      <span className="flex items-center gap-1 text-[10px] text-red-400">
+                        <WifiOff className="w-3 h-3" />
+                        Disconnected
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Terminal body */}
-                <div ref={termRef} className="p-4 h-[500px] overflow-y-auto font-mono text-sm leading-relaxed">
-                  {lines.map((line, i) => (
-                    <div key={i} className={`whitespace-pre-wrap break-all ${
-                      line.type === 'system' ? 'text-[#58a6ff]' :
-                      line.type === 'input' ? 'text-[#c9d1d9]' :
-                      'text-[#8b949e]'
-                    }`}>
-                      {line.text}
-                    </div>
-                  ))}
+                <div className="relative" style={{ height: '500px' }}>
+                  {/* xterm.js mounts here */}
+                  <div ref={termRef} className="w-full h-full p-2" />
 
-                  {/* Input line */}
-                  <form onSubmit={handleSubmit} className="flex items-center text-[#c9d1d9]">
-                    <span className="text-[#3fb950] shrink-0">{sim.getPrompt()}</span>
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      value={input}
-                      onChange={e => setInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      className="flex-1 bg-transparent outline-none text-[#c9d1d9] caret-[#58a6ff] font-mono text-sm"
-                      autoComplete="off"
-                      spellCheck="false"
-                      autoCapitalize="off"
-                    />
-                  </form>
+                  {/* Loading overlay */}
+                  {status === 'loading' && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0d1117]">
+                      <Loader2 className="w-8 h-8 text-[#06b6d4] animate-spin mb-3" />
+                      <p className="text-[#8b949e] text-sm font-mono">Spinning up your Linux container...</p>
+                      <p className="text-[#484f58] text-xs font-mono mt-1">This takes ~5 seconds</p>
+                    </div>
+                  )}
+
+                  {/* Error overlay */}
+                  {status === 'error' && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0d1117]">
+                      <WifiOff className="w-8 h-8 text-red-400 mb-3" />
+                      <p className="text-red-400 text-sm font-mono mb-1">Failed to start terminal</p>
+                      <p className="text-[#8b949e] text-xs font-mono mb-4">{errorMsg}</p>
+                      <button
+                        onClick={handleReset}
+                        className="px-4 py-2 bg-[#06b6d4] text-white text-sm rounded-lg hover:bg-[#0891b2] transition-colors"
+                      >
+                        Try Again
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
               <p className={`text-xs ${theme.text.muted} mt-2 text-center`}>
-                Simulated terminal — supports core Linux commands with sample data. Use ↑↓ for history, Tab for autocomplete.
+                Real Linux environment in an isolated container · Sessions auto-expire after 10 min of inactivity
               </p>
             </div>
 
@@ -219,7 +344,7 @@ const LinuxPlayground = () => {
                 <div className={`${theme.bg.card} border ${theme.border.primary} rounded-xl overflow-hidden`}>
                   <div className={`px-4 py-3 border-b ${theme.border.primary}`}>
                     <h2 className={`text-sm font-bold ${theme.text.primary}`}>Practice Challenges</h2>
-                    <p className={`text-xs ${theme.text.muted} mt-0.5`}>Try solving these in the terminal</p>
+                    <p className={`text-xs ${theme.text.muted} mt-0.5`}>Click a hint to paste it into the terminal</p>
                   </div>
                   <div className="max-h-[460px] overflow-y-auto divide-y divide-[var(--border-primary)]">
                     {CHALLENGES.map((ch, i) => (
@@ -238,8 +363,8 @@ const LinuxPlayground = () => {
                         {revealedHints[i] && (
                           <code
                             className="block mt-1.5 px-2 py-1.5 rounded bg-[#0d1117] text-[10px] text-[#58a6ff] font-mono cursor-pointer hover:bg-[#161b22] transition-colors break-all"
-                            onClick={() => { setInput(ch.hint); inputRef.current?.focus(); }}
-                            title="Click to paste into terminal"
+                            onClick={() => pasteHint(ch.hint + '\n')}
+                            title="Click to run in terminal"
                           >
                             {ch.hint}
                           </code>
