@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Response, File, UploadFile, Form, Request
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Response, File, UploadFile, Form, Request, WebSocket, WebSocketDisconnect
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -29,6 +29,7 @@ load_dotenv(ROOT_DIR / '.env')
 from agents.job_application_agent import JobApplicationAgent
 from agents.referral_finder_agent import ReferralFinderAgent
 import agents.api_routes as agent_routes
+from terminal_service import terminal_manager
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -9044,6 +9045,47 @@ async def schedule_mentorship_session(data: ScheduleSessionRequest, user=Depends
         "session": serialize_doc(session_doc),
     }
 
+# ============ TERMINAL WEBSOCKET ENDPOINTS ============
+
+@app.websocket("/ws/terminal/{session_id}")
+async def terminal_websocket(websocket: WebSocket, session_id: str):
+    """
+    WebSocket endpoint for real Linux terminal.
+    Streams I/O between browser (xterm.js) and Docker container via PTY.
+    """
+    await websocket.accept()
+    await terminal_manager.attach_websocket(session_id, websocket)
+
+
+@api_router.post("/terminal/create")
+async def create_terminal_session(user=Depends(get_current_user)):
+    """Create a new terminal session, returns session_id."""
+    try:
+        session_id = await terminal_manager.create_session(user["id"])
+        return {"session_id": session_id, "status": "ready"}
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to create terminal session: {e}")
+        raise HTTPException(status_code=500, detail="Failed to start terminal. Docker may not be available.")
+
+
+@api_router.delete("/terminal/{session_id}")
+async def close_terminal_session(session_id: str, user=Depends(get_current_user)):
+    """Explicitly close a terminal session."""
+    await terminal_manager.destroy_session(session_id)
+    return {"status": "closed"}
+
+
+@api_router.get("/terminal/status")
+async def terminal_status(user=Depends(get_current_user)):
+    """Get terminal service status."""
+    return {
+        "active_sessions": terminal_manager.session_count(),
+        "available": True,
+    }
+
+
 # Include router
 app.include_router(api_router)
 
@@ -9155,6 +9197,12 @@ async def save_learning_note(body: dict, credentials: HTTPAuthorizationCredentia
 async def startup_scheduler():
     """Start the background scheduler on application startup"""
     start_scheduler()
+    # Start terminal manager (Docker session cleanup)
+    try:
+        await terminal_manager.start()
+        logger.info("✅ Terminal manager started")
+    except Exception as e:
+        logger.warning(f"⚠️ Terminal manager failed to start (Docker may not be available): {e}")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
