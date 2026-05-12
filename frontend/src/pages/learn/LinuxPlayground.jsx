@@ -74,9 +74,13 @@ const LinuxPlayground = () => {
     setStatus('loading');
     setErrorMsg('');
 
+    // Track if this invocation is still current (prevents race conditions)
+    let cancelled = false;
+
     try {
       // Create session on backend
       const res = await api.post('/terminal/create');
+      if (cancelled) return;
       const { session_id } = res.data;
       sessionIdRef.current = session_id;
 
@@ -158,7 +162,7 @@ const LinuxPlayground = () => {
       };
 
       ws.onclose = () => {
-        if (status !== 'idle') {
+        if (!cancelled && status !== 'idle') {
           setStatus('disconnected');
           term.write('\r\n\x1b[33mSession ended. Click "New Session" to reconnect.\x1b[0m\r\n');
         }
@@ -186,15 +190,27 @@ const LinuxPlayground = () => {
       term.focus();
 
     } catch (err) {
+      if (cancelled) return;
       setStatus('error');
       setErrorMsg(err.response?.data?.detail || 'Failed to start terminal. Please try again.');
     }
-  }, [cleanup, status]);
+
+    return () => { cancelled = true; };
+  }, [cleanup]);
 
   // Start session on mount
   useEffect(() => {
-    if (user) startSession();
-    return () => { cleanup(); };
+    if (!user) return;
+    let active = true;
+    // Small delay to avoid React StrictMode double-invoke destroying the session
+    const timer = setTimeout(() => {
+      if (active) startSession();
+    }, 100);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      cleanup();
+    };
   }, [user]); // eslint-disable-line
 
   const handleReset = () => startSession();
