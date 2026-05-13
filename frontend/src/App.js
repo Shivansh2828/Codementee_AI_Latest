@@ -32,6 +32,8 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 
 // Lazy load other pages to reduce initial bundle size
+const BlogIndex = lazy(() => import("./pages/blog/BlogIndex"));
+const BlogArticle = lazy(() => import("./pages/blog/BlogArticle"));
 const ApplyPage = lazy(() => import("./pages/ApplyPage"));
 const AgentPurchasePage = lazy(() => import("./pages/AgentPurchasePage"));
 const AIAgentLandingPage = lazy(() => import("./pages/AIAgentLandingPage"));
@@ -134,6 +136,8 @@ function App() {
               <Routes>
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
+            <Route path="/blog" element={<BlogIndex />} />
+            <Route path="/blog/:slug" element={<BlogArticle />} />
             <Route path="/apply" element={<ApplyPage />} />
             <Route path="/agent-purchase" element={<AgentPurchasePage />} />
             <Route path="/ai-agents" element={<AIAgentLandingPage />} />

@@ -31,6 +31,11 @@ export const topNavConfig = [
     type: 'scroll',
     href: '/#pricing',
   },
+  {
+    label: 'Blog',
+    type: 'link',
+    href: '/blog',
+  },
 ];
 
 // Dashboard Sidebar Config (mentee role)
