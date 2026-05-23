@@ -9045,6 +9045,250 @@ async def schedule_mentorship_session(data: ScheduleSessionRequest, user=Depends
         "session": serialize_doc(session_doc),
     }
 
+# ============ ADMIN ENROLLMENT EMAIL SYSTEM ============
+
+class EnrollmentEmailRequest(BaseModel):
+    user_id: str
+    service_type: str  # "mentorship" or "mock_interview"
+    plan_id: str
+    payment_link: Optional[str] = None
+    custom_message: Optional[str] = None
+    include_course_access: bool = False
+
+class EnrollmentSettingsUpdate(BaseModel):
+    mentorship_payment_link: Optional[str] = None
+    mock_interview_payment_link: Optional[str] = None
+    default_message: Optional[str] = None
+    included_courses: Optional[list] = None
+
+
+@api_router.get("/admin/enrollment-settings")
+async def get_enrollment_settings(user=Depends(get_current_user)):
+    """Get configurable enrollment email settings."""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    settings = await db.admin_settings.find_one({"type": "enrollment_email"})
+    if not settings:
+        # Return defaults
+        return {
+            "mentorship_payment_link": "https://codementee.io/mentorship",
+            "mock_interview_payment_link": "https://codementee.io/pricing",
+            "default_message": "We'd love to have you join our mentorship program! Here's everything included in your plan.",
+            "included_courses": ["DevOps & Cloud Engineering", "AWS Solutions Architect"],
+        }
+    return serialize_doc(dict(settings))
+
+
+@api_router.put("/admin/enrollment-settings")
+async def update_enrollment_settings(data: EnrollmentSettingsUpdate, user=Depends(get_current_user)):
+    """Update enrollment email settings (payment links, default message, included courses)."""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    now = datetime.now(timezone.utc).isoformat()
+    update_data = {k: v for k, v in data.dict().items() if v is not None}
+    update_data["updated_at"] = now
+    update_data["type"] = "enrollment_email"
+
+    await db.admin_settings.update_one(
+        {"type": "enrollment_email"},
+        {"$set": update_data},
+        upsert=True
+    )
+    return {"message": "Settings updated successfully"}
+
+
+@api_router.post("/admin/send-enrollment-email")
+async def send_enrollment_email(data: EnrollmentEmailRequest, user=Depends(get_current_user)):
+    """Send enrollment/welcome email to a user with payment link and plan details."""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    # Fetch the target user
+    target_user = await db.users.find_one({"id": data.user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Fetch the plan details
+    plan = await db.pricing_plans.find_one({"plan_id": data.plan_id})
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+
+    # Get enrollment settings for payment link fallback
+    settings = await db.admin_settings.find_one({"type": "enrollment_email"})
+    if not settings:
+        settings = {
+            "mentorship_payment_link": "https://codementee.io/mentorship",
+            "mock_interview_payment_link": "https://codementee.io/pricing",
+            "included_courses": ["DevOps & Cloud Engineering", "AWS Solutions Architect"],
+        }
+
+    # Determine payment link
+    payment_link = data.payment_link
+    if not payment_link:
+        if data.service_type == "mentorship":
+            payment_link = settings.get("mentorship_payment_link", "https://codementee.io/mentorship")
+        else:
+            payment_link = settings.get("mock_interview_payment_link", "https://codementee.io/pricing")
+
+    # Build features list
+    features = plan.get("features", [])
+    included_courses = settings.get("included_courses", [])
+
+    # Build course section HTML if applicable
+    course_html = ""
+    if data.include_course_access and included_courses:
+        courses_list = "".join([f'<li style="color: #e2e8f0; padding: 4px 0; font-size: 14px;">✅ {c}</li>' for c in included_courses])
+        course_html = f"""
+        <div style="background-color: #0f172a; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #10b981;">
+            <h3 style="color: #10b981; margin: 0 0 12px 0; font-size: 16px;">🎁 Complimentary Tech Resources Included</h3>
+            <ul style="list-style: none; padding: 0; margin: 0;">{courses_list}</ul>
+            <p style="color: #94a3b8; font-size: 12px; margin: 10px 0 0 0;">These courses are included at no extra cost with your plan!</p>
+        </div>
+        """
+
+    # Build features HTML
+    features_html = "".join([f'<li style="color: #e2e8f0; padding: 6px 0; font-size: 14px;">✓ {f}</li>' for f in features])
+
+    # Build mock interview upgrade section if service_type is mentorship
+    upgrade_html = ""
+    if data.service_type == "mentorship":
+        mock_link = settings.get("mock_interview_payment_link", "https://codementee.io/pricing")
+        upgrade_html = f"""
+        <div style="background-color: #0f172a; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #06b6d4;">
+            <h3 style="color: #06b6d4; margin: 0 0 8px 0; font-size: 16px;">🚀 Want Mock Interviews Too?</h3>
+            <p style="color: #94a3b8; font-size: 14px; margin: 0 0 12px 0;">Upgrade to add MAANG-level mock interviews with detailed feedback reports.</p>
+            <a href="{mock_link}" style="display: inline-block; background-color: #06b6d4; color: #0f172a; padding: 10px 24px; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 6px;">View Mock Interview Plans</a>
+        </div>
+        """
+
+    # Custom message
+    custom_msg = data.custom_message or settings.get("default_message", "We'd love to have you join our mentorship program!")
+
+    # Price display
+    price_inr = plan.get("price_inr", 0) // 100
+    price_usd = plan.get("price_usd", 0) // 100
+
+    # Build email
+    name = target_user.get("name", "there")
+    email = target_user.get("email")
+    plan_name = plan.get("name", "Plan")
+    service_label = "1:1 Mentorship" if data.service_type == "mentorship" else "Mock Interview"
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 40px 20px;">
+            <tr><td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #1e293b; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
+                    <!-- Header -->
+                    <tr><td style="padding: 30px 40px; text-align: center; border-bottom: 1px solid #334155;">
+                        <img src="{LOGO_URL}" alt="Codementee" style="height: 50px; width: auto;" />
+                    </td></tr>
+
+                    <!-- Body -->
+                    <tr><td style="padding: 40px;">
+                        <h1 style="color: #06b6d4; margin: 0 0 20px 0; font-size: 26px; font-weight: 600;">
+                            {service_label} — {plan_name}
+                        </h1>
+                        <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 10px 0;">
+                            Hi <strong>{name}</strong>,
+                        </p>
+                        <p style="color: #94a3b8; font-size: 15px; line-height: 1.6; margin: 0 0 24px 0;">
+                            {custom_msg}
+                        </p>
+
+                        <!-- Plan Details -->
+                        <div style="background-color: #0f172a; border-radius: 12px; padding: 24px; margin: 20px 0;">
+                            <h3 style="color: #06b6d4; margin: 0 0 16px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">What's Included in {plan_name}</h3>
+                            <ul style="list-style: none; padding: 0; margin: 0;">{features_html}</ul>
+                            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #334155;">
+                                <span style="color: #94a3b8; font-size: 14px;">Price: </span>
+                                <span style="color: #10b981; font-size: 20px; font-weight: 700;">₹{price_inr:,}</span>
+                                <span style="color: #64748b; font-size: 14px;"> / ${price_usd}</span>
+                            </div>
+                        </div>
+
+                        {course_html}
+                        {upgrade_html}
+
+                        <!-- CTA Button -->
+                        <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                            <tr><td align="center">
+                                <a href="{payment_link}" style="display: inline-block; background: linear-gradient(135deg, #06b6d4, #0891b2); color: #ffffff; padding: 16px 40px; font-size: 16px; font-weight: 700; text-decoration: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);">
+                                    Enroll Now →
+                                </a>
+                            </td></tr>
+                        </table>
+
+                        <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+                            Questions? Reply to this email or reach us at <a href="mailto:support@codementee.com" style="color: #06b6d4; text-decoration: none;">support@codementee.com</a>
+                        </p>
+                    </td></tr>
+
+                    <!-- Footer -->
+                    <tr><td style="padding: 24px 40px; background-color: #0f172a; border-top: 1px solid #334155;">
+                        <p style="color: #64748b; font-size: 12px; margin: 0; text-align: center;">
+                            © 2025 Codementee. All rights reserved.<br>
+                            Real mock interviews & mentorship with MAANG engineers.
+                        </p>
+                    </td></tr>
+                </table>
+            </td></tr>
+        </table>
+    </body>
+    </html>
+    """
+
+    try:
+        params = {
+            "from": SENDER_EMAIL,
+            "to": [email],
+            "subject": f"🎯 {service_label} Enrollment — {plan_name} | Codementee",
+            "html": html_content,
+            "bcc": ["support@codementee.com"],
+        }
+        if BCC_EMAIL and BCC_EMAIL != "support@codementee.com":
+            params["bcc"].append(BCC_EMAIL)
+
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Enrollment email sent to {email} for plan {data.plan_id}, id: {result.get('id')}")
+
+        # Log the email in database
+        await db.enrollment_emails.insert_one({
+            "id": str(uuid.uuid4()),
+            "sent_by": user["id"],
+            "sent_to_user_id": data.user_id,
+            "sent_to_email": email,
+            "sent_to_name": name,
+            "service_type": data.service_type,
+            "plan_id": data.plan_id,
+            "plan_name": plan_name,
+            "payment_link": payment_link,
+            "include_course_access": data.include_course_access,
+            "resend_id": result.get("id"),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+
+        return {"message": f"Enrollment email sent to {email}", "resend_id": result.get("id")}
+    except Exception as e:
+        logger.error(f"Failed to send enrollment email to {email}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
+
+
+@api_router.get("/admin/enrollment-emails")
+async def get_enrollment_email_history(user=Depends(get_current_user)):
+    """Get history of sent enrollment emails."""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    emails = await db.enrollment_emails.find({}).sort("created_at", -1).to_list(50)
+    return [serialize_doc(dict(e)) for e in emails]
+
+
 # ============ TERMINAL WEBSOCKET ENDPOINTS ============
 
 @app.websocket("/ws/terminal/{session_id}")
