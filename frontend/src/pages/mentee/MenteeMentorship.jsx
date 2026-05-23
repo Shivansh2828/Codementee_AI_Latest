@@ -79,7 +79,7 @@ const MenteeMentorship = () => {
           <p className={`${theme.text.secondary} text-sm mb-6 max-w-md mx-auto`}>
             Get paired with an experienced mentor for personalized guidance, regular sessions, and career growth support.
           </p>
-          <Link to="/mentorship">
+          <Link to="/mentee/book?tab=mentorship">
             <Button className={theme.button.primary}>
               <ArrowUpRight className="w-4 h-4 mr-2" />
               View Mentorship Plans

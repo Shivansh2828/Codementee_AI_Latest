@@ -194,8 +194,8 @@ const MentorshipPage = () => {
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [openFAQ, setOpenFAQ] = useState(null);
 
-  const ctaHref = isAuthenticated ? '/mentee/mentorship' : '/register';
-  const ctaLabel = isAuthenticated ? 'View My Mentorship' : 'Get Started';
+  const ctaHref = isAuthenticated ? '/mentee/book?tab=mentorship' : '/register';
+  const ctaLabel = isAuthenticated ? 'Enroll Now' : 'Get Started';
 
   useEffect(() => {
     const fetchPlans = async () => {
