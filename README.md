@@ -25,7 +25,7 @@ A freemium mentorship-based interview preparation platform connecting aspiring s
 ### Production Deployment
 ```bash
 # On VPS
-ssh root@62.72.13.129
+ssh root@<your-vps-ip>
 cd /var/www/codementee
 ./deploy.sh
 ```
@@ -172,7 +172,6 @@ python check_db_data.py
 - **Website**: https://codementee.io
 - **API**: https://codementee.io/api
 - **Admin**: https://codementee.io/admin
-- **VPS IP**: 62.72.13.129
 
 ---
 

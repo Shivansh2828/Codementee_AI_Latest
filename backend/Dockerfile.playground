@@ -1,0 +1,34 @@
+FROM alpine:3.19
+RUN apk add --no-cache bash curl wget vim nano git python3 grep sed gawk coreutils util-linux procps net-tools iputils htop tree jq zip unzip tar ca-certificates
+
+RUN adduser -D -s /bin/bash playground
+
+# syslog sample
+RUN printf 'Jan 15 10:00:01 server sshd: Accepted publickey for ubuntu from 10.0.0.5\nJan 15 10:10:45 server sshd: Failed password for root from 203.0.113.10\nJan 15 10:20:18 server nginx: upstream timed out (110)\nJan 15 10:25:33 server kernel: Out of memory: Kill process java score 850\nJan 15 10:35:44 server sshd: Failed password for admin from 203.0.113.50\nJan 15 10:40:12 server nginx: worker connections are not enough\nJan 15 10:45:55 server kernel: EXT4-fs warning: maximal mount count reached\n' > /home/playground/syslog.txt
+
+# nginx access log sample
+RUN printf '192.168.1.10 - - [15/Jan/2024:10:00:01] "GET /api/users HTTP/1.1" 200 1234 0.045\n192.168.1.20 - - [15/Jan/2024:10:00:02] "POST /api/orders HTTP/1.1" 201 567 0.123\n192.168.1.10 - - [15/Jan/2024:10:00:03] "POST /api/checkout HTTP/1.1" 500 89 2.345\n203.0.113.50 - - [15/Jan/2024:10:00:04] "GET /admin HTTP/1.1" 403 120 0.001\n192.168.1.30 - - [15/Jan/2024:10:00:05] "GET /api/users HTTP/1.1" 200 1234 0.051\n192.168.1.10 - - [15/Jan/2024:10:00:06] "POST /api/checkout HTTP/1.1" 500 89 3.102\n192.168.1.40 - - [15/Jan/2024:10:00:07] "GET /api/products HTTP/1.1" 200 8901 0.067\n10.0.0.5 - - [15/Jan/2024:10:00:08] "GET /health HTTP/1.1" 200 15 0.001\n192.168.1.50 - - [15/Jan/2024:10:00:09] "POST /api/login HTTP/1.1" 401 45 0.012\n192.168.1.20 - - [15/Jan/2024:10:00:10] "GET /api/products HTTP/1.1" 200 8901 0.072\n' > /home/playground/access.log
+
+# CSV data
+RUN printf 'name,age,city,salary\nalice,30,new york,95000\nbob,25,san francisco,85000\ncharlie,35,seattle,110000\ndiana,28,austin,78000\neve,32,boston,102000\nfrank,40,chicago,120000\ngrace,27,denver,88000\nhenry,33,portland,97000\n' > /home/playground/data.csv
+
+# Deploy script
+RUN printf '#!/bin/bash\nset -e\nAPP=myapp\nIMAGE_TAG=${1:-latest}\necho "Deploying $APP:$IMAGE_TAG..."\necho "Pulling latest image..."\necho "Restarting services..."\nsleep 1\necho "Running health check..."\necho "Deploy complete!"\n' > /home/playground/deploy.sh && chmod +x /home/playground/deploy.sh
+
+# Nginx config
+RUN printf 'server {\n    listen 80;\n    server_name myapp.com;\n    location / {\n        proxy_pass http://127.0.0.1:8080;\n        proxy_set_header Host $host;\n    }\n    location /health {\n        return 200 "ok";\n    }\n}\n' > /home/playground/nginx.conf
+
+# Python word count script
+RUN printf '#!/usr/bin/env python3\nimport sys\ntotal = 0\nfor line in sys.stdin:\n    words = len(line.split())\n    total += words\n    print(f"{words:4d}  {line.rstrip()}")\nprint("----")\nprint(f"{total:4d}  total")\n' > /home/playground/wordcount.py
+
+# Fake passwd for practice
+RUN printf 'root:x:0:0:root:/root:/bin/bash\nubuntu:x:1000:1000:Ubuntu:/home/ubuntu:/bin/bash\nnginx:x:101:101:nginx:/var/lib/nginx:/sbin/nologin\npostgres:x:102:102:PostgreSQL:/var/lib/postgresql:/bin/bash\ndeploy:x:1001:1001:Deploy User:/home/deploy:/bin/bash\n' > /home/playground/passwd.txt
+
+# .bashrc
+RUN printf 'export PS1="\\u@codementee:\\w\\$ "\nalias ll="ls -la"\nalias la="ls -la"\necho ""\necho "  Welcome to Codementee Linux Playground!"\necho "  Files: syslog.txt  access.log  data.csv  deploy.sh  nginx.conf  wordcount.py  passwd.txt"\necho ""\n' > /home/playground/.bashrc
+
+RUN chown -R playground:playground /home/playground
+WORKDIR /home/playground
+USER playground
+ENV HOME=/home/playground TERM=xterm-256color SHELL=/bin/bash
+CMD ["/bin/bash", "--login"]

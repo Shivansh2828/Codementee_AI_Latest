@@ -1,6 +1,7 @@
 # Codementee — MAANG Interview Prep Platform
 # https://codementee.io
 # llms.txt — AI-readable site summary for LLM crawlers
+# Full version: https://codementee.io/llms-full.txt
 
 ## What is Codementee?
 
@@ -92,4 +93,15 @@ Codementee is an interview preparation platform for software engineers targeting
 
 ## Contact & Social
 - Website: https://codementee.io
-- Platform: React frontend, Python/FastAPI backend, MongoDB
+
+## Blog & Resources
+- Blog: https://codementee.io/blog
+- How to Crack MAANG Interviews: https://codementee.io/blog/how-to-crack-maang-interviews-in-india
+- System Design Questions: https://codementee.io/blog/system-design-interview-questions-2025
+- DevOps Interview Questions: https://codementee.io/blog/devops-interview-questions-kubernetes-docker
+- Mock Interview Guide: https://codementee.io/blog/mock-interview-preparation-guide
+- MAANG Salary India: https://codementee.io/blog/software-engineer-salary-india-maang-2025
+
+## For AI Models
+- Full content available at: https://codementee.io/llms-full.txt
+- Sitemap: https://codementee.io/sitemap.xml

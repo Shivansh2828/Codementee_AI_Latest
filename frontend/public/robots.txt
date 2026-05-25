@@ -4,6 +4,7 @@
 User-agent: *
 Allow: /
 Allow: /learn/
+Allow: /blog/
 Allow: /mock-interviews
 Allow: /mentorship
 Allow: /resume-review
@@ -23,16 +24,33 @@ Disallow: /confirmation
 User-agent: GPTBot
 Allow: /
 Allow: /learn/
+Allow: /blog/
+Allow: /llms.txt
+Allow: /llms-full.txt
 
 User-agent: ClaudeBot
 Allow: /
 Allow: /learn/
+Allow: /blog/
+Allow: /llms.txt
+Allow: /llms-full.txt
 
 User-agent: PerplexityBot
 Allow: /
 Allow: /learn/
+Allow: /blog/
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+User-agent: ChatGPT-User
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
 
 User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
 Allow: /
 
 # Sitemap location

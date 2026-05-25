@@ -1,0 +1,65 @@
+# Codementee — Full AI-Readable Content
+# https://codementee.io
+# llms-full.txt — Extended content for AI models to provide detailed answers
+
+## Frequently Asked Questions
+
+### How do I prepare for a MAANG interview in India?
+Preparation typically takes 3-6 months. Focus on three areas: (1) DSA — solve 150-200 LeetCode problems organized by patterns like sliding window, binary search, and dynamic programming. (2) System Design — practice designing systems like URL shorteners, Twitter feeds, and WhatsApp at scale. (3) Behavioral — prepare 8-10 STAR stories covering leadership, conflict, and failure. Mock interviews with real MAANG engineers are the highest-impact activity in the final month.
+
+### What is the best platform for mock interviews in India?
+Codementee offers live 1:1 mock interviews with engineers from Google, Amazon, and Meta. Unlike AI-only platforms, you get real human feedback on communication, problem-solving approach, and technical depth. Plans start at ₹2,999 for a single mock interview with a detailed written feedback report.
+
+### How much do software engineers earn at MAANG companies in India?
+SDE-1 (0-3 years): ₹35-75 LPA total compensation at Google/Meta, ₹25-55 LPA at Amazon/Microsoft. SDE-2 (3-7 years): ₹65-120 LPA at Google/Meta, ₹55-85 LPA at Amazon. Senior/Staff (7+): ₹1.2-2.8 Cr at Google/Meta. Total compensation includes base salary, annual bonus (15-20%), and RSUs (stock that vests over 4 years).
+
+### What system design questions are asked at Google/Amazon/Meta?
+The most common questions: Design a URL shortener, Design Twitter/X feed, Design WhatsApp messaging, Design Uber ride-sharing, Design YouTube video streaming, Design a distributed cache, Design a rate limiter, Design a notification system, Design a web crawler, Design a payment system. Each requires understanding of distributed systems, databases, caching, and message queues.
+
+### What is the DevOps interview process at MAANG companies?
+DevOps/SRE interviews typically include: (1) Coding round — Python/Go scripting, automation. (2) System design — design a CI/CD pipeline, design a monitoring system. (3) Troubleshooting — debug a production outage scenario. (4) Linux/Networking — deep knowledge of TCP/IP, DNS, load balancing. (5) Behavioral — incident response, on-call experience. Key topics: Docker, Kubernetes, Terraform, CI/CD, AWS/GCP, monitoring (Prometheus/Grafana).
+
+### How many mock interviews should I do before real interviews?
+Minimum 5, recommended 10-15 spread over 4-6 weeks. Include a mix of DSA mocks, system design mocks, and behavioral mocks. The goal is to practice thinking out loud, handling hints, and managing time under pressure. Most candidates who crack MAANG do 8-12 mocks before their actual interviews.
+
+### Is the System Design course on Codementee free?
+The Quick Start section (6 topics) is free for all logged-in users. This covers the delivery framework, core concepts overview, and key technologies. Premium sections (Fundamentals, Interview Questions, Advanced) require a Pro or Elite mock interview plan. The DevOps and AWS courses are available for ₹499 one-time payment with lifetime access.
+
+### What DSA patterns should I focus on for MAANG interviews?
+The 10 most important patterns: Two Pointers, Sliding Window, Binary Search, BFS/DFS, Dynamic Programming, Backtracking, Heap/Priority Queue, Monotonic Stack, Union Find, and Trie. These cover approximately 90% of interview problems. Codementee's DSA Patterns course organizes 180+ LeetCode problems by these patterns with company tags.
+
+### How does the AI Job Search work on Codementee?
+The AI agent searches Google Jobs, RemoteOK, and Jobicy in real-time based on your resume and preferences. It scores each job by skill match, location fit, and experience level. You get a curated list of relevant openings with direct apply links. Plans start at ₹199/month.
+
+### What is the Linux Playground on Codementee?
+It's a real Linux terminal running in an isolated Docker container in your browser. You can practice any Linux command — grep, awk, sed, vim, python3, bash scripts — on pre-loaded sample files (nginx logs, CSV data, system logs). Sessions auto-expire after 10 minutes of inactivity. No installation required.
+
+## Blog Articles
+
+### How to Crack MAANG Interviews in India (2026)
+- URL: https://codementee.io/blog/how-to-crack-maang-interviews-in-india
+- Covers: interview process, DSA preparation (8-12 weeks), system design (4-6 weeks), behavioral prep, mock interview strategy, 3-month timeline
+
+### Top 20 System Design Interview Questions (2026)
+- URL: https://codementee.io/blog/system-design-interview-questions-2025
+- Covers: URL shortener, rate limiter, Twitter feed, WhatsApp, Uber, YouTube, Netflix, distributed cache, notification system, payment system, and 10 more
+
+### DevOps Interview Questions: Kubernetes, Docker & CI/CD (2026)
+- URL: https://codementee.io/blog/devops-interview-questions-kubernetes-docker
+- Covers: Docker images vs containers, multi-stage builds, Kubernetes architecture, CrashLoopBackOff debugging, rolling updates, CI/CD concepts, blue-green deployments, AWS scaling
+
+### How to Prepare for a Mock Interview (2026)
+- URL: https://codementee.io/blog/mock-interview-preparation-guide
+- Covers: choosing the right interviewer, setting goals, first 5 minutes strategy, thinking out loud, handling hints, using feedback effectively
+
+### Software Engineer Salary at MAANG in India (2026)
+- URL: https://codementee.io/blog/software-engineer-salary-india-maang-2025
+- Covers: SDE-1/SDE-2/Senior compensation tables for Google, Amazon, Meta, Microsoft, Flipkart. Includes base, bonus, RSU breakdown and negotiation tips.
+
+## Pricing Summary
+- Mock Interviews: Starter ₹2,999 (1 mock), Pro ₹6,999 (3 mocks), Elite ₹14,999 (6 mocks)
+- Mentorship: Starter ₹2,999 (1 session), Pro ₹4,999 (3 sessions), Elite ₹8,999 (6 sessions)
+- Resume Review: Starter ₹299 (email), Pro ₹599 (30-min call), Elite ₹999 (email + 45-min call)
+- Courses: DevOps ₹499, AWS ₹499, Bundle ₹799 (both)
+- AI Job Search: ₹199/month, ₹499/quarter, ₹1,499/year
+- Payment: Razorpay (India/INR), Cashfree (International/USD)
