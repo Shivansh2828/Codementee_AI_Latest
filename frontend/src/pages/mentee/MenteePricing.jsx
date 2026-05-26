@@ -370,16 +370,6 @@ const MenteePricing = () => {
 
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto">
-          {/* Founding Slots Badge */}
-          {!sold_out && remaining <= 10 && (
-            <div className="inline-flex items-center gap-2 mb-4 px-4 py-2 rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg animate-pulse-glow">
-              <span className="text-lg">🚀</span>
-              <span className="text-sm font-bold">
-                Only {remaining} of {total} Founding Seats Left
-              </span>
-            </div>
-          )}
-          
           <h1 className={`text-4xl font-bold ${theme.text.primary} mb-4`}>
             Choose Your Plan
           </h1>

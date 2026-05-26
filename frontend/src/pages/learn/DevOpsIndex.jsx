@@ -98,10 +98,7 @@ const DevOpsIndex = () => {
 
           {/* Hero */}
           <div className="text-center mb-14">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#06b6d4]/10 border border-[#06b6d4]/30 mb-6">
-              <Zap className="w-4 h-4 text-[#06b6d4]" />
-              <span className="text-sm font-semibold text-[#06b6d4]">One-time payment · Lifetime access</span>
-            </div>
+            
             <h1 className={`text-4xl md:text-5xl font-bold ${theme.text.primary} mb-4 leading-tight`}>
               {DEVOPS_META.title}
             </h1>

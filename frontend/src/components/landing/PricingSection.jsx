@@ -247,39 +247,12 @@ const PricingSection = () => {
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="max-w-3xl mx-auto text-center mb-16">
-          <span className={`inline-block px-4 py-1.5 rounded-full text-sm font-medium mb-4 ${theme.bg.card} ${theme.text.accent} border ${theme.border.accent}`}>
-            Pricing
-          </span>
-          
           <h2 className={`text-3xl md:text-5xl font-bold mb-6 ${theme.text.primary}`}>
             Simple, Outcome-Based Pricing
           </h2>
           <p className={`text-lg md:text-xl ${theme.text.secondary}`}>
             One-time payment. No subscriptions. No hidden fees.
           </p>
-        </div>
-
-        {/* Free Tier Indicator */}
-        <div className={`max-w-2xl mx-auto mb-12 rounded-2xl ${theme.bg.card} border ${theme.border.primary} p-6`}>
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-sm font-semibold border border-emerald-500/20">
-                Free
-              </span>
-              <span className={`text-lg font-semibold ${theme.text.primary}`}>Start learning at no cost</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-3 sm:ml-auto">
-              {freeFeatures.map((item, idx) => {
-                const FeatureIcon = item.icon;
-                return (
-                  <span key={idx} className={`inline-flex items-center gap-1.5 text-sm ${theme.text.secondary}`}>
-                    <FeatureIcon size={14} className="text-[#06b6d4]" />
-                    {item.label}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
         </div>
 
         {/* Pricing Cards */}

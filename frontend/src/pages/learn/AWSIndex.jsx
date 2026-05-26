@@ -98,10 +98,7 @@ const AWSIndex = () => {
 
           {/* Hero */}
           <div className="text-center mb-14">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#f97316]/10 border border-[#f97316]/30 mb-6">
-              <Zap className="w-4 h-4 text-[#f97316]" />
-              <span className="text-sm font-semibold text-[#f97316]">One-time payment · Lifetime access</span>
-            </div>
+            
             <h1 className={`text-4xl md:text-5xl font-bold ${theme.text.primary} mb-4 leading-tight`}>
               {AWS_META.title}
             </h1>
