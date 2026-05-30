@@ -35,15 +35,6 @@ const MockInterviewProcessSection = () => {
       <div className="container mx-auto px-4">
         {/* Section heading */}
         <div className="text-center mb-16">
-          <div
-            className={`inline-flex items-center gap-2 px-5 py-2 rounded-full mb-6 ${theme.bg.card} border border-[#06b6d4]/40`}
-          >
-            <Mic2 className="w-4 h-4 text-[#06b6d4]" />
-            <span className="text-sm font-semibold text-[#06b6d4]">
-              Simple 3-Step Process
-            </span>
-          </div>
-
           <h2
             className={`text-3xl md:text-5xl font-bold mb-4 ${theme.text.primary} leading-tight`}
           >

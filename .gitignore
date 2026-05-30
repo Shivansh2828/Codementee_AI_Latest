@@ -1,6 +1,11 @@
 # Kiro
 .kiro/
 
+# Deployment docs (contains sensitive server info)
+DEPLOYMENT_SOP.md
+PRICING_MANAGEMENT_GUIDE.md
+PRODUCT_REQUIREMENTS.md
+
 # Lock files (use npm ci on deploy, lock file generated there)
 frontend/package-lock.json
 frontend/yarn.lock

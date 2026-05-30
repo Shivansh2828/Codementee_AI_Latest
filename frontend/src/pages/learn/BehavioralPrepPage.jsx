@@ -121,10 +121,6 @@ const BehavioralPrepPage = () => {
 
           {/* Hero */}
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--green-bg)] border border-[var(--green-border)] mb-6">
-              <Zap className="w-4 h-4 text-[var(--green)]" />
-              <span className="text-sm font-semibold text-[var(--green)]">Free for all logged-in users</span>
-            </div>
             <h1 className={`text-4xl md:text-5xl font-bold ${theme.text.primary} mb-4`}>{BEHAVIORAL_META.title}</h1>
             <p className={`text-lg ${theme.text.secondary} max-w-2xl mx-auto mb-6`}>{BEHAVIORAL_META.subtitle}</p>
             <div className="flex flex-wrap items-center justify-center gap-6 text-sm">

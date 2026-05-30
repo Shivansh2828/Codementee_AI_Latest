@@ -217,10 +217,7 @@ const CoursesLandingPage = () => {
               <ArrowLeft className="w-4 h-4" /> Back to Dashboard
             </Link>
             <div className="max-w-3xl mx-auto text-center">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#06b6d4]/10 border border-[#06b6d4]/30 mb-6">
-                <Zap className="w-4 h-4 text-[#06b6d4]" />
-                <span className="text-sm font-semibold text-[#06b6d4]">Courses for Interview Prep</span>
-              </div>
+              
 
               <h1 className={`text-4xl md:text-5xl font-bold ${theme.text.primary} mb-4 leading-tight`}>
                 Learn. Practice. <span className="text-[#06b6d4]">Get Hired.</span>
