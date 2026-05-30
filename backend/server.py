@@ -30,6 +30,7 @@ from agents.job_application_agent import JobApplicationAgent
 from agents.referral_finder_agent import ReferralFinderAgent
 import agents.api_routes as agent_routes
 from terminal_service import terminal_manager
+from rate_limiter import RateLimitMiddleware, rate_store
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -9368,6 +9369,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Rate limiting middleware (runs after CORS)
+app.add_middleware(RateLimitMiddleware)
+
 # ============ LEARNING PROGRESS ENDPOINTS ============
 
 @api_router.get("/learning/progress")
@@ -9447,6 +9451,9 @@ async def startup_scheduler():
         logger.info("✅ Terminal manager started")
     except Exception as e:
         logger.warning(f"⚠️ Terminal manager failed to start (Docker may not be available): {e}")
+    # Start rate limiter cleanup
+    await rate_store.start_cleanup()
+    logger.info("✅ Rate limiter started")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
