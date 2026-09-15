@@ -31,6 +31,7 @@ from agents.referral_finder_agent import ReferralFinderAgent
 import agents.api_routes as agent_routes
 from terminal_service import terminal_manager
 from rate_limiter import RateLimitMiddleware, rate_store
+from code_runner import run_code, run_with_tests, ensure_image as ensure_coderunner_image
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -3226,14 +3227,14 @@ def start_scheduler():
             replace_existing=True
         )
         
-        # Daily AI job search for all users with preferences — runs at 7 AM IST (1:30 UTC)
-        scheduler.add_job(
-            run_daily_job_search_all_users,
-            CronTrigger(hour=1, minute=30),
-            id='daily_job_search',
-            name='Daily AI job search for all mentees',
-            replace_existing=True
-        )
+        # Daily AI job search for all users with preferences — DISABLED
+        # scheduler.add_job(
+        #     run_daily_job_search_all_users,
+        #     CronTrigger(hour=1, minute=30),
+        #     id='daily_job_search',
+        #     name='Daily AI job search for all mentees',
+        #     replace_existing=True
+        # )
         
         scheduler.start()
         logger.info("Background scheduler started successfully")
@@ -3241,7 +3242,7 @@ def start_scheduler():
         logger.info("  - Update slot statuses: Every hour at :00")
         logger.info("  - Send reminder emails: Every hour at :15")
         logger.info("  - Send feedback requests: Every hour at :30")
-        logger.info("  - Daily AI job search: Every day at 7:00 AM IST")
+        logger.info("  - Daily AI job search: DISABLED")
         
     except Exception as e:
         logger.error(f"Failed to start scheduler: {str(e)}")
@@ -9292,6 +9293,131 @@ async def get_enrollment_email_history(user=Depends(get_current_user)):
 
 # ============ TERMINAL WEBSOCKET ENDPOINTS ============
 
+# ============ CODE EXECUTION ENDPOINTS ============
+
+# ============ DSA PROBLEMS API ============
+
+@api_router.get("/dsa-problems")
+async def get_dsa_problems(category: Optional[str] = None):
+    """Get all active DSA problems (public endpoint)."""
+    query = {"is_active": True}
+    if category:
+        query["category"] = category
+    problems = await db.dsa_problems.find(query).sort("display_order", 1).to_list(200)
+    result = []
+    for p in problems:
+        result.append({
+            "problem_id": p.get("problem_id"),
+            "title": p.get("title"),
+            "difficulty": p.get("difficulty"),
+            "category": p.get("category"),
+            "description": p.get("description"),
+            "input_format": p.get("input_format"),
+            "examples": p.get("examples", []),
+            "starter_code": p.get("starter_code", {}),
+            "test_cases": p.get("test_cases", []),
+        })
+    return result
+
+
+@api_router.get("/dsa-problems/{problem_id}")
+async def get_dsa_problem(problem_id: str):
+    """Get a single DSA problem by ID."""
+    problem = await db.dsa_problems.find_one({"problem_id": problem_id, "is_active": True})
+    if not problem:
+        raise HTTPException(status_code=404, detail="Problem not found")
+    return {
+        "problem_id": problem.get("problem_id"),
+        "title": problem.get("title"),
+        "difficulty": problem.get("difficulty"),
+        "category": problem.get("category"),
+        "description": problem.get("description"),
+        "input_format": problem.get("input_format"),
+        "examples": problem.get("examples", []),
+        "starter_code": problem.get("starter_code", {}),
+        "test_cases": problem.get("test_cases", []),
+    }
+
+
+@api_router.post("/admin/dsa-problems")
+async def create_dsa_problem(request: Request, user=Depends(get_current_user)):
+    """Create a new DSA problem (admin only)."""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    data = await request.json()
+    required = ["problem_id", "title", "difficulty", "category", "description", "starter_code", "test_cases"]
+    for field in required:
+        if field not in data:
+            raise HTTPException(status_code=400, detail=f"Missing field: {field}")
+    data["is_active"] = data.get("is_active", True)
+    data["display_order"] = data.get("display_order", 999)
+    data["created_at"] = datetime.now(timezone.utc).isoformat()
+    data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    existing = await db.dsa_problems.find_one({"problem_id": data["problem_id"]})
+    if existing:
+        raise HTTPException(status_code=400, detail="Problem ID already exists")
+    await db.dsa_problems.insert_one(data)
+    return {"message": "Problem created", "problem_id": data["problem_id"]}
+
+
+@api_router.put("/admin/dsa-problems/{problem_id}")
+async def update_dsa_problem(problem_id: str, request: Request, user=Depends(get_current_user)):
+    """Update a DSA problem (admin only)."""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    data = await request.json()
+    data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    result = await db.dsa_problems.update_one({"problem_id": problem_id}, {"$set": data})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Problem not found")
+    return {"message": "Problem updated"}
+
+
+@api_router.delete("/admin/dsa-problems/{problem_id}")
+async def delete_dsa_problem(problem_id: str, user=Depends(get_current_user)):
+    """Delete a DSA problem (admin only)."""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    result = await db.dsa_problems.delete_one({"problem_id": problem_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Problem not found")
+    return {"message": "Problem deleted"}
+
+@api_router.post("/code/run")
+async def execute_code(request: Request, user=Depends(get_current_user)):
+    """Run user code in a secure sandboxed container. No host access."""
+    body = await request.json()
+    language = body.get("language", "python")
+    code = body.get("code", "")
+    stdin_input = body.get("stdin", "")
+
+    if not code.strip():
+        raise HTTPException(status_code=400, detail="Code cannot be empty")
+    if len(code) > 50000:
+        raise HTTPException(status_code=400, detail="Code too large (max 50KB)")
+
+    result = await run_code(language, code, stdin_input)
+    return result
+
+
+@api_router.post("/code/test")
+async def test_code(request: Request, user=Depends(get_current_user)):
+    """Run user code against test cases. Returns pass/fail for each."""
+    body = await request.json()
+    language = body.get("language", "python")
+    code = body.get("code", "")
+    test_cases = body.get("test_cases", [])
+
+    if not code.strip():
+        raise HTTPException(status_code=400, detail="Code cannot be empty")
+    if len(code) > 50000:
+        raise HTTPException(status_code=400, detail="Code too large (max 50KB)")
+    if not test_cases or len(test_cases) > 20:
+        raise HTTPException(status_code=400, detail="Provide 1-20 test cases")
+
+    result = await run_with_tests(language, code, test_cases)
+    return result
+
 @app.websocket("/ws/terminal/{session_id}")
 async def terminal_websocket(websocket: WebSocket, session_id: str):
     """
@@ -9451,6 +9577,12 @@ async def startup_scheduler():
         logger.info("✅ Terminal manager started")
     except Exception as e:
         logger.warning(f"⚠️ Terminal manager failed to start (Docker may not be available): {e}")
+    # Build code runner image if needed
+    try:
+        await asyncio.get_event_loop().run_in_executor(None, ensure_coderunner_image)
+        logger.info("✅ Code runner image ready")
+    except Exception as e:
+        logger.warning(f"⚠️ Code runner image build failed: {e}")
     # Start rate limiter cleanup
     await rate_store.start_cleanup()
     logger.info("✅ Rate limiter started")
