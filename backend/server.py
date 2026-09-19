@@ -3226,14 +3226,14 @@ def start_scheduler():
             replace_existing=True
         )
         
-        # Daily AI job search for all users with preferences — runs at 7 AM IST (1:30 UTC)
-        scheduler.add_job(
-            run_daily_job_search_all_users,
-            CronTrigger(hour=1, minute=30),
-            id='daily_job_search',
-            name='Daily AI job search for all mentees',
-            replace_existing=True
-        )
+        # Daily AI job search for all users with preferences — DISABLED
+        # scheduler.add_job(
+        #     run_daily_job_search_all_users,
+        #     CronTrigger(hour=1, minute=30),
+        #     id='daily_job_search',
+        #     name='Daily AI job search for all mentees',
+        #     replace_existing=True
+        # )
         
         scheduler.start()
         logger.info("Background scheduler started successfully")
@@ -3241,7 +3241,7 @@ def start_scheduler():
         logger.info("  - Update slot statuses: Every hour at :00")
         logger.info("  - Send reminder emails: Every hour at :15")
         logger.info("  - Send feedback requests: Every hour at :30")
-        logger.info("  - Daily AI job search: Every day at 7:00 AM IST")
+        logger.info("  - Daily AI job search: DISABLED")
         
     except Exception as e:
         logger.error(f"Failed to start scheduler: {str(e)}")
